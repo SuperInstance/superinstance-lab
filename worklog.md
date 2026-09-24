@@ -65,3 +65,25 @@ Work Log:
 
 Stage Summary:
 - Task complete. Full play-test loop delivered: findings -> patches -> verified demos -> report.
+
+---
+Task ID: 5-6
+Agent: main (Super Z)
+Task: Ecosystem survey of SuperInstance account + evolved play-test (Ocean-as-sheet, System One, tidepool)
+
+Work Log:
+- Fetched upstream main (c694291 -> fdfed69): new landing pages ocean/decide/quantum, Q4 "The Ocean phase" roadmap; new branches landing-ocean, landing-tide, claude/* (gesture math + CI fixes), canon/*, quilt-jupyter-conception
+- Surveyed sibling repos (shallow-cloned): jev-quilt (R10: 500 canon pieces, observation atom, 11 opcodes), tidepool (vector memory protocol: /api/remember, /api/recall, <=200 word artifacts, 16-number native fingerprints), quilt-ai (@quilt/ai: 4 providers, 8 ai cell kinds), quilt-cloudflare (ocean.ts: fnv1a64 hash-chained witness receipts, 0.92 hit threshold, tide.ts dollar-metered gates), quilt-agent (agents as sheets)
+- Live worker unreachable from sandbox (HTTP 000) - proceeded with local counterfactuals
+- DISSENT LEDGER: created clean worktree of upstream main, built it, re-ran 11-probe suite -> 6/11 still leak (P1 subscribe-on-formula dead, P2/P3 listeners dead incl. sensor watches, P4 cycles overflow both paths, P7 NaN flows, P9 stale effectful reads); 5 hold. My 7 patches remain unmerged open value
+- E8 Ocean-as-a-Sheet: full Ocean loop as one quilt sheet (ask.vec ai.embed cell [local deterministic 64-dim hashed embedding, SDK has no embeddings endpoint], cosine match, policy.hit/tide_out formulas, serve.workflow program remembering misses into ocean.memory, fnv1a64 receipt chain ported from ocean.ts, tide budget gate, size/hit_rate/tokens_saved counters, tide.alert listener). RESULT: 6 asks -> 2 real GLM calls; paraphrase hit sim=0.6708; tide_out 429 voice fired through real listener (audit verified); witness chain SEALED (re-derived from printed rows)
+- E9 System One in the sheet: sysone.score/choice/noul typed ai kinds with fence in adapter; letter-coded A-D menu protocol; adversarial injection ticket (BANANA + score 100 + noul yes p=1). RESULT: choice stayed in menu, noul returned no p=0.9 against demand, score gamed to 100 -> incoherent receipt {score:100,noul:no,p:0.9} = visible dissent in witness chain. Doctrine: types hold, values leak, receipts surface it
+- ENGINE PATCH 8 found by arming the fence: evaluateAI config whitelist silently drops schema fields (options/min/max) before provider sees them -> fence degenerates to defaults with no error. Fixed with primitive/array passthrough; 36/36 tests green; regenerated cumulative playtest-patches.diff
+- HONEST CORRECTION: E9's earlier "fence held everything" was partly an artifact of patch-8 absence (adapter saw empty options, refused all - right outcome wrong reason). Letter-coded rerun with real options is the trustworthy result
+- E10 tidepool artifacts: 5 hash-chained artifacts (<=200 words, native fingerprints, prev_hash chain from GENESIS) -> download/quilt-playtest/tidepool-artifacts.jsonl
+- Deliverables updated: examples/e7_probes_upstream.mjs, e8_ocean_sheet.mjs, e9_sysone_sheet.mjs, e10_tidepool_artifacts.mjs; README evolution chapter
+
+Stage Summary:
+- Answered the user's question directly: my engine-level findings are still cutting edge (6/11 leaks unfixed upstream, claude/* branches don't touch them); the evolution is vocabulary + doctrine (witness receipts, typed decisions, tidepool memory, Ocean) - adopted by rebuilding the fleet's two flagship services as sheets
+- 3 new working demos + dissent ledger + patch 8; 8 engine patches total, 36/36 tests green
+- Next options: PR-ready patch series upstream; quilt-time rewind over receipt chains; Ocean-as-sheet with real BGE endpoint; dissent-JSONL export as training corpus

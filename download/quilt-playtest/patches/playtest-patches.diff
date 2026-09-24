@@ -1,472 +1,48 @@
-diff --git a/examples/sensor-anomaly/sheet.yaml b/examples/sensor-anomaly/sheet.yaml
-index 7faac72..63ec7a0 100644
---- a/examples/sensor-anomaly/sheet.yaml
-+++ b/examples/sensor-anomaly/sheet.yaml
-@@ -1,12 +1,15 @@
- id: sensor-anomaly
--title: "Self-Tuning Anomaly Detector"
--description: "Local statistical loop + escalation to model — fewer false positives over time"
--version: 0.1.0
--
--# The "surprise loop" pattern:
--#   sensor cell  →  rolling stats  →  z-score  →  if surprising, call model
--# Over time, the system learns what's "normal" and only escalates
--# true anomalies to the (expensive) model.
-+title: "Self-Tuning Anomaly Detector (play-test iteration)"
-+description: >
-+  Push-driven surprise loop that actually runs: listener+program maintain
-+  an EWMA baseline in a value cell (programs are the only stateful cells,
-+  so state lives in value cells and is updated via runtime.set), formulas
-+  derive the z-score and escalation decision, and a listener escalates to
-+  the model action. Patched during play-testing: the original sheet stored
-+  the EWMA in a program cell (never re-evaluated by propagation), the
-+  escalation listener had no action, and the model api endpoint used a
-+  non-fetchable `model:` scheme.
-+version: 0.2.0-playtest
+diff --git a/packages/core/src/cells/ai.ts b/packages/core/src/cells/ai.ts
+old mode 100644
+new mode 100755
+index 16e60a3..62cb61d
+--- a/packages/core/src/cells/ai.ts
++++ b/packages/core/src/cells/ai.ts
+@@ -151,6 +151,25 @@ export async function evaluateAI(
+   if (cell.max_tokens !== undefined) config.max_tokens = cell.max_tokens;
+   if (cell.system !== undefined) config.system = substitute(cell.system);
  
- cells:
-   # ---- Input: a simulated temperature sensor ----
-@@ -16,38 +19,46 @@ cells:
-     source: simulated
-     rate: 100
-     unit: celsius
-+    default: 22
-     description: "Temperature reading (simulated)"
- 
--  # ---- Rolling statistics (classical, local) ----
-+  # ---- Stateful baseline: EWMA lives in a VALUE cell, updated by a
-+  #      listener -> program -> runtime.set loop. This is the working
-+  #      idiom for stateful derived state in Quilt. ----
++  // PLAYTEST PATCH 8: forward schema-carrying fields the whitelist drops.
++  // Typed-decision cells (sysone.choice / sysone.score / sysone.noul) declare
++  // their fence in the sheet — options, min, max, rubric — and the provider
++  // adapter must receive them or the fence silently degenerates to defaults.
++  // Rule: pass through any own field not already handled, when it is a
++  // primitive or an array of primitives (never functions / cell graphs).
++  const HANDLED = new Set(['id', 'kind', 'ai_kind', 'provider', 'model', 'prompt', 'input',
++    'image', 'target', 'language', 'max_words', 'temperature', 'max_tokens', 'system',
++    'deps', 'watch', 'condition', 'action', 'code', 'value', 'default', 'description']);
++  for (const [k, v] of Object.entries(cell)) {
++    if (HANDLED.has(k) || k in config) continue;
++    const passthrough =
++      v === null ||
++      typeof v === 'number' || typeof v === 'boolean' ||
++      (typeof v === 'string' && k !== 'expr') ||
++      (Array.isArray(v) && v.every(x => typeof x !== 'object' || x === null));
++    if (passthrough) ((config as unknown) as Record<string, unknown>)[k] = v;
++  }
 +
-+  - id: ewma.value
-+    kind: value
-+    value: 22
-+    description: "Running EWMA of temperature (state holder)"
- 
--  - id: rolling.window
-+  - id: ewma.alpha
-     kind: value
--    value: 60
--    description: "Window size in samples"
-+    value: 0.05
-+    description: "EWMA smoothing factor"
- 
--  - id: rolling.mean
-+  - id: ewma.updater
-+    kind: listener
-+    watch: [sensor.temp]
-+    action: ewma.update
-+    description: "Every new reading updates the baseline"
-+
-+  - id: ewma.update
-     kind: program
--    description: "Mean of the last N samples (classical loop)"
-+    description: "EWMA update step: reads state, writes back via runtime.set"
-     code: |
--      // In a real impl this would maintain a buffer. For the demo,
--      // we just track the running mean.
--      const cur = (await runtime.get('rolling.mean')).data;
--      const x = (await runtime.get('sensor.temp')).data;
--      const n = (await runtime.get('rolling.count')).data || 0;
--      const mean = (cur || 0);
--      return mean * 0.99 + (x || 0) * 0.01;
--
--  - id: rolling.count
--    kind: value
--    value: 0
--    description: "How many samples we've seen"
-+      const x = input?.value;
-+      if (typeof x !== 'number' || Number.isNaN(x)) return { updated: false };
-+      const cur = (await runtime.get('ewma.value')).data ?? x;
-+      const alpha = (await runtime.get('ewma.alpha')).data ?? 0.05;
-+      await runtime.set('ewma.value', cur * (1 - alpha) + x * alpha);
-+      return { updated: true, reading: x, baseline: cur * (1 - alpha) + x * alpha };
- 
--  # ---- Surprise detection (classical) ----
-+  # ---- Surprise detection (pure formulas — recomputed on every push) ----
- 
-   - id: surprise.z_score
-     kind: formula
--    expr: "=abs(sensor.temp - rolling.mean) / 5"  # assume stddev of 5
--    description: "How many standard deviations from the mean"
-+    expr: "=abs(sensor.temp - ewma.value) / 5"
-+    description: "How many standard deviations from the EWMA baseline (assume stddev 5)"
- 
-   - id: surprise.threshold
-     kind: value
-@@ -59,28 +70,24 @@ cells:
-     expr: "=surprise.z_score > surprise.threshold"
-     description: "True if we should call the model"
- 
--  # ---- The model (jazz — only called on surprise) ----
--
--  - id: model.analyzer
--    kind: api
--    endpoint: "model:claude-sonnet-4-5"
--    description: "The expensive model — only called on anomalies"
-+  # ---- Escalation: listener on the decision formula, program as action ----
- 
--  # ---- Output ----
-+  - id: alert.escalate
-+    kind: listener
-+    watch: [surprise.should_escalate]
-+    condition: "caller.metadata.current === true && caller.metadata.prev !== true"
-+    action: alert.emit
-+    description: "Fires on the false->true escalation edge only"
- 
--  - id: alert
-+  - id: alert.emit
-     kind: program
--    description: "Triggers when surprise.should_escalate is true"
-+    description: "The escalation action — in production this calls the model API"
-     code: |
-       const x = (await runtime.get('sensor.temp')).data;
-       const z = (await runtime.get('surprise.z_score')).data;
-+      const baseline = (await runtime.get('ewma.value')).data;
-       return {
-         severity: z > 4 ? 'critical' : 'warning',
--        message: `Anomaly: temp=${x}°C, z=${z?.toFixed(2)}`,
-+        message: `Anomaly: temp=${x}C, z=${z?.toFixed(2)}, baseline=${baseline?.toFixed(1)}`,
-         timestamp: Date.now(),
-       };
--
--  - id: alert.listener
--    kind: listener
--    watch: [surprise.should_escalate]
--    description: "Fires when an anomaly is detected"
-diff --git a/examples/task-scheduler/sheet.yaml b/examples/task-scheduler/sheet.yaml
-index 8b40624..1ee3a15 100644
---- a/examples/task-scheduler/sheet.yaml
-+++ b/examples/task-scheduler/sheet.yaml
-@@ -111,7 +111,18 @@ cells:
-     expr: '=task.healthcheck.next_run_at > 0 && task.healthcheck.next_run_at < clock.now && task.healthcheck.status != "running"'
-     description: "Is this task overdue?"
- 
-+  # PLAY-TEST FIX: was a `program` cell. Programs are only re-evaluated on
-+  # explicit call — propagation never recomputes them, so the listener below
-+  # could only ever see a stale value. Derived boolean state belongs in a
-+  # formula (pure, auto-tracked, recomputed eagerly on push).
-   - id: scheduler.any_overdue
-+    kind: formula
-+    expr: '=task.daily_summary.is_overdue || task.backup.is_overdue || task.healthcheck.is_overdue'
-+    description: "True when any task is overdue"
-+
-+  # Kept the program variant under a new id — useful for dashboards that
-+  # want the LIST of overdue tasks, called explicitly by the harness.
-+  - id: scheduler.overdue_list
-     kind: program
-     code: |
-       const tasks = ['daily_summary', 'backup', 'healthcheck'];
-@@ -148,11 +159,19 @@ cells:
-   - id: alert.overdue
-     kind: listener
-     watch: [scheduler.any_overdue]
-+    condition: "caller.metadata.current === true && caller.metadata.prev !== true"
-     action: log.overdue
--    description: "Fires when any task is overdue"
-+    description: "Fires on the ok->overdue edge"
- 
-+  # PLAY-TEST FIX: was `kind: io` — io cells are push-only, so calling one
-+  # as a listener action is a silent no-op. Program cells are the action kind.
-   - id: log.overdue
--    kind: io
--    direction: out
--    port: log:stderr
--    description: "Writes a warning when tasks are overdue"
-+    kind: program
-+    description: "Builds the overdue warning"
-+    code: |
-+      const list = (await runtime.get('scheduler.overdue_list')).data;
-+      return {
-+        severity: 'warn',
-+        message: `Overdue tasks: ${(list ?? []).join(', ') || 'unknown'}`,
-+        timestamp: Date.now(),
-+      };
-diff --git a/examples/weather-monitor/sheet.yaml b/examples/weather-monitor/sheet.yaml
-index 2c3a883..f3d54a1 100644
---- a/examples/weather-monitor/sheet.yaml
-+++ b/examples/weather-monitor/sheet.yaml
-@@ -92,27 +92,48 @@ cells:
-   - id: alert.dangerous
-     kind: listener
-     watch: [is_dangerous]
-+    condition: "caller.metadata.current === true && caller.metadata.prev !== true"
-     action: log.dangerous
--    description: "Fires when conditions are dangerous"
-+    description: "Fires on the safe->dangerous edge"
- 
-+  # PLAY-TEST FIX: was `kind: io` — io cells are push-only value holders,
-+  # so calling one as a listener action is a silent no-op. A program cell
-+  # is the action kind that actually produces an observable effect.
-   - id: log.dangerous
--    kind: io
--    direction: out
--    port: log:stderr
--    description: "Writes a warning to stderr when conditions are dangerous"
-+    kind: program
-+    description: "Writes a warning when conditions are dangerous"
-+    code: |
-+      // NOTE (play-test finding): listener actions receive the event via
-+      // `input` ({changed, value}) — caller.metadata is NOT propagated to
-+      // the action, so read live cells via runtime.get instead.
-+      const feels = (await runtime.get('feels_like_c')).data;
-+      return {
-+        severity: 'warn',
-+        message: `Dangerous conditions: feels like ${feels}C`,
-+        timestamp: Date.now(),
-+      };
- 
-   - id: alert.comfort_lost
-     kind: listener
-     watch: [is_comfortable]
--    condition: "=is_comfortable == false"
-+    # PLAY-TEST FIX: was "=is_comfortable == false" — the leading '=' made
-+    # evalWhen throw a SyntaxError on every fire, silently swallowed, so
-+    # this listener could never fire. Conditions are bare expressions.
-+    condition: "caller.metadata.current === false && caller.metadata.prev === true"
-     action: log.comfort_lost
--    description: "Fires when the comfort condition is no longer satisfied"
-+    description: "Fires on the comfortable->uncomfortable edge"
- 
-+  # PLAY-TEST FIX: was `kind: io` — see log.dangerous note above.
-   - id: log.comfort_lost
--    kind: io
--    direction: out
--    port: log:stderr
-+    kind: program
-     description: "Writes a notice when comfort zone is lost"
-+    code: |
-+      const temp = (await runtime.get('sensor.temperature')).data;
-+      return {
-+        severity: 'info',
-+        message: `Comfort zone lost (temp is now ${temp}C)`,
-+        timestamp: Date.now(),
-+      };
- 
-   # -------------------------------------------------------------------------
-   # Router — a caller-aware view. Different consumers ask for
-diff --git a/package-lock.json b/package-lock.json
-index bb8404c..58e1d84 100644
---- a/package-lock.json
-+++ b/package-lock.json
-@@ -66,7 +66,6 @@
-       "os": [
-         "netbsd"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -84,7 +83,6 @@
-       "os": [
-         "openbsd"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -102,7 +100,6 @@
-       "os": [
-         "openharmony"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -2373,7 +2370,6 @@
-       "os": [
-         "darwin"
-       ],
--      "peer": true,
-       "engines": {
-         "node": "^8.16.0 || ^10.6.0 || >=11.0.0"
-       }
-@@ -3767,7 +3763,6 @@
-       "os": [
-         "aix"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3785,7 +3780,6 @@
-       "os": [
-         "android"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3803,7 +3797,6 @@
-       "os": [
-         "android"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3821,7 +3814,6 @@
-       "os": [
-         "android"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3839,7 +3831,6 @@
-       "os": [
-         "darwin"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3857,7 +3848,6 @@
-       "os": [
-         "darwin"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3875,7 +3865,6 @@
-       "os": [
-         "freebsd"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3893,7 +3882,6 @@
-       "os": [
-         "freebsd"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3911,7 +3899,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3929,7 +3916,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3947,7 +3933,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3965,7 +3950,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -3983,7 +3967,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4001,7 +3984,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4019,7 +4001,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4037,7 +4018,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4055,7 +4035,6 @@
-       "os": [
-         "linux"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4073,7 +4052,6 @@
-       "os": [
-         "netbsd"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4091,7 +4069,6 @@
-       "os": [
-         "openbsd"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4109,7 +4086,6 @@
-       "os": [
-         "sunos"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4127,7 +4103,6 @@
-       "os": [
-         "win32"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4145,7 +4120,6 @@
-       "os": [
-         "win32"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
-@@ -4163,7 +4137,6 @@
-       "os": [
-         "win32"
-       ],
--      "peer": true,
-       "engines": {
-         "node": ">=18"
-       }
+   try {
+     const result = await engine.call(config, { useCache: true });
+     return { value: result, error: null };
+diff --git a/packages/core/src/cells/api.ts b/packages/core/src/cells/api.ts
+old mode 100644
+new mode 100755
+diff --git a/packages/core/src/cells/formula.ts b/packages/core/src/cells/formula.ts
+old mode 100644
+new mode 100755
+diff --git a/packages/core/src/cells/io.ts b/packages/core/src/cells/io.ts
+old mode 100644
+new mode 100755
 diff --git a/packages/core/src/cells/listener.ts b/packages/core/src/cells/listener.ts
-index 949883a..46cad9b 100644
+old mode 100644
+new mode 100755
+index 949883a..46cad9b
 --- a/packages/core/src/cells/listener.ts
 +++ b/packages/core/src/cells/listener.ts
 @@ -62,6 +62,9 @@ import type { Cell, CellValue, CellId } from '../types.js';
@@ -503,7 +79,9 @@ index 949883a..46cad9b 100644
  
    return true;
 diff --git a/packages/core/src/cells/program.ts b/packages/core/src/cells/program.ts
-index aed7334..f82e390 100644
+old mode 100644
+new mode 100755
+index aed7334..f82e390
 --- a/packages/core/src/cells/program.ts
 +++ b/packages/core/src/cells/program.ts
 @@ -68,8 +68,13 @@ export interface ProgramRuntime {
@@ -523,7 +101,9 @@ index aed7334..f82e390 100644
  
  /**
 diff --git a/packages/core/src/cells/router.ts b/packages/core/src/cells/router.ts
-index f5d1f41..d3921da 100644
+old mode 100644
+new mode 100755
+index f5d1f41..d3921da
 --- a/packages/core/src/cells/router.ts
 +++ b/packages/core/src/cells/router.ts
 @@ -88,11 +88,15 @@ export async function evaluateRouter(
@@ -544,8 +124,16 @@ index f5d1f41..d3921da 100644
          if (rule.route.with && result.status === 'ready' && result.data && typeof result.data === 'object') {
            return { ...result, data: { ...(result.data as object), ...rule.route.with } };
          }
+diff --git a/packages/core/src/cells/sensor.ts b/packages/core/src/cells/sensor.ts
+old mode 100644
+new mode 100755
+diff --git a/packages/core/src/cells/value.ts b/packages/core/src/cells/value.ts
+old mode 100644
+new mode 100755
 diff --git a/packages/core/src/context.ts b/packages/core/src/context.ts
-index 90549d2..8bb68ef 100644
+old mode 100644
+new mode 100755
+index 90549d2..8bb68ef
 --- a/packages/core/src/context.ts
 +++ b/packages/core/src/context.ts
 @@ -156,8 +156,14 @@ export function evalWhen(when: string, ctx: CallerContext): boolean {
@@ -565,7 +153,9 @@ index 90549d2..8bb68ef 100644
      );
      // eslint-disable-next-line no-new-func
 diff --git a/packages/core/src/engine.ts b/packages/core/src/engine.ts
-index 7f495dd..5061bbe 100644
+old mode 100644
+new mode 100755
+index 7f495dd..5061bbe
 --- a/packages/core/src/engine.ts
 +++ b/packages/core/src/engine.ts
 @@ -125,11 +125,20 @@ export interface EngineOptions {
@@ -725,3 +315,15 @@ index 7f495dd..5061bbe 100644
      }
    }
  
+diff --git a/packages/core/src/gesture.ts b/packages/core/src/gesture.ts
+old mode 100644
+new mode 100755
+diff --git a/packages/core/src/index.ts b/packages/core/src/index.ts
+old mode 100644
+new mode 100755
+diff --git a/packages/core/src/parser.ts b/packages/core/src/parser.ts
+old mode 100644
+new mode 100755
+diff --git a/packages/core/src/types.ts b/packages/core/src/types.ts
+old mode 100644
+new mode 100755

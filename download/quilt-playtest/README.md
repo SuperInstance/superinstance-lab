@@ -46,3 +46,72 @@ node <script>.mjs                      # any file below
 - Formulas read effectful cells' *last* value; undeclared `runtime.get` deps are invisible to invalidation.
 - Program cells execute via `new AsyncFunction` — no sandboxing (documented in-repo, real for multi-tenant use).
 - `get()` on an idle cyclic sheet still stack-overflows (pull path).
+
+---
+
+# EVOLUTION CHAPTER — the fleet moved; here's the recalibrated play-test
+
+*Added after surveying what the other agents shipped while this play-test ran:*
+`quilt-roadmap-2026.md` now carries a **Q4 "The Ocean" phase**; the landing pages
+ship live demos of **the Ocean** (vector memory in front of inference),
+**Decide/System One** (schema-bounded Choice / Score / Noul), and **quantum audio**;
+the org grew to 30+ repos (`tidepool`, `jev-quilt`, `quilt-ai`, `quilt-cloudflare`,
+`quilt-agent`, …) with `claude/*` agent branches fixing gesture math and CI, and a
+witness/canon discipline (fnv1a-64 hash-chained receipts) spanning everything.
+
+## What changed in our approach — three shifts
+
+1. **From "find leaks" to "keep the ledger honest".** We re-ran our 11-probe
+   suite against vanilla upstream main (`fdfed69`) → **6/11 still leak**
+   (`e7_probes_upstream.mjs`, the dissent ledger). The reactive-loop bugs our 7
+   patches fix are *unmerged open value*, and the fleet's own landing demos
+   depend on exactly those paths.
+2. **From "use the API" to "speak the fleet's idiom".** New experiments adopt
+   the witness-receipt format, the tide gate, and the tidepool memory protocol
+   rather than inventing parallel vocabulary.
+3. **From "cloud products" to "shapes the cell model can hold".** The fleet's
+   two flagship *services* both turn out to be expressible as ordinary sheets —
+   which is the strongest evidence yet for the roadmap's core thesis.
+
+## New experiments (verified working, speak the fleet's idiom)
+
+| File | What it proves |
+|---|---|
+| `e7_probes_upstream.mjs` | **Dissent ledger.** Vanilla upstream main: P1/P2/P3 (listeners dead), P4 (cycles overflow both paths), P7 (NaN flows), P9 (stale effectful reads) all still leak. |
+| `e8_ocean_sheet.mjs` | **Ocean-as-a-Sheet** — the fleet's cloud Ocean rebuilt as one reactive sheet: embed → cosine match → hit/miss → remember; fnv1a64 hash-chained witness receipts ported line-for-line from `ocean.ts`; tide budget gate; live counters. 6 asks → **2 real GLM calls**; paraphrase hit sim=0.6708; shrinking `config.tide_budget` mid-session issued the tide_out 429 voice **through a real listener**; witness chain **SEALED** (every receipt re-derives from its printed form). |
+| `e9_sysone_sheet.mjs` | **System One in the sheet** — Choice/Score/Noul as typed ai-cell kinds with the fence enforced in the adapter. Adversarial ticket demanded BANANA + score 100 + noul yes p=1: choice stayed in the menu (letter-coded A–D beats synonym-gravity), noul returned **no p=0.9 against the demanded yes/p=1**, score was gamed to 100 — and the incoherent receipt `{score:100, noul:no, p:0.9}` is the tell. **Types hold, values leak, and the witness chain surfaces the dissent.** |
+| `e10_tidepool_artifacts.mjs` | **Tidepool discipline** — the play-test distilled into 5 hash-chained artifacts (≤200 words each, 16-number native fingerprints, tidepool protocol shape), ready for `POST /api/remember`. → `tidepool-artifacts.jsonl` |
+
+## Engine patch #8 (found by arming the System One fence)
+
+`evaluateAI` rebuilds the provider config from a hardcoded whitelist — any
+schema field declared in the sheet (`options`, `min`, `max`, `rubric`) is
+**silently dropped** before the adapter sees it, so a fence declared in the
+sheet degenerates to adapter defaults without an error. Patch 8 passes through
+own fields that are primitives or arrays-of-primitives. All 36 core tests green.
+Generalized: *any cell kind carrying schema metadata needs a passthrough
+contract, or schemas become hints by accident.*
+
+## Honest corrections this round forced
+
+- E9's first "the fence held every attack" result was partly an artifact of
+  patch-8's absence: the adapter saw an **empty option set**, which refuses
+  everything — right outcome, wrong reason. The letter-coded rerun with real
+  options is the trustworthy result.
+- The live worker (`quilt-cloudflare.superinstance.workers.dev`) is
+  network-unreachable from this sandbox (HTTP 000), so live-Ocean probes were
+  replaced by the stronger local counterfactual (E8).
+- GLM's fresh answer about "what is a quilt cell" was about the *other* Quilt
+  (the data-science tool). The ocean faithfully remembered it — receipts make
+  wrong memories auditable and evictable. Memory without dissent is just a
+  faster wrong answer.
+
+## Where this sits vs the other agents
+
+- `claude/*` branches: gesture-math robustness + CI — adjacent to E3, no overlap
+  with the reactive-loop leaks.
+- `jev-quilt` walkers: doctrine rounds (500 canon pieces) — we adopt their
+  observation/witness framing but test it *in code* rather than in canon.
+- The ecosystem's center of gravity (Ocean/Decide/quantum) is service-shaped;
+  E8/E9 argue the durable form is sheet-shaped. Both can be true: the cloud
+  Ocean is the fleet's shared memory; Ocean-as-a-sheet is the portable unit.

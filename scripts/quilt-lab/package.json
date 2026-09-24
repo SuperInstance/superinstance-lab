@@ -1,0 +1,7 @@
+{
+  "name": "quilt-lab",
+  "type": "module",
+  "dependencies": {
+    "z-ai-web-dev-sdk": "0.0.18"
+  }
+}
