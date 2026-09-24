@@ -36,6 +36,24 @@ new mode 100755
 diff --git a/packages/core/src/cells/formula.ts b/packages/core/src/cells/formula.ts
 old mode 100644
 new mode 100755
+index 2ebe236..fff4558
+--- a/packages/core/src/cells/formula.ts
++++ b/packages/core/src/cells/formula.ts
+@@ -196,6 +196,14 @@ export function evaluateFormula(cell: Cell, ctx: CallerContext, allCells: Map<Ce
+       computedAt: Date.now(),
+     };
+     cell.contextCache.set(key, value);
++    // PLAY-TEST PATCH 9: persist the computed value on the cell itself.
++    // Previously only the per-context cache held the result, so a pull
++    // left cell.value idle — and the eager-propagation path (which reads
++    // cell.value to derive the listener's `prev`) saw no previous value on
++    // the first set after a pull. Listeners missed the first real crossing
++    // of any threshold. With this, a pull seeds the graph: prev is the last
++    // value the cell actually produced.
++    cell.value = value;
+     return value;
+   } catch (err) {
+     const message = err instanceof Error ? err.message : String(err);
 diff --git a/packages/core/src/cells/io.ts b/packages/core/src/cells/io.ts
 old mode 100644
 new mode 100755
@@ -133,7 +151,7 @@ new mode 100755
 diff --git a/packages/core/src/context.ts b/packages/core/src/context.ts
 old mode 100644
 new mode 100755
-index 90549d2..8bb68ef
+index 90549d2..7b02a43
 --- a/packages/core/src/context.ts
 +++ b/packages/core/src/context.ts
 @@ -156,8 +156,14 @@ export function evalWhen(when: string, ctx: CallerContext): boolean {
@@ -152,12 +170,45 @@ index 90549d2..8bb68ef
        'Array.isArray($1) && $1.includes("$2")',
      );
      // eslint-disable-next-line no-new-func
+@@ -171,3 +177,23 @@ export function evalWhen(when: string, ctx: CallerContext): boolean {
+     return false;
+   }
+ }
++
++/**
++ * PLAY-TEST PATCH 10: stable cache key for effectful calls that take input.
++ * contextKey() alone ignores `input`, so runtime.call(id, a) and
++ * runtime.call(id, b) collided on the same context and the second call was
++ * served the first call's memoized result. A program is a function of its
++ * arguments; the cache key must be too.
++ */
++export function stableJson(v: unknown): string {
++  if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null';
++  if (Array.isArray(v)) return `[${v.map(stableJson).join(',')}]`;
++  const keys = Object.keys(v as Record<string, unknown>).sort();
++  return `{${keys.map(k => `${JSON.stringify(k)}:${stableJson((v as Record<string, unknown>)[k])}`).join(',')}}`;
++}
++
++export function callKey(ctx: CallerContext, input: unknown): string {
++  const base = contextKey(ctx);
++  if (input === undefined) return base;
++  return `${base}|in:${stableJson(input)}`;
++}
 diff --git a/packages/core/src/engine.ts b/packages/core/src/engine.ts
 old mode 100644
 new mode 100755
-index 7f495dd..5061bbe
+index 7f495dd..7525d48
 --- a/packages/core/src/engine.ts
 +++ b/packages/core/src/engine.ts
+@@ -101,7 +101,7 @@ import type {
+   Cell, CellDef, CellId, CellRef, CellKind, CallerContext, CellValue,
+   SheetDef, Subscription, EvaluationTrace,
+ } from './types.js';
+-import { emptyContext, extendContext, contextKey } from './context.js';
++import { emptyContext, extendContext, contextKey, callKey } from './context.js';
+ import { evaluateValue } from './cells/value.js';
+ import { evaluateFormula } from './cells/formula.js';
+ import { evaluateApi } from './cells/api.js';
 @@ -125,11 +125,20 @@ export interface EngineOptions {
    tracing?: boolean;
    /** Optional AI engine for `kind: 'ai'` cells. If null, AI cells will error. */
@@ -238,7 +289,17 @@ index 7f495dd..5061bbe
    }
  
    /**
-@@ -403,7 +430,7 @@ export class QuiltEngine implements ProgramRuntime {
+@@ -363,7 +390,8 @@ export class QuiltEngine implements ProgramRuntime {
+       return cell.value;
+     }
+ 
+-    const key = contextKey(fullCtx);
++    // PLAY-TEST PATCH 10: include the call's input in the memo key.
++    const key = callKey(fullCtx, input);
+     const cached = cell.contextCache.get(key);
+     if (cached && cached.status === 'ready') {
+       return cached;
+@@ -403,7 +431,7 @@ export class QuiltEngine implements ProgramRuntime {
      cell.value = newValue;
  
      await this.notify(id, newValue, prev);
@@ -247,7 +308,27 @@ index 7f495dd..5061bbe
    }
  
    // ===========================================================================
-@@ -565,27 +592,60 @@ export class QuiltEngine implements ProgramRuntime {
+@@ -484,7 +512,18 @@ export class QuiltEngine implements ProgramRuntime {
+     if (cell.def.kind === 'api') {
+       result = await evaluateApi(cell, ctx, input);
+     } else if (cell.def.kind === 'program') {
+-      result = await evaluateProgram(cell, ctx, input, this);
++      // PLAY-TEST PATCH 11: programs receive a context-bound runtime.
++      // Previously they got the raw engine, whose get/set/call default to
++      // emptyContext() — so a nested runtime.call from inside a program
++      // silently DROPPED the caller identity (tenant tier, tags, metadata).
++      // Same bug family as the router-delegation fix: per-tenant memoization
++      // collapsed to a single shared answer. Explicit contexts still win.
++      const boundRuntime: ProgramRuntime = {
++        get: (id: CellId) => this.get(id, ctx),
++        set: (id: CellId, value: unknown) => this.set(id, value, ctx),
++        call: (id: CellId, i?: unknown, c?: CallerContext) => this.call(id, i, c ?? ctx),
++      };
++      result = await evaluateProgram(cell, ctx, input, boundRuntime);
+     } else if (cell.def.kind === 'router') {
+       result = await evaluateRouter(cell, ctx, input, this);
+     } else if (cell.def.kind === 'ai') {
+@@ -565,27 +604,60 @@ export class QuiltEngine implements ProgramRuntime {
     * Propagate a change to all dependents. Mark formula/value
     * dependents as stale and invalidate their cache. Fire listener
     * dependents whose conditions are met.

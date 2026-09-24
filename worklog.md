@@ -87,3 +87,23 @@ Stage Summary:
 - Answered the user's question directly: my engine-level findings are still cutting edge (6/11 leaks unfixed upstream, claude/* branches don't touch them); the evolution is vocabulary + doctrine (witness receipts, typed decisions, tidepool memory, Ocean) - adopted by rebuilding the fleet's two flagship services as sheets
 - 3 new working demos + dissent ledger + patch 8; 8 engine patches total, 36/36 tests green
 - Next options: PR-ready patch series upstream; quilt-time rewind over receipt chains; Ocean-as-sheet with real BGE endpoint; dissent-JSONL export as training corpus
+
+---
+Task ID: 7
+Agent: main (Super Z)
+Task: Build 10-tool portfolio on quilt across 10 realms, playtested to 75/75 green
+
+Work Log:
+- Built download/quilt-tools/: quilt-toolkit.mjs (shared runtime: witness idiom incl. verifyChain, playtest harness check()/done(), ANSI panels, SysOne adapter with live/offline degrade + letter-coded choice fence, deterministic 64-d embedder) + tools/01-10 + outputs/*.txt + index.html (generated from captured outputs, dark fleet style) + README.md (engineer entry point, 5 shared idioms, swap-in seams)
+- Tools + verdicts: 01-fleet-pager 7/7 (golden signals, hysteresis, first-sample guard), 02-ledger-seal 6/6 (tamper pinned at exact row), 03-ocean-recall 7/7 (remember/recall/forget, eid discipline), 04-triagedesk 8/8 (fence + adversarial, offline heuristics labeled), 05-budget-tide 8/8 (refuse-when-dry gate semantics: crossing spend allowed, then refusal), 06-home-ecos 6/6 (EWMA baseline + edge-triggered surge + gesture bending energy), 07-driftwatch 7/7 (slope/variance/bending regimes; slope flagged at 0.890 vs static 0.792), 08-approvals 9/9 (caller-aware policy, cross-tenant refusal, patch-11 ctx threading), 09-habit-atlas 8/8 (momentum physics, append-only days), 10-pipeline-guard 9/9 (schema-as-data, precise rejection reasons, dead-letter replay under v2)
+- ENGINE PATCHES 9-11 (all 36 upstream tests green after each):
+  - P9: evaluateFormula persists cell.value -> pulls seed the graph; listeners now see true prev on first crossing (fixed: first-crossing misses)
+  - P10: call() memo key includes stableJson(input) (context.ts callKey) -> programs are honest functions of their arguments; read-caching free, ops need event ids (tools learned eid idiom)
+  - P11: programs receive context-bound runtime (get/set/call thread ctx; explicit ctx wins) -> nested runtime.call no longer drops tenant identity (E6 router-delegation bug family)
+- Play-test insights surfaced by the build: memoization of identical append inputs is correct-for-reads/wrong-for-appends (fix: eid); formulas cannot see caller context (caller-dependent policy must be programs); first-sample guard (prev==null = no transition = no page) belongs in every edge-triggered listener; sensor->listener->program chains need the trigger listener wired explicitly
+- Cumulative playtest-patches.diff regenerated (now includes patches 1-11)
+
+Stage Summary:
+- Portfolio delivered: 10 realms, 75/75 checks green, every tool self-contained + verdict-printing + swap-in-marked
+- Engine now carries 11 playtest patches; upstream still unpatched (all findings remain open PR material)
+- index.html embeds real captured runs as the wow artifact for the engineer audience
