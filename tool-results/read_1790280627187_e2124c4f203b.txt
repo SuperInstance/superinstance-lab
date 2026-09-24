@@ -1,0 +1,1739 @@
+     1→/**
+     2→ * @quilt/sdk — agent substrate primitives
+     3→ *
+     4→ * Five functions that turn Quilt sheets into executable, auditable,
+     5→ * replayable artifacts. This is the minimal surface area that any
+     6→ * planner, runtime, or UI needs to compose Quilt sheets into agentic
+     7→ * workflows.
+     8→ *
+     9→ *   1. resolveTemplate(uri, context)  — substitute {{var}} tokens
+    10→ *   2. resolveArtifact(uri, context)  — resolve a Quilt URI to a pinned version
+    11→ *   3. validateManifest(manifest)     — JSON Schema validation + precondition checks
+    12→ *   4. publishArtifact(path, meta)    — upload an artifact, get back a canonical URI
+    13→ *   5. publishRunTrace(trace)         — write an immutable run trace to Quilt
+    14→ *
+    15→ * Why these five? They are the minimum surface that lets:
+    16→ *   - planners compile goals into manifest DAGs,
+    17→ *   - runtimes execute those DAGs transactionally,
+    18→ *   - agents query the past and learn from it,
+    19→ *   - UIs show users what is happening with full provenance.
+    20→ *
+    21→ * Everything else (UI, scheduler, model router) is built on top of these.
+    22→ *
+    23→ * The SDK is intentionally side-effect-free by default. `resolveArtifact`,
+    24→ * `validateManifest`, and `resolveTemplate` are pure functions of their
+    25→ * inputs. `publishArtifact` and `publishRunTrace` take a transport
+    26→ * (`ArtifactStore`) so callers can wire any backend (Cloudflare R2,
+    27→ * local FS, in-memory mock for tests).
+    28→ *
+    29→ * See `manifest.schema.json` for the manifest format these primitives
+    30→ * operate on.
+    31→ */
+    32→
+    33→import { readFile } from 'node:fs/promises';
+    34→import { createHash } from 'node:crypto';
+    35→
+    36→// Re-export the schema for convenience — consumers can import the JSON
+    37→// directly, but having it exported from the package means types and
+    38→// schema travel together.
+    39→export { default as manifestSchema } from '../../../schemas/manifest.schema.json' with { type: 'json' };
+    40→
+    41→// ──────────────────────────────────────────────────────────────────────────
+    42→//  Types
+    43→// ──────────────────────────────────────────────────────────────────────────
+    44→
+    45→/**
+    46→ * A Quilt URI of the form `quilt://bucket/name:version`. Version is
+    47→ * optional — `quilt://bucket/name` means "resolve to the latest pinned
+    48→ * version". `quilt://cells/foo.bar` refers to a cell value in a sheet
+    49→ * (the canonical cell addressing scheme).
+    50→ */
+    51→export type QuiltURI = string;
+    52→
+    53→/**
+    54→ * The result of resolving a Quilt URI. `version` is always set after
+    55→ * resolution (`:latest` is pinned). `localPath` and `signedUrl` are
+    56→ * optional because some artifacts are computed (cells) rather than
+    57→ * fetched.
+    58→ */
+    59→export interface ResolvedArtifact {
+    60→  /** The original URI that was passed in. */
+    61→  uri: QuiltURI;
+    62→  /** The version this URI resolved to. */
+    63→  version: string;
+    64→  /** The fully-resolved URI with explicit version. */
+    65→  resolvedUri: QuiltURI;
+    66→  /** Local materialized path, if the artifact was downloaded. */
+    67→  localPath?: string;
+    68→  /** Time-limited signed URL for remote fetch, if applicable. */
+    69→  signedUrl?: string;
+    70→  /** Free-form metadata returned by the store. */
+    71→  metadata: Record<string, unknown>;
+    72→  /** Provenance information: who made it, when, from what. */
+    73→  provenance: {
+    74→    createdAt: string;
+    75→    originCommit?: string;
+    76→    manifestId?: string;
+    77→  };
+    78→}
+    79→
+    80→/**
+    81→ * The context object passed alongside any resolve/validate call. The
+    82→ * runtime injects run_id, timestamp, commit, and any planner-provided
+    83→ * variables. Templates may reference any of these as `{{key}}`.
+    84→ */
+    85→export interface RunContext {
+    86→  runId?: string;
+    87→  timestamp?: string;
+    88→  commit?: string;
+    89→  plannerVersion?: string;
+    90→  [key: string]: string | undefined;
+    91→}
+    92→
+    93→/**
+    94→ * Result of manifest validation. `valid: true` means the manifest
+    95→ * conforms to the schema and (if requested) all artifact preconditions
+    96→ * are met.
+    97→ */
+    98→export interface ValidationResult {
+    99→  valid: boolean;
+   100→  errors: ValidationError[];
+   101→}
+   102→
+   103→export interface ValidationError {
+   104→  path: string;
+   105→  message: string;
+   106→  keyword?: string;
+   107→}
+   108→
+   109→/**
+   110→ * Metadata attached to a published artifact. Becomes the artifact's
+   111→ * provenance record.
+   112→ */
+   113→export interface ArtifactMetadata {
+   114→  /** Schema version of the manifest, e.g. "1.0.0". */
+   115→  version?: string;
+   116→  /** Free-form tags for search and grouping. */
+   117→  tags?: string[];
+   118→  /** SHA-256 of the artifact bytes; computed if not provided. */
+   119→  contentHash?: string;
+   120→  /** MIME type, e.g. "application/json". */
+   121→  contentType?: string;
+   122→  /** The manifest_id of the sheet that produced this artifact. */
+   123→  manifestId?: string;
+   124→  /** The run_id of the execution that produced this artifact. */
+   125→  runId?: string;
+   126→  /** Any additional free-form metadata. */
+   127→  [key: string]: unknown;
+   128→}
+   129→
+   130→/**
+   131→ * A run trace — the canonical, immutable record of one execution. Every
+   132→ * run_trace is itself an artifact in Quilt, with a canonical URI.
+   133→ */
+   134→export interface RunTrace {
+   135→  runId: string;
+   136→  planId?: string;
+   137→  manifestId?: string;
+   138→  manifestVersion?: string;
+   139→  startTime: string;
+   140→  endTime?: string;
+   141→  status: 'pending' | 'running' | 'success' | 'failed' | 'aborted';
+   142→  nodes: RunTraceNode[];
+   143→  provenance?: {
+   144→    commit?: string;
+   145→    plannerVersion?: string;
+   146→    manifestId?: string;
+   147→  };
+   148→  replayHint?: {
+   149→    priority?: number;
+   150→    tags?: string[];
+   151→  };
+   152→}
+   153→
+   154→export interface RunTraceNode {
+   155→  nodeId: string;
+   156→  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped' | 'rolledback';
+   157→  startTime?: string;
+   158→  endTime?: string;
+   159→  exitCode?: number;
+   160→  artifactUris?: QuiltURI[];
+   161→  logUri?: QuiltURI;
+   162→  error?: string;
+   163→}
+   164→
+   165→/**
+   166→ * An abstract artifact store. The default in-memory implementation is
+   167→ * used for tests; production wire-ups provide a Cloudflare R2, S3, or
+   168→ * local-filesystem implementation.
+   169→ *
+   170→ * The store is content-addressed: callers provide a `logicalUri` (the
+   171→ * path before `:version`) and the store computes a version from the
+   172→ * content hash. The full URI returned is `${logicalUri}:${version}`.
+   173→ */
+   174→export interface ArtifactStore {
+   175→  /** Store bytes under a logical URI. Returns the canonical URI + version. */
+   176→  put(logicalUri: QuiltURI, bytes: Uint8Array | string, metadata: ArtifactMetadata): Promise<{ uri: QuiltURI; version: string }>;
+   177→  /** Fetch bytes by full URI. */
+   178→  get(uri: QuiltURI): Promise<{ bytes: Uint8Array; metadata: ArtifactMetadata }>;
+   179→  /** Check if an artifact exists. */
+   180→  exists(uri: QuiltURI): Promise<boolean>;
+   181→  /** List versions of a logical artifact (without :version). */
+   182→  listVersions(logicalUri: QuiltURI): Promise<{ version: string; createdAt: string }[]>;
+   183→}
+   184→
+   185→// ──────────────────────────────────────────────────────────────────────────
+   186→//  Primitive 1: resolveTemplate
+   187→// ──────────────────────────────────────────────────────────────────────────
+   188→
+   189→/**
+   190→ * Substitute `{{key}}` tokens in a URI or path string with values from
+   191→ * the run context. Unknown keys cause a fail-fast error — silent
+   192→ * templating is the source of most reproducibility bugs.
+   193→ *
+   194→ * For ergonomics, `{{run_id}}` and `{{runId}}` both look up the same
+   195→ * value (snake_case ↔ camelCase). The lookup is case-insensitive and
+   196→ * ignores underscores.
+   197→ *
+   198→ * @example
+   199→ *   resolveTemplate("quilt://ml/models/classifier:{{run_id}}", { runId: "run-01" })
+   200→ *   // -> "quilt://ml/models/classifier:run-01"
+   201→ *
+   202→ *   resolveTemplate("quilt://data/{{dataset}}", { dataset: "imagenet" })
+   203→ *   // -> "quilt://data/imagenet"
+   204→ */
+   205→export function resolveTemplate(input: string, context: RunContext = {}): string {
+   206→  // Build a normalized lookup: lowercase, no underscores
+   207→  const norm = (s: string) => s.toLowerCase().replace(/_/g, '');
+   208→  const lookup = new Map<string, string>();
+   209→  for (const [k, v] of Object.entries(context)) {
+   210→    if (v !== undefined) lookup.set(norm(k), v);
+   211→  }
+   212→  return input.replace(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g, (_match, key: string) => {
+   213→    const v = lookup.get(norm(key));
+   214→    if (v === undefined) {
+   215→      throw new TemplateError(
+   216→        `Missing template variable: ${key}. ` +
+   217→        `Provide it in the run context. Available: ${Object.keys(context).join(', ') || '(none)'}`,
+   218→      );
+   219→    }
+   220→    return v;
+   221→  });
+   222→}
+   223→
+   224→export class TemplateError extends Error {
+   225→  constructor(message: string) {
+   226→    super(message);
+   227→    this.name = 'TemplateError';
+   228→  }
+   229→}
+   230→
+   231→// ──────────────────────────────────────────────────────────────────────────
+   232→//  Primitive 2: resolveArtifact
+   233→// ──────────────────────────────────────────────────────────────────────────
+   234→
+   235→/**
+   236→ * Resolve a Quilt URI to a concrete artifact version. If the URI has no
+   237→ * version, resolves to the latest. If the URI contains `{{var}}` tokens,
+   238→ * substitutes them from the run context first.
+   239→ *
+   240→ * The `store` argument is optional — when omitted, only the URI is
+   241→ * normalized (no fetch). This is useful for planners that want to know
+   242→ * what would be fetched without actually fetching.
+   243→ *
+   244→ * @example
+   245→ *   await resolveArtifact("quilt://ml/datasets/staged:latest", {}, store)
+   246→ *   // -> { uri: "quilt://ml/datasets/staged:latest", version: "v42", resolvedUri: "quilt://ml/datasets/staged:v42", ... }
+   247→ *
+   248→ *   await resolveArtifact("quilt://ml/models/classifier:{{run_id}}", { runId: "r-01" }, store)
+   249→ *   // -> { resolvedUri: "quilt://ml/models/classifier:r-01", version: "r-01", ... }
+   250→ */
+   251→export async function resolveArtifact(
+   252→  uri: QuiltURI,
+   253→  context: RunContext = {},
+   254→  store?: ArtifactStore,
+   255→): Promise<ResolvedArtifact> {
+   256→  // 1. Validate URI shape
+   257→  if (!uri.startsWith('quilt://') && !uri.startsWith('cell://')) {
+   258→    throw new ResolveError(
+   259→      `Invalid Quilt URI: "${uri}". Must start with "quilt://" or "cell://".`,
+   260→      uri,
+   261→    );
+   262→  }
+   263→
+   264→  // 2. Substitute template variables
+   265→  let templated: string;
+   266→  try {
+   267→    templated = resolveTemplate(uri, context);
+   268→  } catch (err) {
+   269→    if (err instanceof TemplateError) {
+   270→      throw new ResolveError(`Template substitution failed: ${err.message}`, uri);
+   271→    }
+   272→    throw err;
+   273→  }
+   274→
+   275→  // 3. Parse logicalUri + version. Forms:
+   276→  //    quilt://bucket/name:version
+   277→  //    quilt://bucket/name      -> :latest
+   278→  //    cell://sheet/cell.path   -> no version (always live)
+   279→  const lastColon = templated.lastIndexOf(':');
+   280→  let logicalUri: string;
+   281→  let version: string;
+   282→  if (lastColon > templated.indexOf('//')) {
+   283→    // There's a version segment
+   284→    logicalUri = templated.slice(0, lastColon);
+   285→    version = templated.slice(lastColon + 1);
+   286→  } else {
+   287→    logicalUri = templated;
+   288→    version = 'latest';
+   289→  }
+   290→
+   291→  if (version === 'latest' && store) {
+   292→    const versions = await store.listVersions(logicalUri);
+   293→    if (versions.length === 0) {
+   294→      throw new ResolveError(`No versions found for ${logicalUri}`, uri);
+   295→    }
+   296→    // Most recent first
+   297→    versions.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+   298→    version = versions[0].version;
+   299→  }
+   300→
+   301→  const resolvedUri = `${logicalUri}:${version}`;
+   302→
+   303→  // 4. If a store is given, fetch metadata
+   304→  let metadata: Record<string, unknown> = {};
+   305→  let provenance: ResolvedArtifact['provenance'] = { createdAt: new Date().toISOString() };
+   306→  if (store) {
+   307→    try {
+   308→      const result = await store.get(resolvedUri);
+   309→      metadata = result.metadata as Record<string, unknown>;
+   310→      const createdAtValue = result.metadata.createdAt;
+   311→      const createdAt = typeof createdAtValue === 'string' ? createdAtValue : new Date().toISOString();
+   312→      const originCommit = result.metadata.originCommit;
+   313→      const manifestIdValue = result.metadata.manifestId;
+   314→      provenance = {
+   315→        createdAt,
+   316→        originCommit: typeof originCommit === 'string' ? originCommit : undefined,
+   317→        manifestId: typeof manifestIdValue === 'string' ? manifestIdValue : undefined,
+   318→      };
+   319→    } catch (err) {
+   320→      // For latest->pinned, the resolved version may not be materialized
+   321→      // yet. That's OK — we return the resolved URI and let the caller
+   322→      // decide whether to fail.
+   323→      metadata = { _resolveWarning: `Could not fetch metadata: ${(err as Error).message}` };
+   324→    }
+   325→  }
+   326→
+   327→  return {
+   328→    uri,
+   329→    version,
+   330→    resolvedUri,
+   331→    metadata,
+   332→    provenance,
+   333→  };
+   334→}
+   335→
+   336→export class ResolveError extends Error {
+   337→  readonly uri: QuiltURI;
+   338→  constructor(message: string, uri: QuiltURI) {
+   339→    super(message);
+   340→    this.name = 'ResolveError';
+   341→    this.uri = uri;
+   342→  }
+   343→}
+   344→
+   345→// ──────────────────────────────────────────────────────────────────────────
+   346→//  Primitive 3: validateManifest
+   347→// ──────────────────────────────────────────────────────────────────────────
+   348→
+   349→/**
+   350→ * Validate a manifest against the Quilt manifest JSON schema, and
+   351→ * optionally check that all `artifact_exists` preconditions are met.
+   352→ *
+   353→ * Returns `{ valid: true, errors: [] }` on success, or
+   354→ * `{ valid: false, errors: [...] }` with one entry per failure.
+   355→ *
+   356→ * @example
+   357→ *   validateManifest(manifest)  // schema-only
+   358→ *   validateManifest(manifest, { store, checkExists: true })  // also verify preconditions
+   359→ */
+   360→export async function validateManifest(
+   361→  manifest: unknown,
+   362→  options: { store?: ArtifactStore; checkExists?: boolean; runContext?: RunContext } = {},
+   363→): Promise<ValidationResult> {
+   364→  // Lazy-load ajv so consumers that only use resolveTemplate don't pay
+   365→  // the cost. Use unknown casts because ajv is a CJS module whose types
+   366→  // don't perfectly fit the ESM-style default import.
+   367→  const AjvModule = await import('ajv');
+   368→  const AjvCtor = (AjvModule as unknown as { default: new (opts?: object) => unknown }).default;
+   369→  const addFormatsModule = await import('ajv-formats');
+   370→  const addFormats = (addFormatsModule as unknown as { default: (ajv: unknown) => void }).default;
+   371→  const schemaModule = await import('../../../schemas/manifest.schema.json', { with: { type: 'json' } });
+   372→  const schema = (schemaModule as unknown as { default: object }).default;
+   373→  type AjvInstance = {
+   374→    compile: (schema: object) => {
+   375→      (data: unknown): boolean;
+   376→      errors?: Array<{ instancePath: string; message?: string; keyword?: string }> | null;
+   377→    };
+   378→  };
+   379→  const ajv = new AjvCtor({ allErrors: true, strict: false }) as AjvInstance;
+   380→  addFormats(ajv);
+   381→  const validate = ajv.compile(schema);
+   382→  const valid = validate(manifest);
+   383→  const errors: ValidationError[] = [];
+   384→
+   385→  if (!valid) {
+   386→    for (const err of validate.errors ?? []) {
+   387→      errors.push({
+   388→        path: err.instancePath || '/',
+   389→        message: err.message ?? 'validation error',
+   390→        keyword: err.keyword,
+   391→      });
+   392→    }
+   393→    return { valid: false, errors };
+   394→  }
+   395→
+   396→  // Precondition checks
+   397→  if (options.checkExists && options.store) {
+   398→    const m = manifest as { preconditions?: Array<{ type: string; uri?: string }> };
+   399→    for (const pre of m.preconditions ?? []) {
+   400→      if (pre.type === 'artifact_exists' && pre.uri) {
+   401→        try {
+   402→          const resolved = await resolveArtifact(pre.uri, options.runContext ?? {}, options.store);
+   403→          const exists = await options.store.exists(resolved.resolvedUri);
+   404→          if (!exists) {
+   405→            errors.push({
+   406→              path: `/preconditions/${pre.uri}`,
+   407→              message: `Precondition artifact_exists failed: ${resolved.resolvedUri} does not exist`,
+   408→              keyword: 'artifact_exists',
+   409→            });
+   410→          }
+   411→        } catch (err) {
+   412→          errors.push({
+   413→            path: `/preconditions/${pre.uri}`,
+   414→            message: `Precondition check failed: ${(err as Error).message}`,
+   415→            keyword: 'artifact_exists',
+   416→          });
+   417→        }
+   418→      }
+   419→    }
+   420→  }
+   421→
+   422→  return { valid: errors.length === 0, errors };
+   423→}
+   424→
+   425→// ──────────────────────────────────────────────────────────────────────────
+   426→//  Primitive 4: publishArtifact
+   427→// ──────────────────────────────────────────────────────────────────────────
+   428→
+   429→/**
+   430→ * Upload an artifact to the store and return its canonical Quilt URI.
+   431→ * The version is derived from the content hash (sha256) by default, or
+   432→ * from `metadata.version` if provided. This makes publishes content-
+   433→ * addressed and idempotent.
+   434→ *
+   435→ * @example
+   436→ *   const path = "trained_model.bin";
+   437→ *   const bytes = await readFile(path);
+   438→ *   const { uri, version } = await publishArtifact(bytes, {
+   439→ *     manifestId: "train-classifier",
+   440→ *     runId: "run-20260819-01",
+   441→ *     tags: ["model", "production"],
+   442→ *   }, store);
+   443→ *   // -> uri: "quilt://artifacts/trained_model:abc123...", version: "abc123..."
+   444→ */
+   445→export async function publishArtifact(
+   446→  source: Uint8Array | string | { path: string },
+   447→  metadata: ArtifactMetadata,
+   448→  store: ArtifactStore,
+   449→): Promise<{ uri: QuiltURI; version: string; contentHash: string }> {
+   450→  let bytes: Uint8Array;
+   451→  if (typeof source === 'string') {
+   452→    bytes = new TextEncoder().encode(source);
+   453→  } else if (source instanceof Uint8Array) {
+   454→    bytes = source;
+   455→  } else {
+   456→    // { path: string }
+   457→    const buf = await readFile(source.path);
+   458→    bytes = new Uint8Array(buf);
+   459→  }
+   460→
+   461→  const contentHash = metadata.contentHash ?? hashBytes(bytes);
+   462→
+   463→  // Logical URI: derive from metadata or generate a UUID
+   464→  const logicalName = (metadata.manifestId ?? 'artifact') + '/' + (metadata.runId ?? shortHash(bytes));
+   465→  const logicalUri = `quilt://artifacts/${logicalName}`;
+   466→
+   467→  const enrichedMetadata: ArtifactMetadata = {
+   468→    ...metadata,
+   469→    contentHash,
+   470→    createdAt: metadata.createdAt ?? new Date().toISOString(),
+   471→  };
+   472→
+   473→  const result = await store.put(logicalUri, bytes, enrichedMetadata);
+   474→  return {
+   475→    uri: result.uri,
+   476→    version: result.version,
+   477→    contentHash,
+   478→  };
+   479→}
+   480→
+   481→function hashBytes(bytes: Uint8Array): string {
+   482→  return createHash('sha256').update(bytes).digest('hex');
+   483→}
+   484→
+   485→function shortHash(bytes: Uint8Array): string {
+   486→  return hashBytes(bytes).slice(0, 8);
+   487→}
+   488→
+   489→// ──────────────────────────────────────────────────────────────────────────
+   490→//  Primitive 5: publishRunTrace
+   491→// ──────────────────────────────────────────────────────────────────────────
+   492→
+   493→/**
+   494→ * Persist a run_trace as an immutable Quilt artifact. Run traces are
+   495→ * always versioned by run_id so they can be replayed deterministically.
+   496→ *
+   497→ * The run_trace itself is the audit log: who ran what, when, with what
+   498→ * inputs, producing what outputs, and what happened at each node. It
+   499→ * is the single canonical record of an execution.
+   500→ *
+   501→ * @example
+   502→ *   await publishRunTrace({
+   503→ *     runId: "run-20260819-01",
+   504→ *     planId: "plan-abc",
+   505→ *     manifestId: "train-classifier",
+   506→ *     startTime: "2026-08-19T11:00:00Z",
+   507→ *     endTime:   "2026-08-19T11:42:13Z",
+   508→ *     status: "success",
+   509→ *     nodes: [
+   510→ *       { nodeId: "ingest",  status: "success", artifactUris: ["quilt://data/raw:v1"] },
+   511→ *       { nodeId: "train",   status: "success", artifactUris: ["quilt://models/classifier:abc123"] },
+   512→ *       { nodeId: "validate", status: "success" },
+   513→ *     ],
+   514→ *     provenance: { commit: "9f8a7b", plannerVersion: "1.0.0" },
+   515→ *   }, store);
+   516→ */
+   517→export async function publishRunTrace(
+   518→  trace: RunTrace,
+   519→  store: ArtifactStore,
+   520→): Promise<{ uri: QuiltURI; version: string }> {
+   521→  if (!trace.runId) {
+   522→    throw new Error('RunTrace must have a runId');
+   523→  }
+   524→  if (!trace.nodes || trace.nodes.length === 0) {
+   525→    throw new Error('RunTrace must have at least one node');
+   526→  }
+   527→
+   528→  const json = JSON.stringify(trace, null, 2);
+   529→  const bytes = new TextEncoder().encode(json);
+   530→  const contentHash = hashBytes(bytes);
+   531→
+   532→  const metadata: ArtifactMetadata = {
+   533→    contentType: 'application/json',
+   534→    contentHash,
+   535→    manifestId: trace.manifestId,
+   536→    runId: trace.runId,
+   537→    tags: ['run-trace', ...(trace.replayHint?.tags ?? [])],
+   538→    createdAt: trace.startTime,
+   539→    ...trace.provenance,
+   540→  };
+   541→
+   542→  const logicalUri = `quilt://runs/${trace.manifestId ?? 'unscoped'}/${trace.runId}`;
+   543→  const result = await store.put(logicalUri, bytes, { ...metadata, version: contentHash.slice(0, 12) });
+   544→
+   545→  return {
+   546→    uri: result.uri,
+   547→    version: result.version,
+   548→  };
+   549→}
+   550→
+   551→// ──────────────────────────────────────────────────────────────────────────
+   552→//  In-memory ArtifactStore (for tests and small demos)
+   553→// ──────────────────────────────────────────────────────────────────────────
+   554→
+   555→/**
+   556→ * A minimal in-memory artifact store. Useful for tests, examples, and
+   557→ * browser-based demos where there is no real backend. Production
+   558→ * deployments should swap this for a Cloudflare R2 / S3 implementation.
+   559→ */
+   560→export class InMemoryArtifactStore implements ArtifactStore {
+   561→  private store = new Map<string, { bytes: Uint8Array; metadata: ArtifactMetadata }>();
+   562→
+   563→  async put(logicalUri: QuiltURI, bytes: Uint8Array | string, metadata: ArtifactMetadata): Promise<{ uri: QuiltURI; version: string }> {
+   564→    const data = typeof bytes === 'string' ? new TextEncoder().encode(bytes) : bytes;
+   565→    const contentHash = metadata.contentHash ?? hashBytes(data);
+   566→    const version = metadata.version ?? contentHash.slice(0, 12);
+   567→    const fullUri = `${logicalUri}:${version}`;
+   568→    this.store.set(fullUri, { bytes: data, metadata: { ...metadata, contentHash, createdAt: metadata.createdAt ?? new Date().toISOString() } });
+   569→    return { uri: fullUri, version };
+   570→  }
+   571→
+   572→  async get(uri: QuiltURI): Promise<{ bytes: Uint8Array; metadata: ArtifactMetadata }> {
+   573→    const entry = this.store.get(uri);
+   574→    if (!entry) throw new Error(`Artifact not found: ${uri}`);
+   575→    return entry;
+   576→  }
+   577→
+   578→  async exists(uri: QuiltURI): Promise<boolean> {
+   579→    return this.store.has(uri);
+   580→  }
+   581→
+   582→  async listVersions(logicalUri: QuiltURI): Promise<{ version: string; createdAt: string }[]> {
+   583→    const out: { version: string; createdAt: string }[] = [];
+   584→    const prefix = logicalUri + ':';
+   585→    for (const [uri, entry] of this.store) {
+   586→      if (uri.startsWith(prefix)) {
+   587→        const version = uri.slice(prefix.length);
+   588→        const createdAt = entry.metadata.createdAt;
+   589→        out.push({ version, createdAt: typeof createdAt === 'string' ? createdAt : '' });
+   590→      }
+   591→    }
+   592→    return out;
+   593→  }
+   594→
+   595→  /** Inspect everything (for debugging). */
+   596→  entries(): Array<[string, ArtifactMetadata]> {
+   597→    return Array.from(this.store.entries()).map(([uri, e]) => [uri, e.metadata]);
+   598→  }
+   599→}
+   600→
+   601→// ──────────────────────────────────────────────────────────────────────────
+   602→//  Federation: cells and quilts that link to other cells and quilts
+   603→// ──────────────────────────────────────────────────────────────────────────
+   604→
+   605→/**
+   606→ * A federated cell reference. The format is:
+   607→ *
+   608→ *   quilt://[instance-id]/[sheet-id]#[cell-path]
+   609→ *
+   610→ * Examples:
+   611→ *   quilt://local/boat-autopilot#rudder.angle
+   612→ *   quilt://jetson-lab/perception#vision.scene
+   613→ *   quilt://codespace-7c3/prod#anomaly.detector
+   614→ *   quilt://*#/anywhere           — wildcard routing
+   615→ *   quilt://esp32-fleet/+/rudder.angle — fleet-wide cell
+   616→ *
+   617→ * The instance-id can be a name, IP, hostname, or `local` for the
+   618→ * current process. The sheet-id identifies a loaded sheet. The
+   619→ * cell-path uses dots, like a Quilt cell id.
+   620→ */
+   621→export interface FederatedCellRef {
+   622→  /** The original URI. */
+   623→  uri: string;
+   624→  /** Instance id (e.g. "local", "jetson-lab", "codespace-7c3"). */
+   625→  instance: string;
+   626→  /** Sheet id (e.g. "boat-autopilot", "prod"). */
+   627→  sheet: string;
+   628→  /** Cell path within the sheet (e.g. "rudder.angle"). */
+   629→  cellPath: string;
+   630→  /** Whether this is a wildcard reference (`*` or `+`). */
+   631→  isWildcard: boolean;
+   632→}
+   633→
+   634→/**
+   635→ * Parse a federated cell URI into its parts. Throws on malformed URIs.
+   636→ *
+   637→ * @example
+   638→ *   parseCellRef("quilt://local/boat-autopilot#rudder.angle")
+   639→ *   // -> { instance: "local", sheet: "boat-autopilot", cellPath: "rudder.angle", ... }
+   640→ */
+   641→export function parseCellRef(uri: string): FederatedCellRef {
+   642→  if (!uri.startsWith('quilt://')) {
+   643→    throw new CellRefError(`Cell ref must start with "quilt://": ${uri}`);
+   644→  }
+   645→  const afterScheme = uri.slice('quilt://'.length);
+   646→  const hashIdx = afterScheme.indexOf('#');
+   647→  if (hashIdx < 0) {
+   648→    throw new CellRefError(`Cell ref must contain "#" separator: ${uri}`);
+   649→  }
+   650→  const pathPart = afterScheme.slice(0, hashIdx);
+   651→  const cellPath = afterScheme.slice(hashIdx + 1);
+   652→  if (!cellPath) {
+   653→    throw new CellRefError(`Cell ref has empty cell path: ${uri}`);
+   654→  }
+   655→
+   656→  const pathSegments = pathPart.split('/').filter((s) => s.length > 0);
+   657→  if (pathSegments.length < 2) {
+   658→    throw new CellRefError(
+   659→      `Cell ref needs both instance and sheet: ${uri}. ` +
+   660→      `Expected: quilt://[instance]/[sheet]#[cell-path]`,
+   661→    );
+   662→  }
+   663→  const [instance, sheet] = pathSegments;
+   664→  const isWildcard = instance === '*' || sheet === '+' || cellPath === '*';
+   665→
+   666→  return {
+   667→    uri,
+   668→    instance: instance!,
+   669→    sheet: sheet!,
+   670→    cellPath,
+   671→    isWildcard,
+   672→  };
+   673→}
+   674→
+   675→export class CellRefError extends Error {
+   676→  readonly uri: string;
+   677→  constructor(message: string, uri: string = '') {
+   678→    super(message);
+   679→    this.name = 'CellRefError';
+   680→    this.uri = uri;
+   681→  }
+   682→}
+   683→
+   684→/**
+   685→ * A live handle to a cell, locally or on a remote Quilt. Wraps a
+   686→ * subscription so callers can `await handle.get()`, `await
+   687→ * handle.set(v)`, and `await handle.unsubscribe()`.
+   688→ *
+   689→ * The handle is the federated equivalent of a cell id: addressable,
+   690→ * subscribable, and inspectable. It hides the difference between
+   691→ * "value is in this process" and "value is on another Quilt 4 hops
+   692→ * away" — the caller doesn't care.
+   693→ */
+   694→export interface CellHandle {
+   695→  /** The original URI. */
+   696→  readonly uri: string;
+   697→  /** Get the current value. */
+   698→  get(): Promise<unknown>;
+   699→  /** Set the value (if the cell is settable; throws on read-only). */
+   700→  set(value: unknown): Promise<void>;
+   701→  /** Subscribe to changes. Returns an unsubscribe function. */
+   702→  subscribe(callback: (value: unknown) => void): () => void;
+   703→  /** Unsubscribe all listeners. */
+   704→  unsubscribe(): void;
+   705→}
+   706→
+   707→/**
+   708→ * A transport for fetching cells from a remote Quilt instance. The
+   709→ * default in-process implementation reads from a local engine; the
+   710→ * HTTP/MCP/WebSocket implementation talks to a remote Quilt.
+   711→ */
+   712→export interface CellTransport {
+   713→  /** Get a cell value. */
+   714→  get(instance: string, sheet: string, cellPath: string): Promise<unknown>;
+   715→  /** Set a cell value. */
+   716→  set(instance: string, sheet: string, cellPath: string, value: unknown): Promise<void>;
+   717→  /** Subscribe to cell changes. Returns an unsubscribe function. */
+   718→  subscribe(
+   719→    instance: string,
+   720→    sheet: string,
+   721→    cellPath: string,
+   722→    callback: (value: unknown) => void
+   723→  ): () => void;
+   724→}
+   725→
+   726→/**
+   727→ * A local in-process transport backed by a QuiltEngine-like object.
+   728→ * The minimal contract needed is `getCell`, `setCell`, and `subscribe`.
+   729→ * This works with `@quilt/core`'s `QuiltEngine` directly.
+   730→ */
+   731→export interface LocalEngine {
+   732→  getCell(sheetId: string, cellPath: string): Promise<unknown>;
+   733→  setCell(sheetId: string, cellPath: string, value: unknown): Promise<void>;
+   734→  subscribe(sheetId: string, cellPath: string, callback: (value: unknown) => void): () => void;
+   735→}
+   736→
+   737→/**
+   738→ * The most common transport: the local process. If `instance` is
+   739→ * "local" or matches the configured `localInstanceId`, read from the
+   740→ * local engine. Otherwise, raise — the caller should provide a
+   741→ * RemoteCellTransport for non-local instances.
+   742→ */
+   743→export class LocalCellTransport implements CellTransport {
+   744→  private listeners = new Map<string, Set<(value: unknown) => void>>();
+   745→
+   746→  constructor(
+   747→    private readonly engines: Map<string, LocalEngine>,
+   748→    private readonly localInstanceId: string = 'local',
+   749→  ) {}
+   750→
+   751→  async get(instance: string, sheet: string, cellPath: string): Promise<unknown> {
+   752→    const engine = this.engineFor(instance);
+   753→    return engine.getCell(sheet, cellPath);
+   754→  }
+   755→
+   756→  async set(instance: string, sheet: string, cellPath: string, value: unknown): Promise<void> {
+   757→    const engine = this.engineFor(instance);
+   758→    await engine.setCell(sheet, cellPath, value);
+   759→  }
+   760→
+   761→  subscribe(
+   762→    instance: string,
+   763→    sheet: string,
+   764→    cellPath: string,
+   765→    callback: (value: unknown) => void,
+   766→  ): () => void {
+   767→    const engine = this.engineFor(instance);
+   768→    const unsub = engine.subscribe(sheet, cellPath, callback);
+   769→    return unsub;
+   770→  }
+   771→
+   772→  private engineFor(instance: string): LocalEngine {
+   773→    if (instance === 'local' || instance === this.localInstanceId) {
+   774→      // For "local", use the first registered engine (the convention is
+   775→      // one local engine per process)
+   776→      const first = this.engines.values().next().value;
+   777→      if (!first) {
+   778→        throw new CellRefError('No local engine registered');
+   779→      }
+   780→      return first;
+   781→    }
+   782→    const engine = this.engines.get(instance);
+   783→    if (!engine) {
+   784→      throw new CellRefError(
+   785→        `No engine registered for instance "${instance}". ` +
+   786→        `Registered: ${Array.from(this.engines.keys()).join(', ') || '(none)'}`,
+   787→      );
+   788→    }
+   789→    return engine;
+   790→  }
+   791→}
+   792→
+   793→/**
+   794→ * An HTTP-based transport for talking to a remote Quilt instance.
+   795→ * The remote must expose a compatible HTTP API. See `quilt-codespace`
+   796→ * for the reference implementation.
+   797→ *
+   798→ * @example
+   799→ *   const remote = new HttpCellTransport('https://my-codespace-7681.githubpreview.dev', 'my-token');
+   800→ *   const value = await remote.get('codespace-7c3', 'prod', 'anomaly.score');
+   801→ */
+   802→export class HttpCellTransport implements CellTransport {
+   803→  private listeners = new Map<string, Set<(value: unknown) => void>>();
+   804→  private eventSources = new Map<string, EventSource>();
+   805→
+   806→  constructor(
+   807→    private readonly baseUrl: string,
+   808→    private readonly token: string,
+   809→  ) {}
+   810→
+   811→  private headers(): Record<string, string> {
+   812→    return {
+   813→      'Authorization': `Bearer ${this.token}`,
+   814→      'Content-Type': 'application/json',
+   815→    };
+   816→  }
+   817→
+   818→  private cellPath(instance: string, sheet: string, cellPath: string): string {
+   819→    return `/cells/${encodeURIComponent(instance)}/${encodeURIComponent(sheet)}/${cellPath
+   820→      .split('.')
+   821→      .map(encodeURIComponent)
+   822→      .join('/')}`;
+   823→  }
+   824→
+   825→  async get(instance: string, sheet: string, cellPath: string): Promise<unknown> {
+   826→    const url = `${this.baseUrl}${this.cellPath(instance, sheet, cellPath)}`;
+   827→    const res = await fetch(url, { headers: this.headers() });
+   828→    if (!res.ok) {
+   829→      throw new CellRefError(`HTTP ${res.status} getting ${url}: ${await res.text()}`, url);
+   830→    }
+   831→    const body = await res.json() as { value: unknown };
+   832→    return body.value;
+   833→  }
+   834→
+   835→  async set(instance: string, sheet: string, cellPath: string, value: unknown): Promise<void> {
+   836→    const url = `${this.baseUrl}${this.cellPath(instance, sheet, cellPath)}`;
+   837→    const res = await fetch(url, {
+   838→      method: 'PUT',
+   839→      headers: this.headers(),
+   840→      body: JSON.stringify({ value }),
+   841→    });
+   842→    if (!res.ok) {
+   843→      throw new CellRefError(`HTTP ${res.status} setting ${url}: ${await res.text()}`, url);
+   844→    }
+   845→  }
+   846→
+   847→  subscribe(
+   848→    instance: string,
+   849→    sheet: string,
+   850→    cellPath: string,
+   851→    callback: (value: unknown) => void,
+   852→  ): () => void {
+   853→    const key = `${instance}/${sheet}/${cellPath}`;
+   854→    let set = this.listeners.get(key);
+   855→    if (!set) {
+   856→      set = new Set();
+   857→      this.listeners.set(key, set);
+   858→    }
+   859→    set.add(callback);
+   860→
+   861→    // Open SSE connection if this is the first listener
+   862→    if (set.size === 1) {
+   863→      const url = `${this.baseUrl}${this.cellPath(instance, sheet, cellPath)}/events`;
+   864→      const es = new EventSource(url, { withCredentials: false });
+   865→      // Note: EventSource doesn't support custom headers, so the token
+   866→      // must be passed via query string in the actual URL. The
+   867→      // reference Quilt Codespace exposes a token-validated SSE
+   868→      // endpoint at /events?token=...
+   869→      es.onmessage = (ev) => {
+   870→        try {
+   871→          const data = JSON.parse(ev.data) as { value: unknown };
+   872→          for (const cb of this.listeners.get(key) ?? []) {
+   873→            cb(data.value);
+   874→          }
+   875→        } catch {
+   876→          // ignore malformed events
+   877→        }
+   878→      };
+   879→      this.eventSources.set(key, es);
+   880→    }
+   881→
+   882→    return () => {
+   883→      const s = this.listeners.get(key);
+   884→      if (!s) return;
+   885→      s.delete(callback);
+   886→      if (s.size === 0) {
+   887→        this.listeners.delete(key);
+   888→        const es = this.eventSources.get(key);
+   889→        if (es) {
+   890→          es.close();
+   891→          this.eventSources.delete(key);
+   892→        }
+   893→      }
+   894→    };
+   895→  }
+   896→}
+   897→
+   898→/**
+   899→ * Resolve a federated cell URI to a live, subscribable handle.
+   900→ *
+   901→ * This is the federation equivalent of `resolveArtifact`:
+   902→ * - `resolveArtifact` pins an artifact to a version
+   903→ * - `resolveCell` pins a cell to a live handle
+   904→ *
+   905→ * @example
+   906→ *   const handle = await resolveCell('quilt://local/boat-autopilot#rudder.angle', transport);
+   907→ *   const value = await handle.get();
+   908→ *   const unsub = handle.subscribe((v) => console.log('rudder changed:', v));
+   909→ */
+   910→export async function resolveCell(uri: string, transport: CellTransport): Promise<CellHandle> {
+   911→  const ref = parseCellRef(uri);
+   912→  if (ref.isWildcard) {
+   913→    throw new CellRefError(
+   914→      `Wildcard cell refs cannot be resolved to a single handle: ${uri}. ` +
+   915→      `Use a routing table or fleet-discovery to expand wildcards first.`,
+   916→    );
+   917→  }
+   918→
+   919→  // Validate the cell exists by attempting a get
+   920→  await transport.get(ref.instance, ref.sheet, ref.cellPath);
+   921→
+   922→  let unsubscribed = false;
+   923→  const localListeners = new Set<(value: unknown) => void>();
+   924→
+   925→  return {
+   926→    uri,
+   927→    async get() {
+   928→      return transport.get(ref.instance, ref.sheet, ref.cellPath);
+   929→    },
+   930→    async set(value: unknown) {
+   931→      await transport.set(ref.instance, ref.sheet, ref.cellPath, value);
+   932→    },
+   933→    subscribe(callback) {
+   934→      if (unsubscribed) throw new CellRefError('Cannot subscribe to an unsubscribed handle');
+   935→      localListeners.add(callback);
+   936→      const unsub = transport.subscribe(ref.instance, ref.sheet, ref.cellPath, (v) => {
+   937→        if (!unsubscribed) callback(v);
+   938→      });
+   939→      return () => {
+   940→        localListeners.delete(callback);
+   941→        unsub();
+   942→      };
+   943→    },
+   944→    unsubscribe() {
+   945→      unsubscribed = true;
+   946→      localListeners.clear();
+   947→    },
+   948→  };
+   949→}
+   950→
+   951→/**
+   952→ * Subscribe to a federated cell. Convenience wrapper around
+   953→ * `resolveCell` + `handle.subscribe`. The callback fires for every
+   954→ * value change until the returned unsubscribe is called.
+   955→ *
+   956→ * @example
+   957→ *   const unsub = subscribeCell(
+   958→ *     'quilt://jetson-lab/perception#vision.scene',
+   959→ *     transport,
+   960→ *     (scene) => console.log('new scene:', scene)
+   961→ *   );
+   962→ *   // ...later
+   963→ *   unsub();
+   964→ */
+   965→export function subscribeCell(
+   966→  uri: string,
+   967→  transport: CellTransport,
+   968→  callback: (value: unknown) => void,
+   969→): () => void {
+   970→  let unsub: (() => void) | null = null;
+   971→  let cancelled = false;
+   972→
+   973→  resolveCell(uri, transport)
+   974→    .then((handle) => {
+   975→      if (cancelled) {
+   976→        handle.unsubscribe();
+   977→        return;
+   978→      }
+   979→      unsub = handle.subscribe(callback);
+   980→    })
+   981→    .catch((err) => {
+   982→      // Fire callback with the error so the caller can log it
+   983→      callback({ __subscribeError: (err as Error).message });
+   984→    });
+   985→
+   986→  return () => {
+   987→    cancelled = true;
+   988→    if (unsub) unsub();
+   989→  };
+   990→}
+   991→
+   992→/**
+   993→ * A routing table for federated cells. Maps wildcard patterns to
+   994→ * specific instance ids. Like DNS for cells:
+   995→ *   quilt://[*]/prod#x  ->  quilt://codespace-7c3/prod#x
+   996→ * (the wildcards are written as [*] and + to avoid ending the comment)
+   997→ *
+   998→ * The simplest routing is instance-prefix matching:
+   999→ *   "*"              -> "local" (default)
+  1000→ *   "jetson-*"       -> "jetson-lab"
+  1001→ *   "esp32-*"        -> first esp32 in fleet
+  1002→ *
+  1003→ * @example
+  1004→ *   const router = new CellRouter();
+  1005→ *   router.add('local', localTransport);
+  1006→ *   router.add('jetson-lab', httpTransport1);
+  1007→ *   router.add('codespace-7c3', httpTransport2);
+  1008→ *
+  1009→ *   const handle = await router.resolve('quilt://jetson-lab/perception#vision.scene');
+  1010→ *   // -> uses httpTransport1
+  1011→ */
+  1012→export class CellRouter {
+  1013→  private transports = new Map<string, CellTransport>();
+  1014→
+  1015→  /** Register a transport for a specific instance id. */
+  1016→  add(instance: string, transport: CellTransport): this {
+  1017→    this.transports.set(instance, transport);
+  1018→    return this;
+  1019→  }
+  1020→
+  1021→  /** Remove a transport. */
+  1022→  remove(instance: string): boolean {
+  1023→    return this.transports.delete(instance);
+  1024→  }
+  1025→
+  1026→  /** Resolve a cell URI to a live handle, routing through the right transport. */
+  1027→  async resolve(uri: string): Promise<CellHandle> {
+  1028→    const ref = parseCellRef(uri);
+  1029→    const transport = this.transports.get(ref.instance);
+  1030→    if (!transport) {
+  1031→      throw new CellRefError(
+  1032→        `No transport registered for instance "${ref.instance}". ` +
+  1033→        `Registered: ${Array.from(this.transports.keys()).join(', ') || '(none)'}`,
+  1034→      );
+  1035→    }
+  1036→    return resolveCell(uri, transport);
+  1037→  }
+  1038→
+  1039→  /** Subscribe to a cell, routing through the right transport. */
+  1040→  subscribe(uri: string, callback: (value: unknown) => void): () => void {
+  1041→    const ref = parseCellRef(uri);
+  1042→    const transport = this.transports.get(ref.instance);
+  1043→    if (!transport) {
+  1044→      throw new CellRefError(
+  1045→        `No transport registered for instance "${ref.instance}". ` +
+  1046→        `Registered: ${Array.from(this.transports.keys()).join(', ') || '(none)'}`,
+  1047→      );
+  1048→    }
+  1049→    return subscribeCell(uri, transport, callback);
+  1050→  }
+  1051→
+  1052→  /** List all registered instance ids. */
+  1053→  instances(): string[] {
+  1054→    return Array.from(this.transports.keys());
+  1055→  }
+  1056→}
+  1057→
+  1058→// ──────────────────────────────────────────────────────────────────────────
+  1059→//  Deployment-tier detection
+  1060→// ──────────────────────────────────────────────────────────────────────────
+  1061→
+  1062→/**
+  1063→ * The deployment tier this Quilt is running in. Each tier has different
+  1064→ * capabilities (memory, async support, network) and connects to
+  1065→ * different siblings in a federation.
+  1066→ *
+  1067→ * Mirrors cocapn-runtime's "room" abstraction:
+  1068→ *   ESP32 bare metal  -> quilt-esp32 (no_std, sensors+actuators)
+  1069→ *   Jetson/Pi edge    -> quilt-jetson (sync + alloc, vision)
+  1070→ *   Codespace         -> quilt-codespace (async, ttyd + MCP)
+  1071→ *   Docker container  -> quilt-cloudflare (Workers, edge)
+  1072→ *   Lighthouse cloud  -> quilt-codespace persistent (fleet coord)
+  1073→ */
+  1074→export type QuiltTier =
+  1075→  | 'esp32' // bare metal, no_std, sensors + actuators
+  1076→  | 'jetson' // edge, sync + alloc, vision
+  1077→  | 'codespace' // GitHub Codespace, async, ttyd + MCP
+  1078→  | 'cloudflare' // Cloudflare Worker, V8 isolates
+  1079→  | 'server' // generic Node.js server
+  1080→  | 'browser' // browser, Web APIs
+  1081→  | 'unknown';
+  1082→
+  1083→/**
+  1084→ * Information about the detected deployment tier. Use this to decide
+  1085→ * which siblings to federate with and which capabilities to advertise.
+  1086→ */
+  1087→export interface TierInfo {
+  1088→  tier: QuiltTier;
+  1089→  /** Auto-generated instance id (e.g. "esp32-abc123", "codespace-7c3f1"). */
+  1090→  instanceId: string;
+  1091→  /** Human-readable platform name (e.g. "GitHub Codespace", "ESP32-WROOM-32"). */
+  1092→  platform: string;
+  1093→  /** Capabilities the tier supports. */
+  1094→  capabilities: {
+  1095→    async: boolean;
+  1096→    network: boolean;
+  1097→    filesystem: boolean;
+  1098→    persistent: boolean;
+  1099→    gpu: boolean;
+  1100→    llmApi: boolean;
+  1101→  };
+  1102→  /** Connection hints for sibling tiers. */
+  1103→  siblings: string[];
+  1104→}
+  1105→
+  1106→/**
+  1107→ * Detect the deployment tier this Quilt is running in. Looks at env
+  1108→ * vars, runtime markers, and platform-specific signals.
+  1109→ *
+  1110→ * Override with the `QUILT_TIER` env var (one of: esp32, jetson,
+  1111→ * codespace, cloudflare, server, browser).
+  1112→ *
+  1113→ * @example
+  1114→ *   const tier = detectTier();
+  1115→ *   // -> { tier: 'codespace', instanceId: 'codespace-a1b2', platform: 'GitHub Codespace', ... }
+  1116→ */
+  1117→export function detectTier(): TierInfo {
+  1118→  // Manual override
+  1119→  const override = (typeof process !== 'undefined' ? process.env?.QUILT_TIER : undefined) as QuiltTier | undefined;
+  1120→  if (override) {
+  1121→    return tierInfoFor(override);
+  1122→  }
+  1123→
+  1124→  // Cloudflare Worker
+  1125→  if (typeof globalThis !== 'undefined' && (globalThis as { caches?: unknown }).caches !== undefined && typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== 'undefined') {
+  1126→    return tierInfoFor('cloudflare');
+  1127→  }
+  1128→
+  1129→  // GitHub Codespace
+  1130→  if (typeof process !== 'undefined' && process.env?.CODESPACES === 'true') {
+  1131→    return tierInfoFor('codespace');
+  1132→  }
+  1133→
+  1134→  // ESP32 / embedded (very rough — real detection needs no_std Rust)
+  1135→  if (typeof process !== 'undefined' && (process.env?.QUILT_TARGET === 'esp32' || process.env?.PLATFORM === 'esp32')) {
+  1136→    return tierInfoFor('esp32');
+  1137→  }
+  1138→
+  1139→  // Jetson / edge (CUDA available, ARM64, etc.)
+  1140→  if (typeof process !== 'undefined' && process.env?.QUILT_TARGET === 'jetson') {
+  1141→    return tierInfoFor('jetson');
+  1142→  }
+  1143→
+  1144→  // Browser
+  1145→  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  1146→    return tierInfoFor('browser');
+  1147→  }
+  1148→
+  1149→  // Generic server
+  1150→  if (typeof process !== 'undefined' && process.versions?.node) {
+  1151→    return tierInfoFor('server');
+  1152→  }
+  1153→
+  1154→  return tierInfoFor('unknown');
+  1155→}
+  1156→
+  1157→/**
+  1158→ * Build a TierInfo for a given tier, including auto-generated instance
+  1159→ * id and platform name.
+  1160→ */
+  1161→export function tierInfoFor(tier: QuiltTier): TierInfo {
+  1162→  const instanceId = generateInstanceId(tier);
+  1163→  switch (tier) {
+  1164→    case 'esp32':
+  1165→      return {
+  1166→        tier,
+  1167→        instanceId,
+  1168→        platform: 'ESP32 (no_std)',
+  1169→        capabilities: {
+  1170→          async: false,
+  1171→          network: true, // WiFi
+  1172→          filesystem: true, // NVS / flash
+  1173→          persistent: true,
+  1174→          gpu: false,
+  1175→          llmApi: false, // too small
+  1176→        },
+  1177→        siblings: ['jetson', 'codespace'],
+  1178→      };
+  1179→    case 'jetson':
+  1180→      return {
+  1181→        tier,
+  1182→        instanceId,
+  1183→        platform: 'Jetson / Edge (Linux + CUDA)',
+  1184→        capabilities: {
+  1185→          async: true,
+  1186→          network: true,
+  1187→          filesystem: true,
+  1188→          persistent: true,
+  1189→          gpu: true,
+  1190→          llmApi: true, // can run small models locally
+  1191→        },
+  1192→        siblings: ['esp32', 'codespace', 'cloudflare'],
+  1193→      };
+  1194→    case 'codespace':
+  1195→      return {
+  1196→        tier,
+  1197→        instanceId,
+  1198→        platform: 'GitHub Codespace (Linux container)',
+  1199→        capabilities: {
+  1200→          async: true,
+  1201→          network: true,
+  1202→          filesystem: true,
+  1203→          persistent: false, // ephemeral by default
+  1204→          gpu: false, // no GPU in codespace
+  1205→          llmApi: true,
+  1206→        },
+  1207→        siblings: ['jetson', 'cloudflare', 'server'],
+  1208→      };
+  1209→    case 'cloudflare':
+  1210→      return {
+  1211→        tier,
+  1212→        instanceId,
+  1213→        platform: 'Cloudflare Worker (V8 isolate)',
+  1214→        capabilities: {
+  1215→          async: true,
+  1216→          network: true,
+  1217→          filesystem: false, // no local FS
+  1218→          persistent: true, // D1, KV, R2
+  1219→          gpu: false,
+  1220→          llmApi: true, // Workers AI
+  1221→        },
+  1222→        siblings: ['codespace', 'jetson'],
+  1223→      };
+  1224→    case 'server':
+  1225→      return {
+  1226→        tier,
+  1227→        instanceId,
+  1228→        platform: 'Generic server (Node.js / Bun / Deno)',
+  1229→        capabilities: {
+  1230→          async: true,
+  1231→          network: true,
+  1232→          filesystem: true,
+  1233→          persistent: true,
+  1234→          gpu: true, // if hardware available
+  1235→          llmApi: true,
+  1236→        },
+  1237→        siblings: ['codespace', 'jetson', 'cloudflare'],
+  1238→      };
+  1239→    case 'browser':
+  1240→      return {
+  1241→        tier,
+  1242→        instanceId,
+  1243→        platform: 'Browser (Web)',
+  1244→        capabilities: {
+  1245→          async: true,
+  1246→          network: true,
+  1247→          filesystem: false, // no FS
+  1248→          persistent: true, // IndexedDB / localStorage
+  1249→          gpu: true, // WebGL
+  1250→          llmApi: true, // browser LLM
+  1251→        },
+  1252→        siblings: ['codespace', 'cloudflare', 'server'],
+  1253→      };
+  1254→    case 'unknown':
+  1255→    default:
+  1256→      return {
+  1257→        tier: 'unknown',
+  1258→        instanceId,
+  1259→        platform: 'Unknown',
+  1260→        capabilities: {
+  1261→          async: false,
+  1262→          network: false,
+  1263→          filesystem: false,
+  1264→          persistent: false,
+  1265→          gpu: false,
+  1266→          llmApi: false,
+  1267→        },
+  1268→        siblings: [],
+  1269→      };
+  1270→  }
+  1271→}
+  1272→
+  1273→function generateInstanceId(tier: QuiltTier): string {
+  1274→  const env = typeof process !== 'undefined' ? process.env : {};
+  1275→  // Honor explicit instance id
+  1276→  if (env.QUILT_INSTANCE_ID) return env.QUILT_INSTANCE_ID;
+  1277→
+  1278→  // Honor Codespace name
+  1279→  if (env.CODESPACE_NAME) return `codespace-${env.CODESPACE_NAME.split('-').pop()}`;
+  1280→
+  1281→  // Honor hostname
+  1282→  let hostname = 'local';
+  1283→  try {
+  1284→    if (typeof process !== 'undefined' && process.env?.HOSTNAME) {
+  1285→      hostname = process.env.HOSTNAME;
+  1286→    }
+  1287→  } catch {
+  1288→    // no-op
+  1289→  }
+  1290→
+  1291→  // Tier-specific id format
+  1292→  const suffix = (hostname || 'local').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || Math.random().toString(36).slice(2, 8);
+  1293→  return `${tier}-${suffix}`;
+  1294→}
+  1295→
+  1296→// ──────────────────────────────────────────────────────────────────────────
+  1297→//  Federated artifact store
+  1298→// ──────────────────────────────────────────────────────────────────────────
+  1299→
+  1300→/**
+  1301→ * FederatedArtifactStore — a multi-tier, content-addressed artifact store
+  1302→ * with R2 as the canonical backing store and per-tier caches.
+  1303→ *
+  1304→ * Three-tier architecture:
+  1305→ *   1. **Local memory** (fastest, per-instance) — for hot artifacts
+  1306→ *   2. **Tier-local disk** (fast, per-instance) — for warm artifacts
+  1307→ *   3. **R2 / S3** (canonical, shared) — for everything else
+  1308→ *
+  1309→ * Every artifact is content-addressed (sha256). Lookups can specify which
+  1310→ * tiers to consult. Promotion from cold → warm → hot happens on read.
+  1311→ *
+  1312→ * This is the missing piece for cross-tier federation: an ESP32 can fetch
+  1313→ * a model from R2 via the codespace's local cache, a Cloudflare Worker
+  1314→ * can read a sheet from R2 with zero cold-start penalty, a Jetpack can
+  1315→ * upload a run trace to R2 so the central server can replay it.
+  1316→ *
+  1317→ * R2 SDK is dynamically imported so this module works in non-R2
+  1318→ * environments (browsers, Node, Workers without R2 binding). When the R2
+  1319→ * binding is not available, only the local cache tier is used.
+  1320→ */
+  1321→export interface FederatedStoreOptions {
+  1322→  /** R2 binding (Workers) — pass `env.MY_BUCKET`. */
+  1323→  r2?: {
+  1324→    put: (key: string, value: ReadableStream | ArrayBuffer | ArrayBufferView | string) => Promise<unknown>;
+  1325→    get: (key: string) => Promise<{ body: ReadableStream; bodyUsed?: boolean } | null>;
+  1326→    delete?: (key: string) => Promise<void>;
+  1327→    list?: (opts?: { prefix?: string; limit?: number; cursor?: string }) => Promise<{
+  1328→      objects: Array<{ key: string; uploaded: string; size: number }>;
+  1329→      cursor?: string;
+  1330→      truncated: boolean;
+  1331→    }>;
+  1332→  };
+  1333→  /** R2 bucket name (required if r2 is set). */
+  1334→  r2Bucket?: string;
+  1335→  /** Tier-local cache: filesystem-style key/value. Defaults to an in-memory cache. */
+  1336→  local?: {
+  1337→    get: (key: string) => Promise<{ bytes: Uint8Array; metadata: ArtifactMetadata } | null>;
+  1338→    put: (key: string, bytes: Uint8Array, metadata: ArtifactMetadata) => Promise<void>;
+  1339→    delete?: (key: string) => Promise<void>;
+  1340→    list?: (prefix?: string) => Promise<Array<{ key: string; metadata: ArtifactMetadata }>>;
+  1341→  };
+  1342→  /** Max local cache size in bytes (LRU eviction). */
+  1343→  maxLocalBytes?: number;
+  1344→  /** Custom logger. */
+  1345→  log?: (msg: string, level?: 'info' | 'warn' | 'error') => void;
+  1346→}
+  1347→
+  1348→interface CacheEntry {
+  1349→  bytes: Uint8Array;
+  1350→  metadata: ArtifactMetadata;
+  1351→  size: number;
+  1352→  lastAccess: number;
+  1353→}
+  1354→
+  1355→export class FederatedArtifactStore implements ArtifactStore {
+  1356→  private hotCache = new Map<string, CacheEntry>();
+  1357→  private currentBytes = 0;
+  1358→  private readonly maxBytes: number;
+  1359→  private readonly local: NonNullable<FederatedStoreOptions['local']>;
+  1360→  private readonly opts: FederatedStoreOptions;
+  1361→
+  1362→  constructor(opts: FederatedStoreOptions = {}) {
+  1363→    this.opts = opts;
+  1364→    this.maxBytes = opts.maxLocalBytes ?? 64 * 1024 * 1024; // 64 MB default
+  1365→    this.local = opts.local ?? new MemoryCacheBackend();
+  1366→  }
+  1367→
+  1368→  private log(msg: string, level: 'info' | 'warn' | 'error' = 'info'): void {
+  1369→    this.opts.log?.(msg, level);
+  1370→  }
+  1371→
+  1372→  /** Build the R2 key for a logical URI + version. */
+  1373→  private r2Key(uri: QuiltURI, version?: string): string {
+  1374→    // Strip `quilt://` prefix; preserve bucket/name:version structure
+  1375→    const clean = uri.replace(/^quilt:\/\//, '');
+  1376→    return version ? `${clean}:${version}` : clean;
+  1377→  }
+  1378→
+  1379→  /** Promote an entry to hot cache; LRU-evict if over limit. */
+  1380→  private touchHot(key: string, entry: CacheEntry): void {
+  1381→    entry.lastAccess = Date.now();
+  1382→    this.hotCache.set(key, entry);
+  1383→    this.currentBytes += entry.size;
+  1384→    while (this.currentBytes > this.maxBytes && this.hotCache.size > 1) {
+  1385→      // Evict LRU
+  1386→      let oldest: string | null = null;
+  1387→      let oldestTime = Infinity;
+  1388→      for (const [k, e] of this.hotCache) {
+  1389→        if (e.lastAccess < oldestTime) { oldest = k; oldestTime = e.lastAccess; }
+  1390→      }
+  1391→      if (oldest && oldest !== key) {
+  1392→        const evicted = this.hotCache.get(oldest);
+  1393→        if (evicted) this.currentBytes -= evicted.size;
+  1394→        this.hotCache.delete(oldest);
+  1395→      } else break;
+  1396→    }
+  1397→  }
+  1398→
+  1399→  async put(logicalUri: QuiltURI, bytes: Uint8Array | string, metadata: ArtifactMetadata): Promise<{ uri: QuiltURI; version: string }> {
+  1400→    const data = typeof bytes === 'string' ? new TextEncoder().encode(bytes) : bytes;
+  1401→    const contentHash = metadata.contentHash ?? hashBytes(data);
+  1402→    const version = metadata.version ?? contentHash.slice(0, 12);
+  1403→    const fullUri = `${logicalUri}:${version}` as QuiltURI;
+  1404→    const fullMeta: ArtifactMetadata = { ...metadata, contentHash, createdAt: metadata.createdAt ?? new Date().toISOString() };
+  1405→
+  1406→    // 1. Write to local tier
+  1407→    await this.local.put(fullUri, data, fullMeta);
+  1408→
+  1409→    // 2. Write to hot cache
+  1410→    const entry: CacheEntry = { bytes: data, metadata: fullMeta, size: data.byteLength, lastAccess: Date.now() };
+  1411→    this.touchHot(fullUri, entry);
+  1412→
+  1413→    // 3. Replicate to R2 if available (best-effort; failure doesn't break the put)
+  1414→    if (this.opts.r2 && this.opts.r2Bucket) {
+  1415→      try {
+  1416→        const key = this.r2Key(logicalUri, version);
+  1417→        await this.opts.r2.put(key, data);
+  1418→        this.log(`R2 put: ${key} (${data.byteLength} bytes)`, 'info');
+  1419→      } catch (e) {
+  1420→        this.log(`R2 put failed for ${logicalUri}: ${(e as Error).message}`, 'warn');
+  1421→      }
+  1422→    }
+  1423→
+  1424→    return { uri: fullUri, version };
+  1425→  }
+  1426→
+  1427→  async get(uri: QuiltURI): Promise<{ bytes: Uint8Array; metadata: ArtifactMetadata }> {
+  1428→    // 1. Hot cache
+  1429→    const hot = this.hotCache.get(uri);
+  1430→    if (hot) { hot.lastAccess = Date.now(); return { bytes: hot.bytes, metadata: hot.metadata }; }
+  1431→
+  1432→    // 2. Local tier
+  1433→    const local = await this.local.get(uri);
+  1434→    if (local) {
+  1435→      const entry: CacheEntry = { ...local, size: local.bytes.byteLength, lastAccess: Date.now() };
+  1436→      this.touchHot(uri, entry);
+  1437→      return { bytes: local.bytes, metadata: local.metadata };
+  1438→    }
+  1439→
+  1440→    // 3. R2 (cold tier)
+  1441→    if (this.opts.r2) {
+  1442→      const key = this.r2Key(uri);
+  1443→      const obj = await this.opts.r2.get(key);
+  1444→      if (obj) {
+  1445→        const bytes = new Uint8Array(await new Response(obj.body).arrayBuffer());
+  1446→        const metadata: ArtifactMetadata = { contentHash: hashBytes(bytes), createdAt: new Date().toISOString() };
+  1447→        // Promote: write through local + hot
+  1448→        await this.local.put(uri, bytes, metadata);
+  1449→        const entry: CacheEntry = { bytes, metadata, size: bytes.byteLength, lastAccess: Date.now() };
+  1450→        this.touchHot(uri, entry);
+  1451→        this.log(`R2 hit: ${key} (${bytes.byteLength} bytes, promoted to local)`, 'info');
+  1452→        return { bytes, metadata };
+  1453→      }
+  1454→    }
+  1455→
+  1456→    throw new Error(`Artifact not found in any tier: ${uri}`);
+  1457→  }
+  1458→
+  1459→  async exists(uri: QuiltURI): Promise<boolean> {
+  1460→    if (this.hotCache.has(uri)) return true;
+  1461→    if (await this.local.get(uri).then((x) => !!x)) return true;
+  1462→    if (this.opts.r2) {
+  1463→      const obj = await this.opts.r2.get(this.r2Key(uri));
+  1464→      return !!obj;
+  1465→    }
+  1466→    return false;
+  1467→  }
+  1468→
+  1469→  async listVersions(logicalUri: QuiltURI): Promise<{ version: string; createdAt: string }[]> {
+  1470→    const out: { version: string; createdAt: string }[] = [];
+  1471→    const prefix = logicalUri + ':';
+  1472→    // Local
+  1473→    if (this.local.list) {
+  1474→      const items = await this.local.list(prefix);
+  1475→      for (const it of items) {
+  1476→        const version = it.key.slice(prefix.length);
+  1477→        out.push({ version, createdAt: typeof it.metadata.createdAt === 'string' ? it.metadata.createdAt : '' });
+  1478→      }
+  1479→    }
+  1480→    // R2
+  1481→    if (this.opts.r2?.list) {
+  1482→      const r2List = await this.opts.r2.list({ prefix: this.r2Key(logicalUri) });
+  1483→      for (const obj of r2List.objects) {
+  1484→        const version = obj.key.split(':').pop() ?? '';
+  1485→        if (!out.find((o) => o.version === version)) {
+  1486→          out.push({ version, createdAt: obj.uploaded });
+  1487→        }
+  1488→      }
+  1489→    }
+  1490→    return out;
+  1491→  }
+  1492→
+  1493→  /** Invalidate a URI from all tiers. */
+  1494→  async invalidate(uri: QuiltURI): Promise<void> {
+  1495→    this.hotCache.delete(uri);
+  1496→    await this.local.delete?.(uri);
+  1497→    if (this.opts.r2?.delete) {
+  1498→      await this.opts.r2.delete(this.r2Key(uri));
+  1499→    }
+  1500→  }
+  1501→
+  1502→  /** Inspect hot cache (for debugging / metrics). */
+  1503→  hotStats(): { entries: number; bytes: number; maxBytes: number } {
+  1504→    return { entries: this.hotCache.size, bytes: this.currentBytes, maxBytes: this.maxBytes };
+  1505→  }
+  1506→}
+  1507→
+  1508→/** In-memory cache backend (default for `local`). */
+  1509→export class MemoryCacheBackend {
+  1510→  private store = new Map<string, { bytes: Uint8Array; metadata: ArtifactMetadata }>();
+  1511→  async get(key: string) { return this.store.get(key) ?? null; }
+  1512→  async put(key: string, bytes: Uint8Array, metadata: ArtifactMetadata) { this.store.set(key, { bytes, metadata }); }
+  1513→  async delete(key: string) { this.store.delete(key); }
+  1514→  async list(prefix?: string) {
+  1515→    const out: Array<{ key: string; metadata: ArtifactMetadata }> = [];
+  1516→    for (const [k, v] of this.store) if (!prefix || k.startsWith(prefix)) out.push({ key: k, metadata: v.metadata });
+  1517→    return out;
+  1518→  }
+  1519→}
+  1520→
+  1521→/** Filesystem-backed cache tier (Node.js). */
+  1522→export class FileSystemCacheBackend {
+  1523→  private rootDir: string;
+  1524→  constructor(rootDir: string) { this.rootDir = rootDir; }
+  1525→  private path(key: string): string {
+  1526→    // Sanitize: replace non-alphanumeric with underscores
+  1527→    const safe = key.replace(/[^a-zA-Z0-9._-]/g, '_');
+  1528→    return `${this.rootDir}/${safe}`;
+  1529→  }
+  1530→  async get(key: string): Promise<{ bytes: Uint8Array; metadata: ArtifactMetadata } | null> {
+  1531→    try {
+  1532→      const { readFile } = await import('node:fs/promises');
+  1533→      const data = await readFile(this.path(key));
+  1534→      // Read metadata from sidecar
+  1535→      let metadata: ArtifactMetadata = { contentHash: hashBytes(new Uint8Array(data)) };
+  1536→      try {
+  1537→        const { readFile: r2 } = await import('node:fs/promises');
+  1538→        const metaJson = await r2(this.path(key) + '.meta.json', 'utf8');
+  1539→        metadata = JSON.parse(metaJson);
+  1540→      } catch { /* no metadata file */ }
+  1541→      return { bytes: new Uint8Array(data), metadata };
+  1542→    } catch { return null; }
+  1543→  }
+  1544→  async put(key: string, bytes: Uint8Array, metadata: ArtifactMetadata): Promise<void> {
+  1545→    const { writeFile, mkdir } = await import('node:fs/promises');
+  1546→    const { dirname } = await import('node:path');
+  1547→    await mkdir(dirname(this.path(key)), { recursive: true });
+  1548→    await writeFile(this.path(key), bytes);
+  1549→    await writeFile(this.path(key) + '.meta.json', JSON.stringify(metadata, null, 2));
+  1550→  }
+  1551→  async delete(key: string): Promise<void> {
+  1552→    try {
+  1553→      const { unlink } = await import('node:fs/promises');
+  1554→      await unlink(this.path(key));
+  1555→      await unlink(this.path(key) + '.meta.json');
+  1556→    } catch { /* ignore */ }
+  1557→  }
+  1558→  async list(prefix?: string): Promise<Array<{ key: string; metadata: ArtifactMetadata }>> {
+  1559→    const { readdir, readFile } = await import('node:fs/promises');
+  1560→    try {
+  1561→      const files = await readdir(this.rootDir);
+  1562→      const out: Array<{ key: string; metadata: ArtifactMetadata }> = [];
+  1563→      for (const f of files) {
+  1564→        if (f.endsWith('.meta.json')) continue;
+  1565→        const k = f; // reconstruction: we don't have the original URI, but the key matches
+  1566→        if (prefix && !k.startsWith(prefix)) continue;
+  1567→        let metadata: ArtifactMetadata = { contentHash: '' };
+  1568→        try {
+  1569→          metadata = JSON.parse(await readFile(`${this.rootDir}/${f}.meta.json`, 'utf8'));
+  1570→        } catch { /* ignore */ }
+  1571→        out.push({ key: k, metadata });
+  1572→      }
+  1573→      return out;
+  1574→    } catch { return []; }
+  1575→  }
+  1576→}
+  1577→
+  1578→// ──────────────────────────────────────────────────────────────────────────
+  1579→//  MQTT transport for IoT-native pub/sub
+  1580→// ──────────────────────────────────────────────────────────────────────────
+  1581→
+  1582→/**
+  1583→ * MqttCellTransport — an IoT-native cell transport using MQTT 5.0.
+  1584→ *
+  1585→ * Each Quilt cell is published to a topic of the form:
+  1586→ *   quilt/[instance]/[sheet]/#/[cell-path]
+  1587→ *
+  1588→ * Subscribers can subscribe to:
+  1589→ *   - A specific cell: quilt/+/+/foo/bar
+  1590→ *   - A whole sheet: quilt/+/+/#/foo
+  1591→ *   - A whole instance: quilt/esp32-1/#/+
+  1592→ *   - The whole federation: quilt/#/+/+/+
+  1593→ *
+  1594→ * MQTT's retained-message + last-will-and-testament features mean cells
+  1595→ * are auto-replayed on reconnect, and dead instances are detected in <1s.
+  1596→ *
+  1597→ * This is the natural transport for ESP32 / Jetson fleets behind a
+  1598→ * local broker (Mosquitto, EMQX, HiveMQ, AWS IoT Core, Azure IoT Hub).
+  1599→ */
+  1600→export interface MqttTransportOptions {
+  1601→  /** MQTT broker URL (e.g., `mqtt://broker:1883`, `mqtts://...:8883`). */
+  1602→  url: string;
+  1603→  /** Client id (defaults to instance id). */
+  1604→  clientId?: string;
+  1605→  /** Username/password (optional). */
+  1606→  username?: string;
+  1607→  password?: string;
+  1608→  /** Will message on disconnect. */
+  1609→  will?: { topic: string; payload: Uint8Array; qos: 0 | 1 | 2; retain: boolean };
+  1610→  /** QoS for cell publishes. Default 1. */
+  1611→  qos?: 0 | 1 | 2;
+  1612→  /** Whether published cells should be retained. Default true. */
+  1613→  retain?: boolean;
+  1614→}
+  1615→
+  1616→/**
+  1617→ * A minimal mqtt-like client interface. We don't import the `mqtt` package
+  1618→ * directly because it's an optional peer dependency. Pass any client that
+  1619→ * conforms to this shape: `mqtt`, `mqtt.js`, `aedes`, etc.
+  1620→ */
+  1621→export interface MqttLikeClient {
+  1622→  on(event: 'connect' | 'message' | 'error' | 'close', cb: (...args: unknown[]) => void): void;
+  1623→  subscribe(topic: string, opts?: { qos: 0 | 1 | 2 }, cb?: (err: Error | null) => void): void;
+  1624→  publish(topic: string, payload: Uint8Array | string, opts?: { qos: 0 | 1 | 2; retain: boolean }, cb?: () => void): void;
+  1625→  end(force?: boolean): void;
+  1626→}
+  1627→
+  1628→// Note: MqttCellTransport is a URI-addressed transport (resolve/getValue/
+  1629→// publish/subscribe(uri, onValue)) rather than the (instance, sheet, cellPath)
+  1630→// shape of the CellTransport interface, so it does not declare `implements
+  1631→// CellTransport`. It is consumed directly via its own API (see
+  1632→// federation-store tests), not through the CellTransport contract.
+  1633→export class MqttCellTransport {
+  1634→  private readonly client: MqttLikeClient;
+  1635→  private readonly opts: MqttTransportOptions;
+  1636→  private readonly listeners = new Map<string, Set<(v: unknown) => void>>();
+  1637→  private connected = false;
+  1638→
+  1639→  constructor(client: MqttLikeClient, opts: MqttTransportOptions) {
+  1640→    this.client = client;
+  1641→    this.opts = { qos: 1, retain: true, ...opts };
+  1642→    this.wire();
+  1643→  }
+  1644→
+  1645→  private wire(): void {
+  1646→    this.client.on('connect', () => { this.connected = true; });
+  1647→    this.client.on('close', () => { this.connected = false; });
+  1648→    this.client.on('message', (topic: unknown, payload: unknown) => {
+  1649→      const t = String(topic);
+  1650→      const p = payload instanceof Uint8Array ? payload : new Uint8Array(payload as ArrayBuffer);
+  1651→      try {
+  1652→        const decoded = JSON.parse(new TextDecoder().decode(p));
+  1653→        for (const [pattern, cbs] of this.listeners) {
+  1654→          if (mqttTopicMatches(pattern, t)) {
+  1655→            for (const cb of cbs) cb(decoded);
+  1656→          }
+  1657→        }
+  1658→      } catch { /* malformed payload, ignore */ }
+  1659→    });
+  1660→  }
+  1661→
+  1662→  async resolve(uri: string): Promise<{ uri: string; ref: FederatedCellRef; transport: 'mqtt'; topic: string }> {
+  1663→    const ref = parseCellRef(uri);
+  1664→    // Topic format: quilt/{instance}/{sheet}/{cellPath}
+  1665→    // Subscribers can use wildcards: quilt/+/+/#, quilt/+/foo/+/bar, etc.
+  1666→    const topic = `quilt/${ref.instance}/${ref.sheet}/${ref.cellPath}`;
+  1667→    return { uri, ref, transport: 'mqtt', topic };
+  1668→  }
+  1669→
+  1670→  async getValue(uri: string, timeoutMs: number = 5000): Promise<unknown> {
+  1671→    // MQTT doesn't have a synchronous get. We subscribe and wait for the
+  1672→    // next retained message, with a configurable timeout.
+  1673→    const ref = parseCellRef(uri);
+  1674→    const topic = `quilt/${ref.instance}/${ref.sheet}/${ref.cellPath}`;
+  1675→    return new Promise((resolve, reject) => {
+  1676→      const timer = setTimeout(() => { unsub(); reject(new Error(`MQTT getValue timeout for ${uri}`)); }, timeoutMs);
+  1677→      const cb = (v: unknown) => { clearTimeout(timer); unsub(); resolve(v); };
+  1678→      const subs = this.listeners.get(topic) ?? new Set();
+  1679→      subs.add(cb);
+  1680→      this.listeners.set(topic, subs);
+  1681→      const unsub = () => { subs.delete(cb); if (subs.size === 0) this.listeners.delete(topic); };
+  1682→      this.client.subscribe(topic, { qos: this.opts.qos ?? 1 });
+  1683→    });
+  1684→  }
+  1685→
+  1686→  subscribe(uri: string, onValue: (v: unknown) => void): () => void {
+  1687→    const ref = parseCellRef(uri);
+  1688→    const topic = `quilt/${ref.instance}/${ref.sheet}/${ref.cellPath}`;
+  1689→    const cb = (v: unknown) => onValue(v);
+  1690→    const subs = this.listeners.get(topic) ?? new Set();
+  1691→    subs.add(cb);
+  1692→    this.listeners.set(topic, subs);
+  1693→    this.client.subscribe(topic, { qos: this.opts.qos ?? 1 });
+  1694→    return () => {
+  1695→      subs.delete(cb);
+  1696→      if (subs.size === 0) this.listeners.delete(topic);
+  1697→    };
+  1698→  }
+  1699→
+  1700→  publish(uri: string, value: unknown): void {
+  1701→    const ref = parseCellRef(uri);
+  1702→    const topic = `quilt/${ref.instance}/${ref.sheet}/${ref.cellPath}`;
+  1703→    const payload = new TextEncoder().encode(JSON.stringify(value));
+  1704→    this.client.publish(topic, payload, { qos: this.opts.qos ?? 1, retain: this.opts.retain ?? true });
+  1705→  }
+  1706→
+  1707→  /** Direct topic access (for non-Quilt MQTT topics). */
+  1708→  publishRaw(topic: string, payload: Uint8Array | string, retain?: boolean): void {
+  1709→    this.client.publish(topic, payload, { qos: this.opts.qos ?? 1, retain: retain ?? this.opts.retain ?? true });
+  1710→  }
+  1711→
+  1712→  subscribeRaw(topic: string, cb: (topic: string, payload: Uint8Array) => void): () => void {
+  1713→    const handler = (t: unknown, p: unknown) => {
+  1714→      const payload = p instanceof Uint8Array ? p : new Uint8Array(p as ArrayBuffer);
+  1715→      cb(String(t), payload);
+  1716→    };
+  1717→    this.client.on('message', handler as (...args: unknown[]) => void);
+  1718→    this.client.subscribe(topic, { qos: this.opts.qos ?? 1 });
+  1719→    return () => { /* mqtt.js doesn't expose off, callers should manage client lifecycle */ };
+  1720→  }
+  1721→
+  1722→  isConnected(): boolean { return this.connected; }
+  1723→  close(): void { this.client.end(true); }
+  1724→}
+  1725→
+  1726→/** MQTT topic matching with wildcards. `+` matches one level; `#` matches many. */
+  1727→export function mqttTopicMatches(pattern: string, topic: string): boolean {
+  1728→  const p = pattern.split('/');
+  1729→  const t = topic.split('/');
+  1730→  for (let i = 0; i < p.length; i++) {
+  1731→    if (p[i] === '#') return true;
+  1732→    if (p[i] === '+') { if (t[i] === undefined) return false; continue; }
+  1733→    if (p[i] !== t[i]) return false;
+  1734→  }
+  1735→  return p.length === t.length;
+  1736→}
+  1737→
+  1738→
+  1739→
