@@ -1,0 +1,444 @@
+{
+  "families": [
+    "LIN",
+    "WAVE",
+    "BAYES",
+    "MASK"
+  ],
+  "probe": {
+    "LIN": {
+      "acc": 0.5875,
+      "cos": 0.9881611257730645
+    },
+    "WAVE": {
+      "acc": 0.675,
+      "cos": 0.995033585089691
+    },
+    "BAYES": {
+      "acc": 0.5625,
+      "cos": 0.9890832825362283
+    },
+    "MASK": {
+      "acc": 0.7,
+      "cos": 0.9916424649277652
+    }
+  },
+  "phases": [
+    {
+      "setNo": 0,
+      "tag": "A",
+      "budget": 0,
+      "standings": [
+        [
+          "p3",
+          78
+        ],
+        [
+          "p2",
+          -2
+        ],
+        [
+          "p0",
+          -45
+        ],
+        [
+          "p1",
+          -97
+        ]
+      ],
+      "margins": {
+        "p0": -45,
+        "p1": -97,
+        "p2": -2,
+        "p3": 78
+      },
+      "spent": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "revisions": {}
+    },
+    {
+      "setNo": 1,
+      "tag": "B",
+      "budget": 0,
+      "standings": [
+        [
+          "p3",
+          36
+        ],
+        [
+          "p2",
+          -4
+        ],
+        [
+          "p0",
+          -28
+        ],
+        [
+          "p1",
+          -60
+        ]
+      ],
+      "margins": {
+        "p0": -28,
+        "p1": -60,
+        "p2": -4,
+        "p3": 36
+      },
+      "spent": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "revisions": {
+        "p0": {
+          "v": 2,
+          "letter": "B",
+          "novelty": 0.4,
+          "note": "letter B"
+        },
+        "p1": {
+          "v": 2,
+          "letter": "B",
+          "novelty": 0.4,
+          "note": "letter B"
+        },
+        "p2": {
+          "v": 2,
+          "letter": "B",
+          "novelty": 0.4,
+          "note": "letter B"
+        },
+        "p3": {
+          "v": 2,
+          "letter": "B",
+          "novelty": 0.48,
+          "note": "letter B"
+        }
+      }
+    },
+    {
+      "setNo": 2,
+      "tag": "B",
+      "budget": 2,
+      "standings": [
+        [
+          "p3",
+          19
+        ],
+        [
+          "p0",
+          18
+        ],
+        [
+          "p2",
+          -24
+        ],
+        [
+          "p1",
+          -84
+        ]
+      ],
+      "margins": {
+        "p0": 18,
+        "p1": -84,
+        "p2": -24,
+        "p3": 19
+      },
+      "spent": {
+        "p0": 2,
+        "p1": 2,
+        "p2": 0,
+        "p3": 2
+      },
+      "revisions": {
+        "p0": {
+          "v": 3,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p1": {
+          "v": 3,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p2": {
+          "v": 3,
+          "letter": "A",
+          "novelty": 0.05,
+          "note": "letter A +forced divergence"
+        },
+        "p3": {
+          "v": 3,
+          "letter": "B",
+          "novelty": 0.43,
+          "note": "letter B"
+        }
+      }
+    },
+    {
+      "setNo": 3,
+      "tag": "B",
+      "budget": 4,
+      "standings": [
+        [
+          "p3",
+          49
+        ],
+        [
+          "p2",
+          -16
+        ],
+        [
+          "p1",
+          -51
+        ],
+        [
+          "p0",
+          -62
+        ]
+      ],
+      "margins": {
+        "p0": -62,
+        "p1": -51,
+        "p2": -16,
+        "p3": 49
+      },
+      "spent": {
+        "p0": 4,
+        "p1": 4,
+        "p2": 0,
+        "p3": 4
+      },
+      "revisions": {
+        "p0": {
+          "v": 4,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p1": {
+          "v": 4,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p2": {
+          "v": 4,
+          "letter": "B",
+          "novelty": 0.4,
+          "note": "letter B"
+        },
+        "p3": {
+          "v": 4,
+          "letter": "B",
+          "novelty": 0.43,
+          "note": "letter B"
+        }
+      }
+    },
+    {
+      "setNo": 4,
+      "tag": "C",
+      "budget": 2,
+      "standings": [
+        [
+          "p3",
+          84
+        ],
+        [
+          "p0",
+          -31
+        ],
+        [
+          "p2",
+          -49
+        ],
+        [
+          "p1",
+          -58
+        ]
+      ],
+      "margins": {
+        "p0": -31,
+        "p1": -58,
+        "p2": -49,
+        "p3": 84
+      },
+      "spent": {
+        "p0": 2,
+        "p1": 2,
+        "p2": 0,
+        "p3": 2
+      },
+      "revisions": {
+        "p0": {
+          "v": 5,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p1": {
+          "v": 5,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p2": {
+          "v": 5,
+          "letter": "A",
+          "novelty": 0.05,
+          "note": "letter A +forced divergence"
+        },
+        "p3": {
+          "v": 5,
+          "letter": "B",
+          "novelty": 0.43,
+          "note": "letter B"
+        }
+      }
+    },
+    {
+      "setNo": 5,
+      "tag": "C",
+      "budget": 2,
+      "standings": [
+        [
+          "p3",
+          58
+        ],
+        [
+          "p2",
+          -29
+        ],
+        [
+          "p0",
+          -36
+        ],
+        [
+          "p1",
+          -53
+        ]
+      ],
+      "margins": {
+        "p0": -36,
+        "p1": -53,
+        "p2": -29,
+        "p3": 58
+      },
+      "spent": {
+        "p0": 2,
+        "p1": 2,
+        "p2": 0,
+        "p3": 2
+      },
+      "revisions": {
+        "p0": {
+          "v": 6,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p1": {
+          "v": 6,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p2": {
+          "v": 6,
+          "letter": "B",
+          "novelty": 0.4,
+          "note": "letter B"
+        },
+        "p3": {
+          "v": 6,
+          "letter": "B",
+          "novelty": 0.43,
+          "note": "letter B"
+        }
+      }
+    },
+    {
+      "setNo": 6,
+      "tag": "CHAMPIONSHIP:LIVE",
+      "budget": 2,
+      "standings": [
+        [
+          "p3",
+          62
+        ],
+        [
+          "p0",
+          -20
+        ],
+        [
+          "p2",
+          -27
+        ],
+        [
+          "p1",
+          -86
+        ]
+      ],
+      "margins": {
+        "p0": -20,
+        "p1": -86,
+        "p2": -27,
+        "p3": 62
+      },
+      "spent": {
+        "p0": 2,
+        "p1": 2,
+        "p2": 0,
+        "p3": 2
+      },
+      "revisions": {
+        "p0": {
+          "v": 7,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p1": {
+          "v": 7,
+          "letter": "B",
+          "novelty": 0.35,
+          "note": "letter B"
+        },
+        "p2": {
+          "v": 7,
+          "letter": "A",
+          "novelty": 0.05,
+          "note": "letter A +forced divergence"
+        },
+        "p3": {
+          "v": 7,
+          "letter": "B",
+          "novelty": 0.43,
+          "note": "letter B"
+        }
+      }
+    }
+  ],
+  "live": {
+    "attempted": false,
+    "probe": 0
+  },
+  "entangle": {
+    "pre": null,
+    "post": null
+  },
+  "analyst": {
+    "mock": true,
+    "calls": 27,
+    "realCalls": 0
+  },
+  "packets": 36
+}

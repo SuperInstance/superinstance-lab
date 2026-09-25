@@ -1,0 +1,758 @@
+[
+ {
+  "kind": "revise",
+  "by": "p0",
+  "setNo": 1,
+  "letter": "B",
+  "novelty": 0.4,
+  "v": 2,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p1",
+  "setNo": 1,
+  "letter": "B",
+  "novelty": 0.4,
+  "v": 2,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p2",
+  "setNo": 1,
+  "letter": "B",
+  "novelty": 0.4,
+  "v": 2,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p3",
+  "setNo": 1,
+  "letter": "B",
+  "novelty": 0.48,
+  "v": 2,
+  "note": "letter B"
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-0:0",
+  "h": "1odj9nd",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-0",
+  "why": "wave-argmax alarm=1.00",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-1:1",
+  "h": "1lubncm",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-1",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-2:2",
+  "h": "1p2kh0p",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-2",
+  "why": "wave-argmax alarm=0.70",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-3:3",
+  "h": "tf4xhi",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-3",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-1:4",
+  "h": "1b0nxtg",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-1",
+  "why": "mask ε=0.45 pred=0.61",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-3:5",
+  "h": "1nden4l",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-3",
+  "why": "mask ε=0.45 pred=0.61",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "revise",
+  "by": "p0",
+  "setNo": 2,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 3,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p1",
+  "setNo": 2,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 3,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p2",
+  "setNo": 2,
+  "letter": "A",
+  "novelty": 0.05,
+  "v": 3,
+  "note": "letter A +forced divergence"
+ },
+ {
+  "kind": "revise",
+  "by": "p3",
+  "setNo": 2,
+  "letter": "B",
+  "novelty": 0.43,
+  "v": 3,
+  "note": "letter B"
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-0:6",
+  "h": "fn80dc",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-0",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-2:7",
+  "h": "s5d4b5",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-2",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-4:8",
+  "h": "wyg3au",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-4",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-6:9",
+  "h": "15hmweb",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-6",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-15:10",
+  "h": "1garheu",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-15",
+  "why": "wave-argmax alarm=1.00",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-17:11",
+  "h": "1990qvj",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-17",
+  "why": "wave-argmax alarm=0.70",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-1:12",
+  "h": "nwi8pv",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-1",
+  "why": "mask ε=0.45 pred=0.58",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-3:13",
+  "h": "vexuum",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-3",
+  "why": "mask ε=0.45 pred=0.58",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-5:14",
+  "h": "mihnfl",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-5",
+  "why": "mask ε=0.45 pred=0.58",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-7:15",
+  "h": "1rbxu3c",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-7",
+  "why": "mask ε=0.45 pred=0.58",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-41:16",
+  "h": "1msxlcv",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-41",
+  "why": "wave-argmax alarm=1.00",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-43:17",
+  "h": "8d0s2i",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-43",
+  "why": "wave-argmax alarm=0.70",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "revise",
+  "by": "p0",
+  "setNo": 3,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 4,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p1",
+  "setNo": 3,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 4,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p2",
+  "setNo": 3,
+  "letter": "B",
+  "novelty": 0.4,
+  "v": 4,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p3",
+  "setNo": 3,
+  "letter": "B",
+  "novelty": 0.43,
+  "v": 4,
+  "note": "letter B"
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-0:18",
+  "h": "gak2tr",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-0",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-2:19",
+  "h": "1yh0t22",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-2",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-0:20",
+  "h": "1cklp4v",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-0",
+  "why": "mask ε=0.45 pred=0.57",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-2:21",
+  "h": "4a29ma",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-2",
+  "why": "mask ε=0.45 pred=0.57",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:hearts-t7-s0:22",
+  "h": "m19z29",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "hearts-t7-s0",
+  "why": "wave-argmax alarm=1.00",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:hearts-t8-s0:23",
+  "h": "s8dsi3",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "hearts-t8-s0",
+  "why": "wave-argmax alarm=0.70",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "revise",
+  "by": "p0",
+  "setNo": 4,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 5,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p1",
+  "setNo": 4,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 5,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p2",
+  "setNo": 4,
+  "letter": "A",
+  "novelty": 0.05,
+  "v": 5,
+  "note": "letter A +forced divergence"
+ },
+ {
+  "kind": "revise",
+  "by": "p3",
+  "setNo": 4,
+  "letter": "B",
+  "novelty": 0.43,
+  "v": 5,
+  "note": "letter B"
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-0:24",
+  "h": "1o3zxud",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-0",
+  "why": "wave-argmax alarm=1.00",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-1:25",
+  "h": "16lp7pu",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-1",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-2:26",
+  "h": "1c2gzel",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-2",
+  "why": "wave-argmax alarm=0.70",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-3:27",
+  "h": "brm9tm",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-3",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-0:28",
+  "h": "6rqpuf",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-0",
+  "why": "mask ε=0.45 pred=0.58",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-2:29",
+  "h": "17rhx8a",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-2",
+  "why": "mask ε=0.45 pred=0.58",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "revise",
+  "by": "p0",
+  "setNo": 5,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 6,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p1",
+  "setNo": 5,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 6,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p2",
+  "setNo": 5,
+  "letter": "B",
+  "novelty": 0.4,
+  "v": 6,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p3",
+  "setNo": 5,
+  "letter": "B",
+  "novelty": 0.43,
+  "v": 6,
+  "note": "letter B"
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-0:30",
+  "h": "1ni4p1p",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-0",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p0:mines-2:31",
+  "h": "tnt1wk",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p0",
+  "tag": "mines-2",
+  "why": "argmax m=0.003",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-35:32",
+  "h": "11itu3g",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-35",
+  "why": "wave-argmax alarm=1.00",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p1:mines-37:33",
+  "h": "h7sb7t",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p1",
+  "tag": "mines-37",
+  "why": "wave-argmax alarm=0.70",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-1:34",
+  "h": "uiub1z",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-1",
+  "why": "mask ε=0.45 pred=0.57",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "packet",
+  "tag": "p:p3:mines-3:35",
+  "h": "1jj4mg2",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "spend",
+  "by": "p3",
+  "tag": "mines-3",
+  "why": "mask ε=0.45 pred=0.57",
+  "source": "cache",
+  "mock": true
+ },
+ {
+  "kind": "revise",
+  "by": "p0",
+  "setNo": 6,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 7,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p1",
+  "setNo": 6,
+  "letter": "B",
+  "novelty": 0.35,
+  "v": 7,
+  "note": "letter B"
+ },
+ {
+  "kind": "revise",
+  "by": "p2",
+  "setNo": 6,
+  "letter": "A",
+  "novelty": 0.05,
+  "v": 7,
+  "note": "letter A +forced divergence"
+ },
+ {
+  "kind": "revise",
+  "by": "p3",
+  "setNo": 6,
+  "letter": "B",
+  "novelty": 0.43,
+  "v": 7,
+  "note": "letter B"
+ }
+]
