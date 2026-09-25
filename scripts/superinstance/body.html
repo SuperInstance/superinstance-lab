@@ -1,0 +1,367 @@
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="SuperInstance home">
+      <svg viewBox="0 0 96 96" fill="none" aria-hidden="true"><rect x="8" y="8" width="36" height="36" rx="9" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".16" stroke-width="3"/><rect x="52" y="8" width="36" height="36" rx="9" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".16" stroke-width="3"/><rect x="8" y="52" width="36" height="36" rx="9" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".16" stroke-width="3"/><circle cx="70" cy="70" r="26" fill="#3FE0C5" opacity=".18"/><rect x="52" y="52" width="36" height="36" rx="9" fill="#3FE0C5"/><circle cx="70" cy="70" r="5" fill="#052A26"/></svg>
+      super<span class="light">instance</span>
+    </a>
+    <div class="links">
+      <a href="#demos">LIVE DEMOS</a>
+      <a href="#landscape">LANDSCAPE</a>
+      <a href="#ecosystem">ECOSYSTEM</a>
+      <a class="cta" href="#manifesto">THE STORY</a>
+    </div>
+  </div>
+</nav>
+
+<header id="top">
+  <canvas id="heroFx"></canvas>
+  <div class="wrap">
+    <span class="kicker"><span class="dot"></span> A REACTIVE CELL RUNTIME · PLAYTESTED IN PUBLIC</span>
+    <h1>The spreadsheet<br>grew <em>senses.</em></h1>
+    <p class="sub">SuperInstance builds on <b>quilt</b> — a runtime where cells don't just hold numbers,
+      they <b>watch each other, act on what they see, learn in public, and book every decision
+      into a tamper-evident receipt chain</b>. Below, four of those sheets are already alive.
+      No screenshots. The cells are running.</p>
+    <div class="heroBtns">
+      <a class="btn primary" href="#demos">Watch the cells <span aria-hidden="true">↓</span></a>
+      <a class="btn ghost" href="#landscape">Where it beats the big players</a>
+    </div>
+    <div class="stats">
+      <div><div class="n num">6</div><div class="l">living projects</div></div>
+      <div><div class="n num">187<span class="u">✓</span></div><div class="l">green checks</div></div>
+      <div><div class="n num">12</div><div class="l">engine patches</div></div>
+      <div><div class="n num">36<span class="u">/36</span></div><div class="l">upstream tests kept</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= WHY ================= -->
+<section id="why" class="reveal">
+  <div class="wrap">
+    <div class="secHead">
+      <div class="tag">WHY A NEW INSTINCT</div>
+      <h2>Three primitives the classic grid never had</h2>
+      <p>A formula computes. A <b>listener</b> notices. A <b>weight in a visible cell</b> can be
+         argued with, nudged, and improved — by you, or by the sheet itself.</p>
+    </div>
+    <div class="props">
+      <div class="prop">
+        <svg class="glyph" viewBox="0 0 40 40" fill="none"><rect x="3" y="3" width="14" height="14" rx="4" stroke="#3FE0C5" stroke-width="2"/><rect x="23" y="23" width="14" height="14" rx="4" stroke="#3FE0C5" stroke-opacity=".45" stroke-width="2"/><path d="M17 10h9a4 4 0 0 1 4 4v5" stroke="#3FE0C5" stroke-width="2" stroke-dasharray="3 3"/><path d="M27 15l3 4 3-4" stroke="#3FE0C5" stroke-width="2"/></svg>
+        <h3>Rules are cells</h3>
+        <p>Every rule — a trading clause, a poker read, a game's legality — is an inspectable
+           cell you can click, question, and edit. Not a hidden function. The sheet is the spec.</p>
+      </div>
+      <div class="prop">
+        <svg class="glyph" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="18" r="9" stroke="#FF7A6B" stroke-width="2"/><circle cx="20" cy="18" r="3" fill="#FF7A6B"/><path d="M20 27v7M14 34h12" stroke="#FF7A6B" stroke-width="2" stroke-linecap="round"/><path d="M6 8c2.5 2.5 2.5 5 0 7.5M34 8c-2.5 2.5-2.5 5 0 7.5" stroke="#FF7A6B" stroke-opacity=".5" stroke-width="2" stroke-linecap="round"/></svg>
+        <h3>Watching is a primitive</h3>
+        <p>Listeners fire when a cell changes: flash a rule, halt a trade, refuse a payment,
+           play a move. Reactivity isn't a plugin — it's the substrate. The demos below run on it.</p>
+      </div>
+      <div class="prop">
+        <svg class="glyph" viewBox="0 0 40 40" fill="none"><path d="M4 32L14 20l7 6 12-16" stroke="#3FE0C5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="33" cy="10" r="3.4" fill="#3FE0C5"/><path d="M4 37h32" stroke="#3FE0C5" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/></svg>
+        <h3>Learning is visible</h3>
+        <p>Weights live in cells you can watch drift. Improvement passes gates, and every
+           promotion is a receipt in an fnv1a64 chain. You never have to trust the black box —
+           the box is glass.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DEMOS ================= -->
+<section id="demos">
+  <div class="wrap">
+    <div class="secHead reveal">
+      <div class="tag">LIVE · RUNNING IN THIS PAGE</div>
+      <h2>Four sheets, already alive</h2>
+      <p>Each patch below runs on a tiny reactive engine embedded in this page — the same
+         semantics as the full quilt runtime: value cells, formulas with declared dependencies,
+         listeners that fire on change. The mini-console in every patch is <b>real engine traffic</b>,
+         sampled, not theater.</p>
+    </div>
+
+    <!-- D1 OCEAN -->
+    <div class="patch reveal" id="p-ocean">
+      <div class="patchHead">
+        <span class="no">DEMO 01</span><h3>Ocean-as-a-Sheet</h3>
+        <div class="badges"><span class="badge value">336 VALUE CELLS</span><span class="badge formula">WAVE FORMULA</span><span class="badge listener">TIDE GAUGE</span></div>
+      </div>
+      <p class="patchSub">A tide field where every cell is a cell. The wave formula
+        <code>h′ = (Σhₙ)/2 − h</code> propagates energy through the grid; a <b>listener</b> on the
+        tide gauge lights the foam when |h| crosses the surge line. Drop a stone and watch
+        the cascade — reactivity as physics.</p>
+      <div class="demoGrid">
+        <div class="stage"><canvas id="oceanCanvas" width="520" height="300"></canvas></div>
+        <div class="sidePanel">
+          <div class="cellCard">
+            <div class="ch"><span class="badge listener">LISTENER</span><span class="cid"><b>tide.gauge</b> · cell D7</span></div>
+            <div class="cval" id="oceanGauge">h = 0.00</div>
+            <div class="cexpr">watch(tide.gauge) → if |h| &gt; 0.55 <i>· light foam cells, log surge</i></div>
+          </div>
+          <div class="cellCard">
+            <div class="ch"><span class="badge formula">FORMULA</span><span class="cid"><b>wave.step</b></span></div>
+            <div class="cexpr">h′(x,y) = (h↑+h↓+h←+h→)/2 − h(x,y) <i>· damping 0.994 · walls reflect</i></div>
+          </div>
+          <div class="controls">
+            <button class="chip on" id="oceanPlay">⏸ flowing</button>
+            <button class="chip" id="oceanDrop">drop a stone</button>
+            <label class="fadeNote">tempo <input type="range" id="oceanSpeed" min="1" max="5" value="3" style="vertical-align:middle;width:90px"></label>
+          </div>
+          <div class="miniLog" id="oceanLog"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D2 REVERSI -->
+    <div class="patch reveal" id="p-reversi">
+      <div class="patchHead">
+        <span class="no">DEMO 02</span><h3>Reversi, self-playing</h3>
+        <div class="badges"><span class="badge formula">pick=Σweights</span><span class="badge value">wpos VISIBLE</span><span class="badge listener">apply-move</span></div>
+      </div>
+      <p class="patchSub">Two agents share one board sheet: <b>TIDE</b> reads a positional weight map,
+        <b>TERRA</b> counts mobility. The <code>pick</code> formula evaluates every legal move;
+        a listener applies the pick — which re-triggers the formula. The sheet plays itself.
+        When a game ends, the loser's <b>weight cells drift</b> toward what beat it. You are
+        watching the learning loop, not a replay of one.</p>
+      <div class="demoGrid">
+        <div class="stage">
+          <div class="scoreRow" style="margin-bottom:12px">
+            <span class="scoreBig whoB num" id="revScoreB">2</span>
+            <span class="fadeNote">TIDE · positional</span>
+            <span style="margin:0 8px;color:var(--dim)">vs</span>
+            <span class="scoreBig whoW num" id="revScoreW">2</span>
+            <span class="fadeNote">TERRA · mobility</span>
+            <span class="streetTag" id="revTurnTag" style="margin-left:auto">TIDE to move</span>
+          </div>
+          <div class="board" id="reversiBoard"></div>
+        </div>
+        <div class="sidePanel">
+          <div class="cellCard">
+            <div class="ch"><span class="badge value">VALUE CELLS</span><span class="cid"><b>agent.wpos</b> · TIDE's weights</span></div>
+            <canvas id="revWeights" width="240" height="240" style="width:120px;height:120px;float:right;margin-left:12px;border-radius:8px"></canvas>
+            <div class="cexpr">8×8 heat map <i>· darker = quiet square, brighter = territory the agent is learning to want</i></div>
+            <div class="cexpr num" id="revGames" style="color:var(--muted)">games played: 0 · last result —</div>
+            <div style="clear:both"></div>
+          </div>
+          <div class="controls">
+            <button class="chip on" id="revPause">⏸ playing</button>
+            <label class="fadeNote">tempo <input type="range" id="revSpeed" min="1" max="10" value="6" style="vertical-align:middle;width:90px"></label>
+          </div>
+          <div class="miniLog" id="revLog"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D3 HOLDEM -->
+    <div class="patch reveal" id="p-holdem">
+      <div class="patchHead">
+        <span class="no">DEMO 03</span><h3>Hold'em — playing the players</h3>
+        <div class="badges"><span class="badge value">odds: 0 TOKENS</span><span class="badge formula">shape(opp)</span><span class="badge listener">read composer</span></div>
+      </div>
+      <p class="patchSub">Pot odds are mechanical — a formula cell gets them for free, costing
+        zero attention. The game happens <b>elsewhere</b>: across flop, turn and river, the
+        <code>shape</code> formula reads OPP's bet sizes into a decision-shape — looseness,
+        aggression, deception — and a listener speaks the read out loud. Slide
+        <b>focus</b> down and your own cards literally fade into the environment, the way a
+        good player's attention already has.</p>
+      <div class="demoGrid">
+        <div class="stage">
+          <div class="streetRow" style="margin-bottom:10px">
+            <span class="streetTag" id="streetTag">PREFLOP</span>
+            <span style="color:var(--dim)">·</span>
+            <span class="fadeNote">community</span>
+            <span id="community" style="display:flex;gap:6px"></span>
+            <span style="margin-left:auto" class="fadeNote">pot <b class="mono num" id="potAmt" style="color:var(--budget)">40</b></span>
+          </div>
+          <div class="holeRow" id="holeRow">
+            <div class="pcard red" id="holeA"><span>A♥</span><span class="st">hole</span></div>
+            <div class="pcard black" id="holeB"><span>9♠</span><span class="st">hole</span></div>
+            <div class="fadeNote" style="margin-left:6px">your cards — <span id="fadePct">watching them</span></div>
+          </div>
+          <div class="readBox" id="readBox" style="margin-top:16px">
+            OPP limps. No shape yet — the flop is where decision-making starts to have a silhouette.
+          </div>
+        </div>
+        <div class="sidePanel">
+          <div class="cellCard">
+            <div class="ch"><span class="badge formula">FORMULA</span><span class="cid"><b>shape.opp</b> · decision silhouette</span></div>
+            <canvas id="shapeRadar" width="260" height="200" style="width:130px;height:100px;float:right;margin-left:10px"></canvas>
+            <div class="kv"><span class="k">looseness</span><span class="v num" id="shLoose">–</span></div>
+            <div class="kv"><span class="k">aggression</span><span class="v num" id="shAggr">–</span></div>
+            <div class="kv"><span class="k">deception</span><span class="v num" id="shDecep">–</span></div>
+            <div class="kv"><span class="k">observations</span><span class="v num" id="shObs">0</span></div>
+            <div style="clear:both"></div>
+          </div>
+          <div class="controls">
+            <button class="chip" id="heNext">next street →</button>
+            <button class="chip" id="heHand">new hand</button>
+            <button class="chip" id="heAuto">▶ auto</button>
+          </div>
+          <label class="fadeNote" style="display:block">focus on the player, not the cards
+            <input type="range" id="focusSlider" min="0" max="100" value="100" style="width:100%;display:block;margin-top:6px">
+          </label>
+          <div class="miniLog" id="heLog"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D4 DESK -->
+    <div class="patch reveal" id="p-desk">
+      <div class="patchHead">
+        <span class="no">DEMO 04</span><h3>The signal desk</h3>
+        <div class="badges"><span class="badge formula">signal → confirm</span><span class="badge economy">MOTH BUDGET</span><span class="badge quantum">quantum dice</span></div>
+      </div>
+      <p class="patchSub">A backtest where the tape, the indicators and the risk clause are all
+        cells. The twist learned the hard way in <code>quilt-quant/lab</code>: <b>a signal is a
+        proposal, not an oracle</b> — entries wait for a confirmation cell, and each entry can
+        be validated by a true-random draw from a <b>rationed quantum budget</b> (mocked here,
+        metered like the real moth-quantum API). Perception costs something; the meter keeps the score.</p>
+      <div class="demoGrid">
+        <div class="stage"><canvas id="deskCanvas" width="560" height="330"></canvas></div>
+        <div class="sidePanel">
+          <div class="cellCard">
+            <div class="ch"><span class="badge formula">FORMULA</span><span class="cid"><b>sig.position</b></span></div>
+            <div class="cval" id="deskPos">flat</div>
+            <div class="cexpr">enter iff signal &amp; confirm &amp; quantum OK <i>· signal is a proposal — confirmation is the gate</i></div>
+          </div>
+          <div class="cellCard">
+            <div class="ch"><span class="badge economy">ECONOMY</span><span class="cid"><b>moth.budget</b></span></div>
+            <div class="meterLbl"><span>perception calls</span><span class="num" id="mothUsed">0 / 24</span></div>
+            <div class="meter"><div id="mothFill" style="width:0%"></div></div>
+            <div class="cexpr num" style="margin-top:8px">insight per call: <i id="mothInsight">–</i></div>
+          </div>
+          <div class="kv"><span class="k">equity (strategy)</span><span class="v num" id="kEq">1.000</span></div>
+          <div class="kv"><span class="k">buy &amp; hold</span><span class="v num" id="kBnh">1.000</span></div>
+          <div class="kv"><span class="k">max drawdown</span><span class="v num" id="kDd">0.0%</span></div>
+          <div class="kv"><span class="k">completed trades</span><span class="v num" id="kTrades">0</span></div>
+          <div class="controls">
+            <button class="chip on" id="deskRun">⏸ running</button>
+            <button class="chip amber" id="deskQuantum">spend a call</button>
+            <button class="chip" id="deskRetape">re-tape</button>
+          </div>
+          <div class="miniLog" id="deskLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LANDSCAPE ================= -->
+<section id="landscape" class="reveal" style="background:linear-gradient(rgba(13,21,36,.5),transparent)">
+  <div class="wrap">
+    <div class="secHead">
+      <div class="tag">THE HONEST MAP</div>
+      <h2>Compared with the big players</h2>
+      <p>Scored on the four things SuperInstance is actually about. Not a claim of superiority
+        everywhere — a claim of a different point on the map.</p>
+    </div>
+    <div class="landscape">
+      <table>
+        <thead><tr>
+          <th>Player</th><th>Paradigm</th><th>Live reactivity<br><span style="opacity:.6">cell-to-cell, sub-second</span></th>
+          <th>Cells that act<br><span style="opacity:.6">listeners · gates</span></th>
+          <th>Learning in-sheet<br><span style="opacity:.6">visible weights · loops</span></th>
+          <th>Provenance<br><span style="opacity:.6">receipts · chains</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><b>Excel + Copilot</b></td><td>the deep classic grid</td><td class="no">recalc only</td><td class="no">—</td><td class="no">Solver, offline</td><td class="no">—</td></tr>
+          <tr><td><b>Google Sheets + Gemini</b></td><td>collab grid</td><td class="part">share-level</td><td class="part">Apps Script triggers</td><td class="no">—</td><td class="no">version history</td></tr>
+          <tr><td><b>Airtable</b></td><td>records + views</td><td class="part">view refresh</td><td class="part">automations out-of-sheet</td><td class="no">—</td><td class="no">—</td></tr>
+          <tr><td><b>Notion AI</b></td><td>docs + blocks</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+          <tr><td><b>Observable</b></td><td>reactive notebooks</td><td class="yes">yes, dev-first</td><td class="no">code effects</td><td class="part">by hand</td><td class="no">—</td></tr>
+          <tr><td><b>Bloomberg Terminal</b></td><td>market data fortress</td><td class="yes">data feeds</td><td class="part">alerts</td><td class="no">closed</td><td class="part">audit trails</td></tr>
+          <tr><td><b>Hex / Deepnote</b></td><td>AI data notebooks</td><td class="no">run-on-demand</td><td class="no">—</td><td class="part">AI suggests</td><td class="no">—</td></tr>
+          <tr class="us"><td><b>SuperInstance / quilt</b></td><td><b>the sheet is the agent</b></td><td class="yes">cell-to-cell cascade</td><td class="yes">watch · condition · act</td><td class="yes">weights as cells, gated loops</td><td class="yes">fnv1a64 receipt chains</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="honest">
+      <b>Where the big players win today, said plainly:</b> collaboration at enterprise scale,
+      integration ecosystems, mobile, 10M-cell performance, compliance teams, and support desks.
+      SuperInstance is a different bet — that the next step is not a smarter assistant next to
+      the grid, but <b>agency living inside the grid itself</b>.
+    </div>
+    <div class="mapCard">
+      <svg viewBox="0 0 780 430" role="img" aria-label="Positioning map: static-to-living vs human-driven-to-agentic">
+        <defs>
+          <radialGradient id="usGlow" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#3FE0C5" stop-opacity=".35"/><stop offset="1" stop-color="#3FE0C5" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="qTint" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#3FE0C5" stop-opacity=".08"/><stop offset="1" stop-color="#3FE0C5" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect x="398" y="36" width="332" height="314" fill="url(#qTint)"/>
+        <line x1="64" y1="350" x2="730" y2="350" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
+        <line x1="64" y1="350" x2="64" y2="36" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
+        <line x1="397" y1="350" x2="397" y2="36" stroke="rgba(255,255,255,.07)" stroke-dasharray="4 6"/>
+        <line x1="64" y1="193" x2="730" y2="193" stroke="rgba(255,255,255,.07)" stroke-dasharray="4 6"/>
+        <text x="726" y="376" fill="#8A96AD" font-size="13" font-family="inherit" text-anchor="end" font-style="italic">a living field →</text>
+        <text x="70" y="376" fill="#8A96AD" font-size="13" font-family="inherit" font-style="italic">static compute</text>
+        <text x="46" y="52" fill="#8A96AD" font-size="13" font-family="inherit" font-style="italic" transform="rotate(-90 46 52)" text-anchor="end">cells act on their own</text>
+        <text x="80" y="344" fill="#5A667E" font-size="13" font-family="inherit">humans drive every step</text>
+        <g font-size="14.5" fill="#C6CFDF" font-family="inherit">
+          <circle cx="190" cy="300" r="5" fill="#5A667E"/><text x="190" y="288" text-anchor="middle">Excel + Copilot</text>
+          <circle cx="252" cy="322" r="5" fill="#5A667E"/><text x="252" y="306" text-anchor="middle">Google Sheets</text>
+          <circle cx="120" cy="332" r="5" fill="#5A667E"/><text x="120" y="322" text-anchor="middle">Notion AI</text>
+          <circle cx="316" cy="282" r="5" fill="#8A96AD"/><text x="316" y="270" text-anchor="middle">Airtable</text>
+          <circle cx="368" cy="244" r="5" fill="#8A96AD"/><text x="368" y="232" text-anchor="middle">Coda · Rows</text>
+          <circle cx="446" cy="268" r="5" fill="#8A96AD"/><text x="446" y="256" text-anchor="middle">Hex · Deepnote</text>
+          <circle cx="492" cy="212" r="5" fill="#8A96AD"/><text x="492" y="200" text-anchor="middle">Observable</text>
+          <circle cx="196" cy="176" r="5" fill="#5A667E"/><text x="196" y="164" text-anchor="middle">Bloomberg Terminal</text>
+        </g>
+        <circle cx="648" cy="112" r="46" fill="url(#usGlow)"/>
+        <circle cx="648" cy="112" r="7" fill="#3FE0C5"/>
+        <text x="648" y="88" fill="#3FE0C5" font-size="16" font-weight="700" text-anchor="middle" font-family="inherit">SuperInstance</text>
+        <text x="648" y="142" fill="#8A96AD" font-size="12.5" text-anchor="middle" font-family="inherit">cells that watch back</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ECOSYSTEM ================= -->
+<section id="ecosystem" class="reveal">
+  <div class="wrap">
+    <div class="secHead">
+      <div class="tag">ONE ABSTRACTION, SIX PATCHES</div>
+      <h2>The quilt so far</h2>
+      <p>Every project below is the same claim tested in a new realm: <b>rules as cells, effects
+         as value pushes, learning as visible cell updates, decisions booked as receipts</b>.
+         None of the later projects needed new engine code — the abstraction held.</p>
+    </div>
+    <div class="quiltBanner">
+      <img src="@@QUILT_ART@@" alt="A quilt of nine living interface patches stitched together over a night ocean" loading="lazy">
+      <div class="cap"><b>Six patches, one seam.</b> Each project stitched to the same reactive cloth — vendored engine, zero forks after patch 12.</div>
+    </div>
+    <div class="quiltGrid">
+      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 01 · INVESTIGATION</div><h4>quilt-playtest</h4><p>12 engine patches, an 11-probe dissent ledger, gesture math, federation — the engine learned to be trusted.</p><span class="pill">36/36 upstream tests kept green</span></div>
+      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 02 · PRODUCTION</div><h4>quilt-tools</h4><p>Ten tools in ten realms — pagers, ledgers, memory, triage, budgets — proving the template ships real software.</p><span class="pill">75/75 checks</span></div>
+      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 03 · PLAY</div><h4>quilt-arcade</h4><p>Five games as spreadsheets — reversi, gomoku, hold'em — rules as cells, flip cascades, visible learning loops.</p><span class="pill">55/55 checks</span></div>
+      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 04 · MARKETS</div><h4>quilt-quant</h4><p>The trading desk as a sheet: one value push re-prices everything; improvement only through an out-of-sample gate.</p><span class="pill">15/15 checks vs reference stack</span></div>
+      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 05 · AGENCY</div><h4>quilt-quant / lab</h4><p>The sheet IS the agent — simulation-first, signal-as-confirmation, entanglement veto, pruning by participation.</p><span class="pill">19/19 · live QRNG + GLM</span></div>
+      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 06 · COMPETITION</div><h4>quilt-arena</h4><p>Four rival minds play minesweeper &amp; hearts, infer each other's formulas, under a rationed quantum perception budget.</p><span class="pill">23/23 · live championship</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MANIFESTO ================= -->
+<section class="manifesto" id="manifesto">
+  <div class="wrap reveal">
+    <div class="line">The old grid waits for you to ask. <b>These cells answer before you do.</b></div>
+    <div class="line">A rule you can't click is a rumor. <em>Every rule is a cell.</em></div>
+    <div class="line">Understanding should <b>spread across cells</b>, the way a tide spreads across a shore.</div>
+    <div class="line">Randomness you pay for should <em>earn its keep</em> — metered, receipted, rationed like perception itself.</div>
+    <div class="line">In cards, in markets, in mines: <b>the odds are mechanical. The players are the game.</b></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="flogo">
+      <svg viewBox="0 0 96 96" fill="none" aria-hidden="true"><rect x="8" y="8" width="36" height="36" rx="9" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".16" stroke-width="3"/><rect x="52" y="8" width="36" height="36" rx="9" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".16" stroke-width="3"/><rect x="8" y="52" width="36" height="36" rx="9" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".16" stroke-width="3"/><rect x="52" y="52" width="36" height="36" rx="9" fill="#3FE0C5"/><circle cx="70" cy="70" r="5" fill="#052A26"/></svg>
+      super<span class="light" style="color:var(--muted);font-weight:300">instance</span>
+    </div>
+    <div class="fl">built on <a href="https://github.com/SuperInstance/quilt">SuperInstance/quilt</a> · cells that watch, act, learn, and prove it</div>
+    <div class="right num">187 checks green · 12 patches · 2026-09-25</div>
+  </div>
+</footer>

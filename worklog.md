@@ -211,3 +211,30 @@ Stage Summary:
 - quilt-arena delivers the user's phase-8 ask: MOTH-driven novel ML through competitive iterative experimentation (4 families forced apart by a novelty rule every revision), minesweeper+hearts reduced to formulas with opponents inferred in a shared feature language, and an explicit perception economy (MOTH calls per set with family-distinct spend doctrines)
 - The strongest single find is the evolutionary gradient ensemble (selection + gradient offspring); the strongest engineering find is the silent-cell-error lesson
 - Portfolio: playtest (12 patches) + tools (75/75) + arcade (55/55) + quant (15/15) + lab (19/19) + arena (23/23)
+
+---
+Task ID: 13
+Agent: main (Super Z)
+Task: Stage 9 — "better images and look and feel, playtest and iterate, compare with big players, make superinstance a thing"
+
+Work Log:
+- Built the SuperInstance brand kit (download/superinstance/brand/): "the watching cell" mark (2x2 quilt, one lit pulsing cell), logo lockup, favicon, and a palette/type/motion spec where each accent is bound to a meaning (tide=life, signal=events, budget=economy, quantum=the quantum layer)
+- Generated brand art via z-ai image CLI (learned: sizes must be 32-multiples; 1440x720 rejected, 1344x768 works): hero-art.png (night ocean of glowing cells) + quilt-art.png (stitched quilt of living patches)
+- Built the flagship showcase download/superinstance/index.html — single self-contained 456KB file, zero dependencies, works offline: modular sources in scripts/superinstance/ (css/body/engine/demos1/demos2/chrome/build) with base64-embedded art
+- Embedded a ~120-line mini reactive engine with full quilt semantics (value/formula with declared deps/watch listeners, mid-cascade watcher flush, cycle guard) + event bus feeding real per-demo consoles
+- Four LIVE demos: (1) Ocean-as-a-Sheet 336 cells + damped wave formula + tide-gauge listener; (2) Reversi self-playing via pick-formula + apply-move listener chain, TIDE positional weights vs TERRA mobility, loser's weight cells drift (visible learning loop); (3) Hold'em "playing the players" — mechanical pot odds cost 0 tokens, shape.opp formula reads looseness/aggression/deception, listener composes spoken reads, focus slider fades your cards into the environment; (4) Signal desk — signal proposes, confirm gate disposes, mocked-but-metered quantum dice budget (amber meter, insight-per-call stat), doctrine toggle
+- Landscape section: honest scored table vs Excel+Copilot / Google Sheets+Gemini / Airtable / Notion / Observable / Bloomberg Terminal / Hex-Deepnote + "where the big players win today" callout + inline SVG 2x2 positioning map
+- PLAYTEST LOOP (4 rounds, headless chromium QA harness scripts/superinstance/qa.mjs — console/page errors, canvas-animation assertions, real clicks, per-demo screenshots), real bugs found and fixed:
+  (a) OCEAN BLEW UP (gauge -7.2e34): wave recursion used current field as inertia term instead of previous — fixed scheme (Σhn)/2 − h_prev, damping 0.99, ±3 clamp
+  (b) REVERSI NEVER MOVED: initial pick evaluated before its listener existed — kick with schedule(S.get('pick'))
+  (c) HOLDEM SHAPE FROZE AT n=0: aliasing trap — stt.n++ mutated the cell's own object, spreading it back deep-equals current value so recompute silently skipped — copy-then-mutate fix (sameV lesson, echoes arena's silent-cell-error lesson)
+  (d) CONSOLES UNREADABLE: 24 flex rows in fixed-height column got flex-shrink squashed — flex:0 0 auto
+  (e) positioning-map label collision (humans-drive vs Google Sheets) + dim ocean render — both fixed
+- Final QA: ZERO console/page errors; hero canvas verified animating; reversi self-plays to 63 discs; holdem obs 1->4 with composed reads; desk trades 3 with 3/24 metered calls
+- Exported images: og-card.png (1200x630 social card composed over hero art), positioning-map.png, demo/qa screenshots (9 PNGs)
+- Rewrote download/README.md as a branded portfolio index (superinstance as the front door); appended worklog; rebuilt quilt-portfolio-2026-09-25.zip (16.4MB, 904 files) including superinstance/
+
+Stage Summary:
+- SuperInstance is now a thing: a name with a mark, a palette with meanings, a front door where four sheets are alive before you scroll, an honest competitive map, and a playtest log that shows the iteration
+- The portfolio: playtest (12 patches, 36/36) + tools (75/75) + arcade (55/55) + quant (15/15) + lab (19/19) + arena (23/23) = 187 green checks, all in one verified zip
+- Reusable finding for future UI work: sameV-style deep equality + in-place mutation = silent no-op recompute; and flex columns with fixed height squash overflowing children unless flex-shrink is zeroed

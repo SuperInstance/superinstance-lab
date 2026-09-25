@@ -1,0 +1,33 @@
+      <svg viewBox="0 0 780 430" role="img" aria-label="Positioning map: static-to-living vs human-driven-to-agentic">
+        <defs>
+          <radialGradient id="usGlow" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#3FE0C5" stop-opacity=".35"/><stop offset="1" stop-color="#3FE0C5" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="qTint" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#3FE0C5" stop-opacity=".08"/><stop offset="1" stop-color="#3FE0C5" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect x="398" y="36" width="332" height="314" fill="url(#qTint)"/>
+        <line x1="64" y1="350" x2="730" y2="350" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
+        <line x1="64" y1="350" x2="64" y2="36" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
+        <line x1="397" y1="350" x2="397" y2="36" stroke="rgba(255,255,255,.07)" stroke-dasharray="4 6"/>
+        <line x1="64" y1="193" x2="730" y2="193" stroke="rgba(255,255,255,.07)" stroke-dasharray="4 6"/>
+        <text x="726" y="376" fill="#8A96AD" font-size="13" font-family="inherit" text-anchor="end" font-style="italic">a living field →</text>
+        <text x="70" y="376" fill="#8A96AD" font-size="13" font-family="inherit" font-style="italic">static compute</text>
+        <text x="46" y="52" fill="#8A96AD" font-size="13" font-family="inherit" font-style="italic" transform="rotate(-90 46 52)" text-anchor="end">cells act on their own</text>
+        <text x="80" y="344" fill="#5A667E" font-size="13" font-family="inherit">humans drive every step</text>
+        <g font-size="14.5" fill="#C6CFDF" font-family="inherit">
+          <circle cx="190" cy="300" r="5" fill="#5A667E"/><text x="190" y="288" text-anchor="middle">Excel + Copilot</text>
+          <circle cx="252" cy="322" r="5" fill="#5A667E"/><text x="252" y="306" text-anchor="middle">Google Sheets</text>
+          <circle cx="120" cy="332" r="5" fill="#5A667E"/><text x="120" y="322" text-anchor="middle">Notion AI</text>
+          <circle cx="316" cy="282" r="5" fill="#8A96AD"/><text x="316" y="270" text-anchor="middle">Airtable</text>
+          <circle cx="368" cy="244" r="5" fill="#8A96AD"/><text x="368" y="232" text-anchor="middle">Coda · Rows</text>
+          <circle cx="446" cy="268" r="5" fill="#8A96AD"/><text x="446" y="256" text-anchor="middle">Hex · Deepnote</text>
+          <circle cx="492" cy="212" r="5" fill="#8A96AD"/><text x="492" y="200" text-anchor="middle">Observable</text>
+          <circle cx="196" cy="176" r="5" fill="#5A667E"/><text x="196" y="164" text-anchor="middle">Bloomberg Terminal</text>
+        </g>
+        <circle cx="648" cy="112" r="46" fill="url(#usGlow)"/>
+        <circle cx="648" cy="112" r="7" fill="#3FE0C5"/>
+        <text x="648" y="88" fill="#3FE0C5" font-size="16" font-weight="700" text-anchor="middle" font-family="inherit">SuperInstance</text>
+        <text x="648" y="142" fill="#8A96AD" font-size="12.5" text-anchor="middle" font-family="inherit">cells that watch back</text>
+      </svg>
