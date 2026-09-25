@@ -1,0 +1,41 @@
+  cells: 67
+
+── THE TAPE ────────────────────────────────────────────────
+  760 synthetic daily bars (seed 20260925), regimes: trend-up×120, bear×90, trend-up×110, chop×80, trend-up×120, bear×100, recovery×140
+  buy & hold: ret 1.1%, sharpe 1.27, dd 0.3%
+
+── CHECKS ──────────────────────────────────────────────────
+  ✓ S1 stops the desk on an untradeable series (NaN / short)
+  ✓ indicators agree with the reference stack (SMA prefix-sum, delta-array RSI)
+  ✓ signal agrees with the reference state machine; S3 audits structure
+  ✓ no lookahead: mutating bar 400 cannot move anything before it
+  ✓ HAND-COMPUTED tape: 60 bars, 50bps fee — every number done on paper
+  ✓ backtest agrees with settlement-accounting reference on the real tape (3 configs)
+  ✓ walk-forward: split integrity, reference agreement, S6 verdicts
+  ✓ S7 promotion gate: beats-OOS-but-drops-IS is refused, beats-both is promoted
+  ✓ THE OVERFIT TRAP: a candidate that wins IS and loses OOS is refused, champion untouched
+  ✓ LIVE PROMOTION: a candidate that beats both windows takes the desk and re-prices it
+    curve: 2 promotions, champion OOS 1.304 (desk seeded at 0.677), verdict ROBUST
+  ✓ FULL TRAINING RUN: 24 generations, OOS improves, promotions are monotone
+  ✓ WITNESS CHAIN: re-derives from GENESIS; one flipped byte breaks it
+  ✓ DETERMINISM: same seed, same 24 generations, byte-identical receipts
+  ✓ ONE NUDGE RE-PRICES THE DESK: p.fast push flows through every cell
+  ✓ BUY & HOLD control group is priced and beaten-or-explained
+
+quant: 15/15 checks green in 132ms
+
+── LEARNING CURVE (a fresh 24-generation run, replayed from receipts) ──
+  gen  0  seed        sma_cross       f/s   8/34   IS  0.990  OOS  0.677  SEED
+  gen  1  promote·wb  sma_cross       f/s   8/34   IS  1.209  OOS  1.056  ROBUST
+  gen  4  refuse      sma_cross       f/s   8/30   IS  1.004  OOS  1.021  ROBUST
+  gen  7  promote·wb  sma_cross       f/s   5/34   IS  1.211  OOS  1.304  ROBUST
+  gen  8  refuse      sma_cross       f/s   5/34   IS  1.112  OOS  0.986  ROBUST
+  gen 12  refuse      sma_cross       f/s   5/34   IS  1.121  OOS  1.436  ROBUST
+  gen 16  refuse      sma_cross       f/s   5/34   IS  1.164  OOS  1.451  ROBUST
+  gen 20  refuse      sma_cross       f/s   5/34   IS  1.211  OOS  1.304  ROBUST
+  gen 24  refuse      sma_cross       f/s   5/38   IS  1.213  OOS  1.112  ROBUST
+
+  champion: gen 24 — sma_cross fast=5 slow=34 rsi_max=77
+  OOS score 1.304 — ROBUST out of sample
+
+  (emitted quant.sheet.json — 67 cells; experiments/quant.json)

@@ -1,0 +1,551 @@
+{
+ "built": "2026-09-25",
+ "seed": 20260925,
+ "bars": 760,
+ "cells": 67,
+ "checks": {
+  "pass": 15,
+  "fail": 0
+ },
+ "tape": {
+  "bnh": {
+   "total_return": 0.01098701291452242,
+   "cagr": 0.0036345570680009764,
+   "sharpe": 1.2744574251982597,
+   "maxdd": 0.003204269038445713,
+   "n_trades": 0,
+   "win_rate": 0,
+   "profit_factor": 0,
+   "exposure": 1
+  }
+ },
+ "champion": {
+  "gen": 24,
+  "strategy": "sma_cross",
+  "params": {
+   "fast": 5,
+   "slow": 34,
+   "rsi_len": 14,
+   "rsi_max": 77,
+   "rsi_buy": 30,
+   "rsi_sell": 64
+  },
+  "is_score": 1.2114278726066234,
+  "oos_score": 1.3044121659701322,
+  "verdict": "ROBUST"
+ },
+ "promotions": 3,
+ "curve": [
+  {
+   "seq": 1,
+   "gen": 0,
+   "kind": "seed",
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 8,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 72,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 0.9902958260258978,
+   "oos_score": 0.6765998665422798,
+   "verdict": "SEED",
+   "row_hash": "4593d0facf74eb18"
+  },
+  {
+   "seq": 2,
+   "gen": 1,
+   "kind": "promote",
+   "wb_moved": true,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 8,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.2092259078151528,
+   "oos_score": 1.0563555921657666,
+   "verdict": "ROBUST",
+   "row_hash": "3ccfbaf2cc02dfc0"
+  },
+  {
+   "seq": 3,
+   "gen": 2,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 8,
+    "slow": 34,
+    "rsi_len": 11,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.0756681745183838,
+   "oos_score": 0.7348029365693617,
+   "verdict": "WEAK",
+   "row_hash": "2269eacd074b3c51"
+  },
+  {
+   "seq": 4,
+   "gen": 3,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 8,
+    "slow": 34,
+    "rsi_len": 16,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.1495427132256164,
+   "oos_score": 1.2951054844395635,
+   "verdict": "ROBUST",
+   "row_hash": "30a54964ce412b28"
+  },
+  {
+   "seq": 5,
+   "gen": 4,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 8,
+    "slow": 30,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.0043331460571403,
+   "oos_score": 1.021154673469378,
+   "verdict": "ROBUST",
+   "row_hash": "b2bea9615c2d4e18"
+  },
+  {
+   "seq": 6,
+   "gen": 5,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 8,
+    "slow": 34,
+    "rsi_len": 11,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.0756681745183838,
+   "oos_score": 0.7348029365693617,
+   "verdict": "WEAK",
+   "row_hash": "c0e42b4a03cc1692"
+  },
+  {
+   "seq": 7,
+   "gen": 6,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "rsi_reversion",
+   "params": {
+    "fast": 3,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 0.7506729817091167,
+   "oos_score": 0.812149009128655,
+   "verdict": "WEAK",
+   "row_hash": "677775126e1d20af"
+  },
+  {
+   "seq": 8,
+   "gen": 7,
+   "kind": "promote",
+   "wb_moved": true,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.2114278726066234,
+   "oos_score": 1.3044121659701322,
+   "verdict": "ROBUST",
+   "row_hash": "eb916641d5178934"
+  },
+  {
+   "seq": 9,
+   "gen": 8,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 12,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.112467355233326,
+   "oos_score": 0.9858949296598887,
+   "verdict": "ROBUST",
+   "row_hash": "222f321a243b72f6"
+  },
+  {
+   "seq": 10,
+   "gen": 9,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 70,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.0261614551862837,
+   "oos_score": 1.027025450291896,
+   "verdict": "ROBUST",
+   "row_hash": "a08caa86fc33278c"
+  },
+  {
+   "seq": 11,
+   "gen": 10,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 75,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.0752075628507676,
+   "oos_score": 0.9858949296598887,
+   "verdict": "ROBUST",
+   "row_hash": "2521c34e93997b7e"
+  },
+  {
+   "seq": 12,
+   "gen": 11,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 9,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.1849953978704213,
+   "oos_score": 1.0906444627389604,
+   "verdict": "ROBUST",
+   "row_hash": "8c510d3fbc3dcd9d"
+  },
+  {
+   "seq": 13,
+   "gen": 12,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 79,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.1208296190885576,
+   "oos_score": 1.435645724940935,
+   "verdict": "ROBUST",
+   "row_hash": "3f07ece8299c69f1"
+  },
+  {
+   "seq": 14,
+   "gen": 13,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 6,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.0850826891006864,
+   "oos_score": 1.030354030684545,
+   "verdict": "ROBUST",
+   "row_hash": "1c5989ab7050ef1c"
+  },
+  {
+   "seq": 15,
+   "gen": 14,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 3,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 0.7439716651253818,
+   "oos_score": 1.0456233535792572,
+   "verdict": "ROBUST",
+   "row_hash": "f76aabf719fd4915"
+  },
+  {
+   "seq": 16,
+   "gen": 15,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "rsi_reversion",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 70,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 0.7506729817091167,
+   "oos_score": 0.812149009128655,
+   "verdict": "WEAK",
+   "row_hash": "b3ed7d2ac3fbdf79"
+  },
+  {
+   "seq": 17,
+   "gen": 16,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 81,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.1644468760932585,
+   "oos_score": 1.4505804469658568,
+   "verdict": "ROBUST",
+   "row_hash": "9fa2262507c3a18b"
+  },
+  {
+   "seq": 18,
+   "gen": 17,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "rsi_reversion",
+   "params": {
+    "fast": 2,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 0.7506729817091167,
+   "oos_score": 0.812149009128655,
+   "verdict": "WEAK",
+   "row_hash": "f37514176450eb6a"
+  },
+  {
+   "seq": 19,
+   "gen": 18,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 75,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.0752075628507676,
+   "oos_score": 0.9858949296598887,
+   "verdict": "ROBUST",
+   "row_hash": "becad5fff03a0e26"
+  },
+  {
+   "seq": 20,
+   "gen": 19,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 23,
+    "rsi_sell": 64
+   },
+   "is_score": 1.2114278726066234,
+   "oos_score": 1.3044121659701322,
+   "verdict": "ROBUST",
+   "row_hash": "49057372080d4dc1"
+  },
+  {
+   "seq": 21,
+   "gen": 20,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 32,
+    "rsi_sell": 64
+   },
+   "is_score": 1.2114278726066234,
+   "oos_score": 1.3044121659701322,
+   "verdict": "ROBUST",
+   "row_hash": "8da5afebcf9fc902"
+  },
+  {
+   "seq": 22,
+   "gen": 21,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 34,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 24,
+    "rsi_sell": 64
+   },
+   "is_score": 1.2114278726066234,
+   "oos_score": 1.3044121659701322,
+   "verdict": "ROBUST",
+   "row_hash": "a0322c78f76fa472"
+  },
+  {
+   "seq": 23,
+   "gen": 22,
+   "kind": "refuse",
+   "wb_moved": true,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 38,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 64
+   },
+   "is_score": 1.2125221166687152,
+   "oos_score": 1.1115011052837576,
+   "verdict": "ROBUST",
+   "row_hash": "9915e953b4ce0ef3"
+  },
+  {
+   "seq": 24,
+   "gen": 23,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 38,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 28,
+    "rsi_sell": 64
+   },
+   "is_score": 1.2125221166687152,
+   "oos_score": 1.1115011052837576,
+   "verdict": "ROBUST",
+   "row_hash": "db21683c758279d2"
+  },
+  {
+   "seq": 25,
+   "gen": 24,
+   "kind": "refuse",
+   "wb_moved": false,
+   "strategy": "sma_cross",
+   "params": {
+    "fast": 5,
+    "slow": 38,
+    "rsi_len": 14,
+    "rsi_max": 77,
+    "rsi_buy": 30,
+    "rsi_sell": 58
+   },
+   "is_score": 1.2125221166687152,
+   "oos_score": 1.1115011052837576,
+   "verdict": "ROBUST",
+   "row_hash": "7b754e8c8dcc11ed"
+  }
+ ],
+ "wf": {
+  "ok": true,
+  "isN": 532,
+  "oosN": 228,
+  "strategy": "sma_cross",
+  "params": {
+   "fast": 5,
+   "slow": 34,
+   "rsi_len": 14,
+   "rsi_max": 77,
+   "rsi_buy": 30,
+   "rsi_sell": 64,
+   "fee_bps": 2
+  },
+  "is_m": {
+   "total_return": 0.005468860459320046,
+   "cagr": 0.0025916728495201102,
+   "sharpe": 1.2143280432436474,
+   "maxdd": 0.0014500853185119755,
+   "n_trades": 18,
+   "win_rate": 0.6666666666666666,
+   "profit_factor": 3.089124538815086,
+   "exposure": 0.6120527306967984
+  },
+  "oos_m": {
+   "total_return": 0.0027770095858368204,
+   "cagr": 0.0030833186842065263,
+   "sharpe": 1.3068071059710342,
+   "maxdd": 0.001197470000451033,
+   "n_trades": 7,
+   "win_rate": 0.8571428571428571,
+   "profit_factor": 7.600885149650522,
+   "exposure": 0.5726872246696035
+  },
+  "verdict": "ROBUST",
+  "why": "ROBUST out of sample: sharpe 1.31 >= 0.75, dd 0.1% <= 40%, 7 trades (S6)."
+ }
+}

@@ -1,0 +1,13 @@
+LLM STRATEGIST — letter-coded nudges through the S2→S7 pipeline
+
+  [cold desk] picked D (flip strategy) -> REFUSE WEAK · OOS 0.812
+        desk: REFUSED: IS score 0.751 degrades champion 0.990 (S7 gate).
+  [after first promotion] picked A (faster crossover) -> PROMOTE ROBUST · OOS 1.170
+        desk: PROMOTED: OOS score 1.170 beats champion 0.922, IS score holds (S7).
+  [after second promotion] picked E (hold the line) -> REFUSE ROBUST · OOS 1.481
+        desk: REFUSED: OOS score 1.481 does not beat champion 1.481 (S7 gate).
+  [deep in the run] picked E (hold the line) -> REFUSE ROBUST · OOS 1.481
+        desk: REFUSED: OOS score 1.481 does not beat champion 1.481 (S7 gate).
+
+ledger: 24 receipts, chain SEALED (head 5ddb29cd)
+strategist picks (mock): D A E E

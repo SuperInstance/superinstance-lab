@@ -156,3 +156,23 @@ Stage Summary:
 - Engine now carries 12 playtest patches (upstream still unpatched); patch 12 (fresh-by-default effectful evaluation) is the newest and was found by the holdem sheet itself
 - Agent UX documented end-to-end (thoughts -> nudges -> receipts -> curves) in agent_ux_field_notes.md
 - Single zip of all projects assembled at download/quilt-portfolio-2026-09-25.zip (1.7MB, 5 projects + worklog; verified self-contained by extracting and re-running the scoreboard: 55/55)
+
+---
+Task ID: 10
+Agent: main (Super Z)
+Task: quilt-quant — the trading desk as a spreadsheet (backtesting + self-improving strategies as cells); rebuild the single portfolio zip
+
+Work Log:
+- Built download/quilt-quant/ on the arcade's vendored engine (patches 1-12, ZERO further engine changes): 67 cells
+- Architecture: strategy.book S1-S8 (precise clause language) -> rule.Sn.check pure cells; ind.sma_fast/slow + ind.rsi + sig.pos probe-able cells; bt.run pricing engine sequences S1->S5 and PUBLISHES bt.last receipt; wf.report publishes wf.last + S6 walk-forward verdict (ROBUST/OVERFIT/WEAK); bnh.run buy&hold control; art.equity unicode sparklines; ai.trainer hill-climbs params (seeded, deterministic), promotes ONLY through rule.S7 gate (OOS score beats champion AND IS does not degrade), books fnv1a64 receipts (seed/promote/refuse + wb_moved); desk.champion + p.* write-back re-prices the whole sheet (the visible cascade); champion.push listener flashes promotions
+- KEY ENGINE LESSON (documented): formulas-over-programs go stale after a set (P2 family) — fixed spreadsheet-natively: pricing cells publish receipts into value cells, formulas read published receipts. No engine patch needed.
+- quant/play.mjs: INDEPENDENT reference stack (prefix-sum SMA, delta-array RSI, settlement-accounting backtest, two-pass Sharpe) + 15 checks: S1 refusals, indicator/signal agreement, no-lookahead tape mutation, HAND-COMPUTED 60-bar 50bps fee tape (every number on paper — caught the virtual-exit-fee inconsistency: liquidation fee now paid in the equity path; also caught S2 correctly refusing slow=3), 4-config agreement incl. fee storm, WF split integrity + S6 vocabulary, S7 unit + LIVE OVERFIT TRAP (wins IS/loses OOS -> refuse receipt, champion untouched) + LIVE PROMOTION, 24-gen run (OOS 0.677 -> 1.304, WEAK -> ROBUST, promotions monotone), chain verify + tamper break, byte-identical determinism, one-nudge re-price, bnh control. RESULT: 15/15 green in ~130ms
+- quant/viewer.mjs + bun bundle -> single-file quant/index.html (165KB): tape/SMA/long-shading/trade markers canvas, equity vs bnh, drawdown, book clause flash, metric cells, champion card, +/- nudge buttons (value push re-prices live), RUN THE TRAINER, receipt ledger with promote highlight, sparkline glass; agent-browser QA: nudge re-priced sharpe 0.89->0.88 live, trainer ran 24 candidates/2 promotions to OOS 1.241 ROBUST, ZERO console errors; 2 QA screenshots in experiments/
+- experiments/llm_strategist.mjs: letter-coded menu fence (A-E from desk state) -> decode -> ai.trainer force_cand -> same S2-S7 gate; mock state-reactive doctrine shows flip-refused / faster-crossover PROMOTED / hold tie-refused, chain sealed; --real flag for z-ai with 15/30/45s backoff
+- Docs: README.md (architecture diagram, book clauses, 15-check table, honest limits), PROVENANCE.md (engine lineage), experiments/build_notes.md (agent UX: the stale formula lesson, the hand-audit catches, receipts speaking the gate's language, determinism-by-design)
+- download/README.md rewritten as portfolio index; worklog updated; quilt-portfolio-2026-09-25.zip REBUILT including quilt-quant + updated README/worklog, verified by extraction + re-run
+
+Stage Summary:
+- quilt-quant delivers the user's ask: advanced backtest analytics as child's play (one value push re-prices everything) + self-improving strategies with watchable, gated, receipted learning
+- The arcade template absorbed a market domain with zero engine changes — strongest evidence yet of the template's generality
+- Portfolio now: playtest (12 patches) + tools (75/75) + arcade (55/55) + quant (15/15) in a single verified zip
