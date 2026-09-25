@@ -1,0 +1,25 @@
+{
+ "45a0695a982a": {
+  "answers": {
+   "action": {
+    "type": "choice",
+    "choice": "bet_big",
+    "confidence": 0.2,
+    "probabilities": {
+     "check": 0.2,
+     "fold": 0,
+     "bet_big": 0.4,
+     "bet_small": 0.4
+    }
+   }
+  },
+  "usage": {
+   "input_tokens": 424,
+   "output_tokens": 48
+  },
+  "model": "jev-1.13.0",
+  "__mock": false,
+  "__ns": "LIVE",
+  "at": "2026-09-25T11:26:21.637Z"
+ }
+}

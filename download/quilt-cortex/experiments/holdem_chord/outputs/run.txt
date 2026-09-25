@@ -1,0 +1,18 @@
+  ✓ cortex spine offline: sheet ai cell (jev.batch) answers 4 typed questions in ONE vault call; chord verdict on the same payload is a cache hit
+      off hands  25  fish 113+68  chord P1 119  (chord +9.5bb)
+      off hands  50  fish 130+48  chord P1 122  (chord +11bb)
+      off hands  75  fish 120+23  chord P1 157  (chord +28.5bb)
+      off hands 100  fish 110+97  chord P1 178  (chord +39bb)
+  ✓ offline learning: 120 hands chord vs 2 fish (mock spine) — conservation every action, zero refusals
+  ✓ every hand booked chord receipt rows; chord chain verifies; tamper caught on a copy
+  ✓ learning receipts: one row per hand with fnv1a64 chain; weights moved and stayed clamped
+      block 1 (1-25): mean calibration mae 0.2498
+      block 2 (26-50): mean calibration mae 0.2028
+      block 3 (51-75): mean calibration mae 0.2148
+      block 4 (76-100): mean calibration mae 0.2177
+      block 5 (101-120): mean calibration mae 0.2141
+  ✓ calibration mae trend across 25-hand blocks (report + trend check)
+      offline gates: {"flagged":167,"fast-accept":16,"tie-broken":38}
+  ✓ gate distribution offline (mock System One + offline reviewer): multiple paths exercised
+
+holdem-chord: 6/6 checks green in 1953ms

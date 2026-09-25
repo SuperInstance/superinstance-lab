@@ -1,0 +1,165 @@
+{
+  "checks": "7/7",
+  "zzRanking": [
+    {
+      "pair": [
+        "cyc",
+        "level"
+      ],
+      "zz": 0.3953996462657531
+    },
+    {
+      "pair": [
+        "rev",
+        "level"
+      ],
+      "zz": 0.17916661837351452
+    },
+    {
+      "pair": [
+        "vol",
+        "level"
+      ],
+      "zz": 0.17816664672898397
+    },
+    {
+      "pair": [
+        "rev",
+        "cyc"
+      ],
+      "zz": 0.07084241752751883
+    },
+    {
+      "pair": [
+        "vol",
+        "cyc"
+      ],
+      "zz": 0.07044702909299566
+    },
+    {
+      "pair": [
+        "rev",
+        "vol"
+      ],
+      "zz": 0.03192151560138065
+    },
+    {
+      "pair": [
+        "mom",
+        "level"
+      ],
+      "zz": -0.000027635079813969377
+    },
+    {
+      "pair": [
+        "mom",
+        "rev"
+      ],
+      "zz": -0.000023129292992679792
+    },
+    {
+      "pair": [
+        "mom",
+        "cyc"
+      ],
+      "zz": -0.000010929054913868964
+    },
+    {
+      "pair": [
+        "mom",
+        "vol"
+      ],
+      "zz": -0.000004923649502542759
+    }
+  ],
+  "retest": {
+    "rho": 0.4424242424242424,
+    "mock": false
+  },
+  "wirings": {
+    "BASE": {
+      "wiring": [],
+      "train": {
+        "acc": 0.6143,
+        "logloss": 0.6132,
+        "n": 280
+      },
+      "test": {
+        "acc": 0.5882,
+        "logloss": 0.6102,
+        "n": 119
+      }
+    },
+    "ORACLE": {
+      "wiring": [
+        "cyc×level",
+        "rev×level",
+        "vol×level"
+      ],
+      "train": {
+        "acc": 0.6071,
+        "logloss": 0.6089,
+        "n": 280
+      },
+      "test": {
+        "acc": 0.6134,
+        "logloss": 0.6081,
+        "n": 119
+      }
+    },
+    "CLASSICAL": {
+      "wiring": [
+        "vol×cyc",
+        "rev×level",
+        "mom×level"
+      ],
+      "train": {
+        "acc": 0.8929,
+        "logloss": 0.3195,
+        "n": 280
+      },
+      "test": {
+        "acc": 0.8992,
+        "logloss": 0.3279,
+        "n": 119
+      }
+    },
+    "ANTI": {
+      "wiring": [
+        "mom×rev",
+        "mom×cyc",
+        "mom×vol"
+      ],
+      "train": {
+        "acc": 0.6786,
+        "logloss": 0.58,
+        "n": 280
+      },
+      "test": {
+        "acc": 0.6387,
+        "logloss": 0.586,
+        "n": 119
+      }
+    },
+    "RANDOM": {
+      "wiring": [
+        "rev×vol",
+        "rev×level",
+        "mom×cyc"
+      ],
+      "train": {
+        "acc": 0.6643,
+        "logloss": 0.5897,
+        "n": 280
+      },
+      "test": {
+        "acc": 0.6387,
+        "logloss": 0.5987,
+        "n": 119
+      }
+    }
+  },
+  "oracleBeatAnti": false,
+  "oracleBeatClassical": false,
+  "probeMock": false
+}

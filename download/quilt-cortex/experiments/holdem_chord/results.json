@@ -1,0 +1,110 @@
+{
+  "task": "14-4 holdem chord spine",
+  "generated": "2026-09-25T11:58:22.384Z",
+  "keys": {
+    "typesafe": "apikey_22173…",
+    "moth": "moth_LK5TNff…"
+  },
+  "caps": {
+    "jev_live": 30,
+    "moth_live": 8
+  },
+  "offline": {
+    "weights_before": {
+      "aggro": 0.6,
+      "tight": 0,
+      "bluff": 0.3,
+      "sticky": 0.2,
+      "adapt": 0.2
+    },
+    "weights_after": {
+      "aggro": 2.5,
+      "tight": 1.5,
+      "bluff": 1.2,
+      "sticky": -1,
+      "adapt": 1.5
+    },
+    "weight_drift": 1.9,
+    "mae_blocks": [
+      {
+        "block": 1,
+        "hands": "1-25",
+        "mae": 0.2498
+      },
+      {
+        "block": 2,
+        "hands": "26-50",
+        "mae": 0.2028
+      },
+      {
+        "block": 3,
+        "hands": "51-75",
+        "mae": 0.2148
+      },
+      {
+        "block": 4,
+        "hands": "76-100",
+        "mae": 0.2177
+      },
+      {
+        "block": 5,
+        "hands": "101-120",
+        "mae": 0.2141
+      }
+    ],
+    "gates": {
+      "flagged": 167,
+      "fast-accept": 16,
+      "tie-broken": 38
+    },
+    "blocks": [
+      {
+        "hands": 25,
+        "stacks": [
+          113,
+          119,
+          68
+        ],
+        "fish_bb": -9.5,
+        "chord_bb": 9.5
+      },
+      {
+        "hands": 50,
+        "stacks": [
+          130,
+          122,
+          48
+        ],
+        "fish_bb": -11,
+        "chord_bb": 11
+      },
+      {
+        "hands": 75,
+        "stacks": [
+          120,
+          157,
+          23
+        ],
+        "fish_bb": -28.5,
+        "chord_bb": 28.5
+      },
+      {
+        "hands": 100,
+        "stacks": [
+          110,
+          178,
+          97
+        ],
+        "fish_bb": 3.5,
+        "chord_bb": 39
+      }
+    ],
+    "refusals": 0,
+    "chord_rows": 222,
+    "hands": 120
+  },
+  "checks": {
+    "pass": 6,
+    "fail": 0
+  }
+}

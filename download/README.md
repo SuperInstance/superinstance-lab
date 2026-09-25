@@ -29,11 +29,14 @@ chain.**
 | `quilt-quant/` | **the trading desk as a spreadsheet**: backtest-as-cells, walk-forward honesty (S6), gated self-improvement (S7), witness receipts (S8) | `node quant/play.mjs`, `quant/index.html` |
 | `quilt-quant/lab/` | **E11, the sim-first agent lab**: the sheet IS the agent — M1–M8 doctrine, waveform perception, entanglement veto, moth-entropy learning with pruning | `node lab/play.mjs` |
 | `quilt-arena/` | **E12, the perception arena**: four rival agent-minds play minesweeper-duel and hearts-trio while inferring each other's formulas under a rationed moth-quantum budget | `node arena/play.mjs` |
+| `quilt-cortex/` | **the tri-nervous system**: TypeSafe System One one-pass typed decisions + GLM System Two + MOTH quantum, fused into the Chord decision spine; played on the games (hold'em chord seat, arena JEVE mind, the e16 wiring-oracle study) | `node smoke.mjs`, `README.md` |
 
-**Scoreboard: 187 green checks** across tools 75 · arcade 55 · quant 15 ·
-lab 19 · arena 23 — plus 36/36 upstream engine tests kept green through 12
-playtest patches. No engine changes were needed after patch 12: the later
-projects are all pure sheets.
+**Scoreboard: 230 green checks** across tools 75 · arcade 55 · quant 15 ·
+lab 19 · arena 23 · cortex 14 + 11 smoke + 11 arena-jeve + 7 e16 — plus 36/36
+upstream engine tests kept green through 12 playtest patches. **Zero new
+engine patches in the last three projects**: the template absorbed a trading
+desk, an agent lab, a perception arena, and a tri-provider AI substrate as
+pure sheets.
 
 ## The one-paragraph story
 
@@ -47,7 +50,10 @@ desk into a single agentic mind** — simulation-first, signal-as-confirmation,
 understanding pruned by participation. **quilt-arena points the minds at each
 other** — formula-inference games under a quantum perception budget, where
 rival sheets buy true stochastic perception only when their doctrine says so.
-And **superinstance makes it a thing**: a brand, a front door, and four live
+**quilt-cortex gives every mind a nervous system** — System One judges in one
+pass, System Two is bought only by doubt, quantum breaks ties and certifies
+wiring — the chord spine, played to green on the games themselves. And
+**superinstance makes it a thing**: a brand, a front door, and four live
 proofs you can open in a browser tab.
 
 ## Reproduce
@@ -57,6 +63,10 @@ cd quilt-arcade && node run_all.mjs             # 5 games, 55/55
 cd quilt-quant  && node quant/play.mjs          # the desk, 15/15
 cd quilt-quant  && node lab/play.mjs            # the sim-first lab, 19/19
 cd quilt-arena  && node arena/play.mjs          # the perception arena, 23/23
+cd quilt-cortex && node smoke.mjs               # the chord spine, 11/11
+cd quilt-cortex && node experiments/holdem_chord/play.mjs   # chord plays hold'em, 14/14
+cd quilt-arena  && node jeve/run.mjs            # the JEVE mind, 11/11
+cd quilt-cortex && node experiments/e16_entangle.mjs        # the wiring oracle, 7/7
 open superinstance/index.html                   # the showcase — just open it
 ```
 

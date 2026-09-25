@@ -1,0 +1,124 @@
+{
+  "checks": "11/11",
+  "recoveryOffline": {
+    "p0": {
+      "mind": "p0",
+      "games": 40,
+      "acc": 0.815,
+      "cosine": 0.6223,
+      "jevCalls": 0,
+      "jevLive": 0,
+      "mothSpent": 0,
+      "n": 1000
+    },
+    "p1": {
+      "mind": "p1",
+      "games": 40,
+      "acc": 0.816,
+      "cosine": 0.6103,
+      "jevCalls": 0,
+      "jevLive": 0,
+      "mothSpent": 0,
+      "n": 1000
+    },
+    "p2": {
+      "mind": "p2",
+      "games": 40,
+      "acc": 0.804,
+      "cosine": 0.7013,
+      "jevCalls": 0,
+      "jevLive": 0,
+      "mothSpent": 0,
+      "n": 1000
+    },
+    "p3": {
+      "mind": "p3",
+      "games": 40,
+      "acc": 0.837,
+      "cosine": 0.6367,
+      "jevCalls": 0,
+      "jevLive": 0,
+      "mothSpent": 0,
+      "n": 1000
+    },
+    "p4": {
+      "mind": "p4",
+      "games": 40,
+      "acc": 0.828,
+      "cosine": 0.6254,
+      "jevCalls": 533,
+      "jevLive": 0,
+      "mothSpent": 0,
+      "n": 1000
+    }
+  },
+  "tournament": {
+    "p0": 24,
+    "p1": -16,
+    "p2": 60,
+    "p3": 140,
+    "p4": 52
+  },
+  "jevEconomy": {
+    "calls": 136,
+    "live": 0,
+    "journal": [
+      {
+        "tag": "mines-38",
+        "source": "mock",
+        "mock": true,
+        "mae": 0.0639,
+        "worth": 0.373,
+        "margin": 0,
+        "blended": true
+      },
+      {
+        "tag": "mines-40",
+        "source": "mock",
+        "mock": true,
+        "mae": 0.0514,
+        "worth": 0.559,
+        "margin": 0,
+        "blended": true
+      },
+      {
+        "tag": "mines-42",
+        "source": "mock",
+        "mock": true,
+        "mae": 0.0309,
+        "worth": 0.935,
+        "margin": 0,
+        "blended": true
+      },
+      {
+        "tag": "mines-44",
+        "source": "mock",
+        "mock": true,
+        "mae": 0.064,
+        "worth": 0.478,
+        "margin": 0,
+        "blended": true
+      },
+      {
+        "tag": "mines-46",
+        "source": "mock",
+        "mock": true,
+        "mae": 0.0543,
+        "worth": 0.202,
+        "margin": 0,
+        "blended": true
+      }
+    ],
+    "moth": 2
+  },
+  "recoveryLive": {
+    "mind": "p4",
+    "games": 40,
+    "acc": 0.822,
+    "cosine": 0.6332,
+    "jevCalls": 22,
+    "jevLive": 22,
+    "mothSpent": 0,
+    "n": 1000
+  }
+}

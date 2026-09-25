@@ -1,0 +1,74 @@
+{
+  "checks": "14/14",
+  "offline": {
+    "hands": 120,
+    "decisions": 203,
+    "gates": {
+      "flagged": 162,
+      "tie-broken": 22,
+      "fast-accept": 18,
+      "escalated": 1
+    },
+    "weightsAfter": {
+      "aggro": 0.5,
+      "tight": 0.5,
+      "bluff": 0.3,
+      "sticky": 0.3
+    },
+    "fishFinal": 98
+  },
+  "live": {
+    "hands": 24,
+    "decisions": 43,
+    "liveCalls": 24,
+    "mock": 19,
+    "gates": {
+      "fast-accept": 26,
+      "flagged": 17
+    },
+    "tokens": {
+      "input": 14363,
+      "output": 2088
+    },
+    "meanLatencyMs": 833,
+    "weightsLearned": {
+      "aggro": 0.95,
+      "tight": 0.3252439999999999,
+      "bluff": 0.3,
+      "sticky": 0.05
+    },
+    "maeSeries": [
+      0.0876,
+      0.1048,
+      0.1316,
+      0.0897,
+      0.1706,
+      0.086,
+      0.1927,
+      0.0861,
+      0.1861,
+      0.2294,
+      0.1442,
+      0.0857,
+      0.231,
+      0.3562,
+      0.1975,
+      0.4041,
+      0.2381,
+      0.412,
+      0.1921,
+      0.3437,
+      0.0833,
+      0.2253,
+      0.1496,
+      0.3687
+    ]
+  },
+  "compare": {
+    "handsPerLeg": 60,
+    "chordLearnedStack": 98,
+    "chordRawStack": 98,
+    "fishLearnedLeg": 98,
+    "fishRawLeg": 98
+  }
+}
