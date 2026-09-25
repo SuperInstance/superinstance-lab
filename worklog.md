@@ -107,3 +107,23 @@ Stage Summary:
 - Portfolio delivered: 10 realms, 75/75 checks green, every tool self-contained + verdict-printing + swap-in-marked
 - Engine now carries 11 playtest patches; upstream still unpatched (all findings remain open PR material)
 - index.html embeds real captured runs as the wow artifact for the engineer audience
+
+---
+Task ID: 8
+Agent: main (Super Z)
+Task: Build spreadsheet-native games on quilt (quilt-arcade) — rules-as-cells, flip cascades, learning loops, CVC, browser viewers
+
+Work Log:
+- Built download/quilt-arcade/: 4 games (tictactoe 41 cells, reversi 113, connect4 89, gomoku 126) on the vendored patched engine (engine/ + PROVENANCE.md, patches 1-11)
+- Architecture per game: rules.book (precise clause language) -> rule.N.law/.check (PURE program cells, verdicts carry effects: flip lists with rays, winning squares) -> move.arbiter (pure sequencer, owns match.seq DUP guard) -> push listener (move.request value cell drives everything) -> log.events ledger
+- Learning loops as cells: ai.weights/ai.features/ai.choose/ai.move_log/learn.update (averaged perceptron) + learn.receipts (fnv1a64 witness chain per generation); control group = frozen gen-1 self (ai.fixed_weights); harnesses carry INDEPENDENT reference implementations and cross-check whole-board equality every ply
+- Results: tictactoe 11/11 (minimax never loses, 300 games); reversi 12/12 (corner discovery theta 0->4.8, curve 24 gens x 8 games); connect4 11/11 (mine3 0->7.9, theirs3 0->-7.2, held-out 72%); gomoku 9/9 (tookFive discovery, held-out 78%); run_all.mjs scoreboard ALL GREEN 43/43
+- Viewers: shared/viewer.mjs (spreadsheet grid, rulebook clause flash, referee bubble, cell ledger, theta bars, CVC self-play) + shared/driver.mjs + 4 entries; scripts/build_arcade_html.mjs bundles engine+sheet+UI via bun into single-file index.html x4 (150KB each, runs from file://)
+- agent-browser QA: reversi click-play + flip cascade + AI reply + R3 refusal bubble verified; CVC reached gen 15 in 11s; connect4 R6 WIN NOW advisory fired live; zero console errors; 2 QA screenshots in experiments/
+- experiments/llm_advisor.mjs: small-model advisor seam (letter-coded menu fence -> decode -> arbiter verifies -> heuristic fallback; engine ai cells return unusable values rather than throwing - treat both as refusal); mock path 4/4 green, --real flag for z-ai with backoff
+- Engine facts surfaced: loadSheet REPLACES the sheet (use register() to extend); runtime.call returns CellValue (.data); match.seq must be arbiter-owned; naive move-level perceptron cannot learn blocking without tookFive/missedFive hindsight features
+
+Stage Summary:
+- 4 polished, playtested, research-grade spreadsheet games + viewers + docs (README, PATTERNS.md with porting guide, learning_curves.md) - all self-contained, no install needed
+- 43/43 harness checks green; learning is real (held-out evals vs frozen gen-1: 72%/78%/corner-discovery) and tamper-evident (witness chains)
+- Deliverable: download/quilt-arcade/
