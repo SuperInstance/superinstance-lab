@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const games = ['tictactoe', 'reversi', 'connect4', 'gomoku'];
+const games = ['tictactoe', 'reversi', 'connect4', 'gomoku', 'holdem'];
 
 console.log('QUILT ARCADE — full playtest run\n' + '='.repeat(46));
 const results = [];
@@ -42,10 +42,26 @@ const lines = ['# Learning curves — quilt-arcade', '',
   'receipt). The control group is each learner\'s own frozen generation-1 policy.',
   'Receipt chains re-derive from GENESIS (see each harness).', ''];
 
-for (const game of ['reversi', 'connect4', 'gomoku']) {
+for (const game of ['reversi', 'connect4', 'gomoku', 'holdem']) {
   const p = join(here, 'experiments', game + '.json');
   if (!existsSync(p)) continue;
   const d = JSON.parse(readFileSync(p, 'utf8'));
+  if (game === 'holdem') {
+    // different shape: per-block stacks (fish vs two learners with visible weights)
+    const b = d.blocks ?? [];
+    if (b.length) {
+      const first = b[0], last = b[b.length - 1];
+      const learnersFirst = first.stacks[1] + first.stacks[2], learnersLast = last.stacks[1] + last.stacks[2];
+      lines.push(`## holdem (Texas Hold'em — hidden information + ML strategy cells)`, '');
+      lines.push(`- setup: ${d.hands} hands, 3-max (frozen fish + two learners), α=${d.alpha}, nudge rate visible per hand`);
+      lines.push(`- combined learner stacks: **${learnersFirst} → ${learnersLast}** chips vs the frozen fish at **${last.stacks[0]}** — the table hardens around a stationary opponent`);
+      const drifts = Object.keys(d.theta0[1]).map(k => `\`${k}\`: ${(d.theta0[1][k]).toFixed(2)} → ${last.th1[k].toFixed(2)}`);
+      lines.push(`- P1 weight refinement: ${drifts.join(', ')}`);
+      lines.push(`- agent decision traces: ${d.thoughts_sample?.length ?? 0} entries captured (see \`ai.thoughts.pN\` cells and agent_ux_field_notes.md)`);
+      lines.push('');
+    }
+    continue;
+  }
   lines.push(`## ${game}`, '');
   lines.push(`- setup: ${d.gens} generations × ${d.games_per_gen} games, α=${d.alpha}, baseline: ${d.baseline}`);
   const curve = d.curve.filter(c => c.gen !== 'eval');

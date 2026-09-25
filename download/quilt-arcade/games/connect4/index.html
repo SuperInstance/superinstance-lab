@@ -501,23 +501,18 @@ class QuiltEngine {
       case "program":
       case "router":
       case "ai": {
+        if (!cell.def.memo) {
+          const value = await this.evaluateEffectful(cell, fullCtx, undefined);
+          return value;
+        }
         const key = contextKey(fullCtx);
         const cached = cell.contextCache.get(key);
         if (cached && cached.status === "ready") {
           return cached;
         }
-        if (this.inflight.has(id)) {
-          return this.inflight.get(id);
-        }
-        const promise = this.evaluateEffectful(cell, fullCtx, undefined);
-        this.inflight.set(id, promise);
-        try {
-          const value = await promise;
-          cell.contextCache.set(key, value);
-          return value;
-        } finally {
-          this.inflight.delete(id);
-        }
+        const value2 = await this.evaluateEffectful(cell, fullCtx, undefined);
+        cell.contextCache.set(key, value2);
+        return value2;
       }
       case "sensor":
       case "io":
@@ -557,21 +552,25 @@ class QuiltEngine {
       return cell.value;
     }
     const key = callKey(fullCtx, input);
-    const cached = cell.contextCache.get(key);
-    if (cached && cached.status === "ready") {
-      return cached;
+    if (cell.def.memo) {
+      const cached = cell.contextCache.get(key);
+      if (cached && cached.status === "ready") {
+        return cached;
+      }
     }
-    if (this.inflight.has(id)) {
-      return this.inflight.get(id);
+    const inflightKey = `${id}|${key}`;
+    if (this.inflight.has(inflightKey)) {
+      return this.inflight.get(inflightKey);
     }
     const promise = this.evaluateEffectful(cell, fullCtx, input);
-    this.inflight.set(id, promise);
+    this.inflight.set(inflightKey, promise);
     try {
       const value = await promise;
-      cell.contextCache.set(key, value);
+      if (cell.def.memo)
+        cell.contextCache.set(key, value);
       return value;
     } finally {
-      this.inflight.delete(id);
+      this.inflight.delete(inflightKey);
     }
   }
   async push(id, data, ctx = emptyContext()) {
@@ -778,7 +777,7 @@ class QuiltEngine {
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/identity.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/identity.js
 var ALIAS = Symbol.for("yaml.alias");
 var DOC = Symbol.for("yaml.document");
 var MAP = Symbol.for("yaml.map");
@@ -814,7 +813,7 @@ function isNode(node) {
 }
 var hasAnchor = (node) => (isScalar(node) || isCollection(node)) && !!node.anchor;
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/visit.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/visit.js
 var BREAK = Symbol("break visit");
 var SKIP = Symbol("skip children");
 var REMOVE = Symbol("remove node");
@@ -964,7 +963,7 @@ function replaceNode(key, path, node) {
   }
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/doc/directives.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/doc/directives.js
 var escapeChars = {
   "!": "%21",
   ",": "%2C",
@@ -1111,7 +1110,7 @@ class Directives {
 Directives.defaultYaml = { explicit: false, version: "1.2" };
 Directives.defaultTags = { "!!": "tag:yaml.org,2002:" };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/doc/anchors.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/doc/anchors.js
 function anchorIsValid(anchor) {
   if (/[\x00-\x19\s,[\]{}]/.test(anchor)) {
     const sa = JSON.stringify(anchor);
@@ -1121,7 +1120,7 @@ function anchorIsValid(anchor) {
   return true;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/doc/applyReviver.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/doc/applyReviver.js
 function applyReviver(reviver, obj, key, val) {
   if (val && typeof val === "object") {
     if (Array.isArray(val)) {
@@ -1165,7 +1164,7 @@ function applyReviver(reviver, obj, key, val) {
   return reviver.call(obj, key, val);
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/toJS.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/toJS.js
 function toJS(value, arg, ctx) {
   if (Array.isArray(value))
     return value.map((v, i) => toJS(v, String(i), ctx));
@@ -1188,7 +1187,7 @@ function toJS(value, arg, ctx) {
   return value;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/Node.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/Node.js
 class NodeBase {
   constructor(type) {
     Object.defineProperty(this, NODE_TYPE, { value: type });
@@ -1218,7 +1217,7 @@ class NodeBase {
   }
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/Alias.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/Alias.js
 class Alias extends NodeBase {
   constructor(source) {
     super(ALIAS);
@@ -1321,7 +1320,7 @@ function getAliasCount(doc, node, anchors) {
   return 1;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/Scalar.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/Scalar.js
 var isScalarValue = (value) => !value || typeof value !== "function" && typeof value !== "object";
 
 class Scalar extends NodeBase {
@@ -1342,7 +1341,7 @@ Scalar.PLAIN = "PLAIN";
 Scalar.QUOTE_DOUBLE = "QUOTE_DOUBLE";
 Scalar.QUOTE_SINGLE = "QUOTE_SINGLE";
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/doc/createNode.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/doc/createNode.js
 var defaultTagPrefix = "tag:yaml.org,2002:";
 function findTagObject(value, tagName, tags) {
   if (tagName) {
@@ -1408,7 +1407,7 @@ function createNode(value, tagName, ctx) {
   return node;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/Collection.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/Collection.js
 function collectionFromPath(schema, path, value) {
   let v = value;
   for (let i = path.length - 1;i >= 0; --i) {
@@ -1515,7 +1514,7 @@ class Collection extends NodeBase {
   }
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/stringify/stringifyComment.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/stringify/stringifyComment.js
 var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
 function indentComment(comment, indent) {
   if (/^\n+$/.test(comment))
@@ -1527,7 +1526,7 @@ var lineComment = (str, indent, comment) => str.endsWith(`
 `) ? `
 ` + indentComment(comment, indent) : (str.endsWith(" ") ? "" : " ") + comment;
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/stringify/foldFlowLines.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/stringify/foldFlowLines.js
 var FOLD_FLOW = "flow";
 var FOLD_BLOCK = "block";
 var FOLD_QUOTED = "quoted";
@@ -1658,7 +1657,7 @@ function consumeMoreIndentedLines(text, i, indent) {
   return end;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/stringify/stringifyString.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/stringify/stringifyString.js
 var getFoldOptions = (ctx, isBlock) => ({
   indentAtStart: isBlock ? ctx.indent.length : ctx.indentAtStart,
   lineWidth: ctx.options.lineWidth,
@@ -1951,7 +1950,7 @@ function stringifyString(item, ctx, onComment, onChompKeep) {
   return res;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/stringify/stringify.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/stringify/stringify.js
 function createStringifyContext(doc, options) {
   const opt = Object.assign({
     blockQuote: true,
@@ -2064,7 +2063,7 @@ function stringify(item, ctx, onComment, onChompKeep) {
 ${ctx.indent}${str}`;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/stringify/stringifyPair.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/stringify/stringifyPair.js
 function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
   const { allNullValues, doc, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
   let keyComment = isNode(key) && key.comment || null;
@@ -2193,14 +2192,14 @@ ${ctx.indent}`;
   return str;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/log.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/log.js
 function warn(logLevel, warning) {
   if (logLevel === "debug" || logLevel === "warn") {
     console.warn(warning);
   }
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js
 var MERGE_KEY = "<<";
 var merge = {
   identify: (value) => value === MERGE_KEY || typeof value === "symbol" && value.description === MERGE_KEY,
@@ -2250,7 +2249,7 @@ function resolveAliasValue(ctx, value) {
   return ctx && isAlias(value) ? value.resolve(ctx.doc, ctx) : value;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/addPairToJSMap.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/addPairToJSMap.js
 function addPairToJSMap(ctx, map, { key, value }) {
   if (isNode(key) && key.addToJSMap)
     key.addToJSMap(ctx, map, value);
@@ -2303,7 +2302,7 @@ function stringifyKey(key, jsKey, ctx) {
   return JSON.stringify(jsKey);
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/Pair.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/Pair.js
 function createPair(key, value, ctx) {
   const k = createNode(key, undefined, ctx);
   const v = createNode(value, undefined, ctx);
@@ -2333,7 +2332,7 @@ class Pair {
   }
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/stringify/stringifyCollection.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/stringify/stringifyCollection.js
 function stringifyCollection(collection, ctx, options) {
   const flow = ctx.inFlow ?? collection.flow;
   const stringify2 = flow ? stringifyFlowCollection : stringifyBlockCollection;
@@ -2479,7 +2478,7 @@ function addCommentBefore({ indent, options: { commentString } }, lines, comment
   }
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/YAMLMap.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/YAMLMap.js
 function findPair(items, key) {
   const k = isScalar(key) ? key.value : key;
   for (const it of items) {
@@ -2596,7 +2595,7 @@ class YAMLMap extends Collection {
   }
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/common/map.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/common/map.js
 var map = {
   collection: "map",
   default: true,
@@ -2610,7 +2609,7 @@ var map = {
   createNode: (schema, obj, ctx) => YAMLMap.from(schema, obj, ctx)
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/nodes/YAMLSeq.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/nodes/YAMLSeq.js
 class YAMLSeq extends Collection {
   static get tagName() {
     return "tag:yaml.org,2002:seq";
@@ -2693,7 +2692,7 @@ function asItemIndex(key) {
   return typeof idx === "number" && Number.isInteger(idx) && idx >= 0 ? idx : null;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/common/seq.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/common/seq.js
 var seq = {
   collection: "seq",
   default: true,
@@ -2707,7 +2706,7 @@ var seq = {
   createNode: (schema, obj, ctx) => YAMLSeq.from(schema, obj, ctx)
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/common/string.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/common/string.js
 var string = {
   identify: (value) => typeof value === "string",
   default: true,
@@ -2719,7 +2718,7 @@ var string = {
   }
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/common/null.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/common/null.js
 var nullTag = {
   identify: (value) => value == null,
   createNode: () => new Scalar(null),
@@ -2730,7 +2729,7 @@ var nullTag = {
   stringify: ({ source }, ctx) => typeof source === "string" && nullTag.test.test(source) ? source : ctx.options.nullStr
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/core/bool.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/core/bool.js
 var boolTag = {
   identify: (value) => typeof value === "boolean",
   default: true,
@@ -2747,7 +2746,7 @@ var boolTag = {
   }
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/stringify/stringifyNumber.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/stringify/stringifyNumber.js
 function stringifyNumber({ format, minFractionDigits, tag, value }) {
   if (typeof value === "bigint")
     return String(value);
@@ -2768,7 +2767,7 @@ function stringifyNumber({ format, minFractionDigits, tag, value }) {
   return n;
 }
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/core/float.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/core/float.js
 var floatNaN = {
   identify: (value) => typeof value === "number",
   default: true,
@@ -2804,7 +2803,7 @@ var float = {
   stringify: stringifyNumber
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/core/int.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/core/int.js
 var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
 var intResolve = (str, offset, radix, { intAsBigInt }) => intAsBigInt ? BigInt(str) : parseInt(str.substring(offset), radix);
 function intStringify(node, radix, prefix) {
@@ -2840,7 +2839,7 @@ var intHex = {
   stringify: (node) => intStringify(node, 16, "0x")
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/core/schema.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/core/schema.js
 var schema = [
   map,
   seq,
@@ -2855,7 +2854,7 @@ var schema = [
   float
 ];
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/json/schema.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/json/schema.js
 function intIdentify2(value) {
   return typeof value === "bigint" || Number.isInteger(value);
 }
@@ -2913,7 +2912,7 @@ var jsonError = {
 };
 var schema2 = [map, seq].concat(jsonScalars, jsonError);
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js
 var binary = {
   identify: (value) => value instanceof Uint8Array,
   default: false,
@@ -2958,7 +2957,7 @@ var binary = {
   }
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js
 function resolvePairs(seq2, onError) {
   if (isSeq(seq2)) {
     for (let i = 0;i < seq2.items.length; ++i) {
@@ -3024,7 +3023,7 @@ var pairs = {
   createNode: createPairs
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js
 class YAMLOMap extends YAMLSeq {
   constructor() {
     super();
@@ -3086,7 +3085,7 @@ var omap = {
   createNode: (schema3, iterable, ctx) => YAMLOMap.from(schema3, iterable, ctx)
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js
 function boolStringify({ value, source }, ctx) {
   const boolObj = value ? trueTag : falseTag;
   if (source && boolObj.test.test(source))
@@ -3110,7 +3109,7 @@ var falseTag = {
   stringify: boolStringify
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/float.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/float.js
 var floatNaN2 = {
   identify: (value) => typeof value === "number",
   default: true,
@@ -3149,7 +3148,7 @@ var float2 = {
   stringify: stringifyNumber
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/int.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/int.js
 var intIdentify3 = (value) => typeof value === "bigint" || Number.isInteger(value);
 function intResolve2(str, offset, radix, { intAsBigInt }) {
   const sign = str[0];
@@ -3218,7 +3217,7 @@ var intHex2 = {
   stringify: (node) => intStringify2(node, 16, "0x")
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/set.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/set.js
 class YAMLSet extends YAMLMap {
   constructor(schema3) {
     super(schema3);
@@ -3293,7 +3292,7 @@ var set = {
   }
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js
 function parseSexagesimal(str, asBigInt) {
   const sign = str[0];
   const parts = sign === "-" || sign === "+" ? str.substring(1) : str;
@@ -3369,7 +3368,7 @@ var timestamp = {
   stringify: ({ value }) => value?.toISOString().replace(/(T00:00:00)?\.000Z$/, "") ?? ""
 };
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js
 var schema3 = [
   map,
   seq,
@@ -3394,7 +3393,7 @@ var schema3 = [
   timestamp
 ];
 
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/schema/tags.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/schema/tags.js
 var schemas = new Map([
   ["core", schema],
   ["failsafe", [map, seq, string]],
@@ -3402,7 +3401,7 @@ var schemas = new Map([
   ["yaml11", schema3],
   ["yaml-1.1", schema3]
 ]);
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/parse/cst-visit.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/parse/cst-visit.js
 var BREAK2 = Symbol("break visit");
 var SKIP2 = Symbol("skip children");
 var REMOVE2 = Symbol("remove item");
@@ -3457,7 +3456,7 @@ function _visit(path, item, visitor) {
   }
   return typeof ctrl === "function" ? ctrl(item, path) : ctrl;
 }
-// download/quilt-arcade/engine/node_modules/yaml/browser/dist/parse/lexer.js
+// download/quilt-arcade/node_modules/yaml/browser/dist/parse/lexer.js
 var hexDigits = new Set("0123456789ABCDEFabcdef");
 var tagChars = new Set("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-#;/?:@&=+$_.!~*'()");
 var flowIndicatorChars = new Set(",[]{}");

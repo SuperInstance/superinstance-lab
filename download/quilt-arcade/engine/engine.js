@@ -264,24 +264,24 @@ export class QuiltEngine {
             case 'program':
             case 'router':
             case 'ai': {
+                // PLAY-TEST PATCH 12: effectful cells are honest functions of the
+                // SHEET STATE, which contextKey cannot see. Serving them from the
+                // caller-aware cache froze a stateful sheet (the hold'em arbiter
+                // returned a stale verdict forever while match.seq read a stale 0
+                // from the read-cache). Default is now FRESH evaluation; declare
+                // `memo: true` on a pure cell to opt back into caching.
+                if (!cell.def.memo) {
+                    const value = await this.evaluateEffectful(cell, fullCtx, undefined);
+                    return value;
+                }
                 const key = contextKey(fullCtx);
                 const cached = cell.contextCache.get(key);
                 if (cached && cached.status === 'ready') {
                     return cached;
                 }
-                if (this.inflight.has(id)) {
-                    return this.inflight.get(id);
-                }
-                const promise = this.evaluateEffectful(cell, fullCtx, undefined);
-                this.inflight.set(id, promise);
-                try {
-                    const value = await promise;
-                    cell.contextCache.set(key, value);
-                    return value;
-                }
-                finally {
-                    this.inflight.delete(id);
-                }
+                const value2 = await this.evaluateEffectful(cell, fullCtx, undefined);
+                cell.contextCache.set(key, value2);
+                return value2;
             }
             case 'sensor':
             case 'io':
@@ -341,23 +341,29 @@ export class QuiltEngine {
             return cell.value;
         }
         // PLAY-TEST PATCH 10: include the call's input in the memo key.
+        // PLAY-TEST PATCH 12: ...and only memoize when the cell declares `memo: true`
+        // (a program is a function of its arguments AND of the sheet state).
         const key = callKey(fullCtx, input);
-        const cached = cell.contextCache.get(key);
-        if (cached && cached.status === 'ready') {
-            return cached;
+        if (cell.def.memo) {
+            const cached = cell.contextCache.get(key);
+            if (cached && cached.status === 'ready') {
+                return cached;
+            }
         }
-        if (this.inflight.has(id)) {
-            return this.inflight.get(id);
+        const inflightKey = `${id}|${key}`;
+        if (this.inflight.has(inflightKey)) {
+            return this.inflight.get(inflightKey);
         }
         const promise = this.evaluateEffectful(cell, fullCtx, input);
-        this.inflight.set(id, promise);
+        this.inflight.set(inflightKey, promise);
         try {
             const value = await promise;
-            cell.contextCache.set(key, value);
+            if (cell.def.memo)
+                cell.contextCache.set(key, value);
             return value;
         }
         finally {
-            this.inflight.delete(id);
+            this.inflight.delete(inflightKey);
         }
     }
     /**

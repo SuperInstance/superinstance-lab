@@ -25,6 +25,13 @@ Receipt chains re-derive from GENESIS (see each harness).
 - **held-out eval vs generation-1: 78%** over 40 games (30 per colour)
 - weight discoveries: `five`: 8.00 → 12.00, `open4`: 2.00 → 2.56, `four`: 1.00 → 10.36, `open3`: 0.50 → 1.78, `blockFive`: 0.00 → 1.60, `blockFour`: 0.00 → 3.84, `tookFive`: 0.00 → 1.60, `missedFive`: 0.00 → 1.52
 
+## holdem (Texas Hold'em — hidden information + ML strategy cells)
+
+- setup: 150 hands, 3-max (frozen fish + two learners), α=0.12, nudge rate visible per hand
+- combined learner stacks: **210 → 868** chips vs the frozen fish at **81** — the table hardens around a stationary opponent
+- P1 weight refinement: `aggro`: 0.60 → 2.50, `tight`: 0.00 → 0.45, `bluff`: 0.30 → 0.30, `sticky`: 0.20 → -0.54, `adapt`: 0.20 → 0.20
+- agent decision traces: 40 entries captured (see `ai.thoughts.pN` cells and agent_ux_field_notes.md)
+
 What "learning" means here: the score cells stay honest (the referee validates every move),
 the weights are plain cell values you can watch move in the viewer's learning strip, and every
 generation is pinned into an fnv1a64 witness chain — tampering with history breaks the chain.

@@ -12,12 +12,13 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'download', 'quilt-arcade');
-const games = ['tictactoe', 'reversi', 'connect4', 'gomoku'];
+const games = ['tictactoe', 'reversi', 'connect4', 'gomoku', 'holdem'];
 const titles = {
   tictactoe: 'Quilt Arcade — TicTacToe (the template game)',
   reversi: 'Quilt Arcade — Reversi (rules-as-cells + learning loop)',
   connect4: 'Quilt Arcade — Connect Four (gravity + threats as cells)',
   gomoku: 'Quilt Arcade — Gomoku (patterns + learning loop)',
+  holdem: "Quilt Arcade — Texas Hold'em (hidden info + ML strategy cells)",
 };
 
 const tmp = mkdtempSync(join(tmpdir(), 'qa-build-'));

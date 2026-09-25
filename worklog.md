@@ -127,3 +127,32 @@ Stage Summary:
 - 4 polished, playtested, research-grade spreadsheet games + viewers + docs (README, PATTERNS.md with porting guide, learning_curves.md) - all self-contained, no install needed
 - 43/43 harness checks green; learning is real (held-out evals vs frozen gen-1: 72%/78%/corner-discovery) and tamper-evident (witness chains)
 - Deliverable: download/quilt-arcade/
+
+---
+Task ID: 9
+Agent: main (Super Z)
+Task: Add Texas Hold'em (non-grid, hidden-info + ML strategy cells) to quilt-arcade; playtest, polish, document agent UX; package everything into a single zip
+
+Work Log:
+- Verified quilt-arcade state (previous session's Task 8): fixed missing `yaml` dep for vendored engine, 43/43 grid-game checks confirmed green
+- Built games/holdem/: sheet.mjs (124 cells) + cards.mjs (inline code templates) — 10-clause rulebook C1-C10 (deck/blinds/holes/streets/betting/table-stakes/showdown/ranking/rebuy/PROJECTION), pure checkers, deal.hand + action.arbiter (sequencer), one-push input surface (action.request), match.step routing via seats.cfg (fish | learn | human)
+- PRIVACY MODEL per user spec: hole.pN = agent's own view; proj.pN + table.public render through rule.C10.check — "??" until view/reveal (showdown auto or explicit reveal.show "call to show"); uncontested fold-wins never reveal; 2 humans on a shared screen see identical projections (documented in rulebook)
+- ML loop per user spec: strategy weights as SEPARATE visible cells (W.pN.aggro/tight/bluff/sticky/adapt), ai.equity Monte-Carlo cell (60 rollouts), ai.decide with inline reasoning strings, learn.update per-hand nudges with reason tags + fnv1a64 receipts; frozen fish = control group
+- play.mjs: INDEPENDENT brute-force 21-combo evaluator (agrees on 200 random 7-card hands), chip-conservation + pot.audit asserts EVERY action, blind-rotation check, showdown winners re-derived by reference, C10 gate tests, human-seat flow test, 150-hand learning run (per-25-hand blocks)
+- BUGS FOUND & FIXED (all by referee-vs-reference):
+  (a) eval7 two-pair kicker wrong on three-pair boards (kicker must be best remaining rank)
+  (b) new_match/deal.hand wrote cells that did not exist for seat 0 (W.p0.frozen, om.p0, hand.log.p0, ai.thoughts.p0) -> threw
+  (c) harness conservation baseline forgot blinds move stacks->pot
+  (d) ENGINE PATCH 12: state-blind call/get caches FROZE the sheet — repeated (caller,input) (fish call seq:1 after reset) served stale arbiter verdict forever; fix: effectful cells (program/router/ai/api) re-evaluate by default, memoization opt-in via `memo: true`; mirrored in quilt-playtest/packages/core/src (engine.ts/types.ts), ai cache test updated to new semantics
+  (e) C5 short-shove normalization overpaid (pay: stack instead of owed call) + C6 applied raise cap to calls; both fixed, C6 law text reworded
+- RESULTS: holdem 12/12 green in ~1.9s; learning story real — fish 100->81 while combined learners 205->868 over 150 hands; theta1.aggro 0.6->2.5 (clamp), theta1.sticky 0.2->-0.54; receipts chains verify
+- VIEWER: games/holdem/viewer.mjs (custom poker-table UI reusing qa-* language: seats, community, referee bubble, rulebook flash, cell ledger, agent-thoughts panel, theta bars + nudge feed); bundled single-file index.html (181KB) via build_arcade_html.mjs; run_all.mjs now 5 games
+- BROWSER QA (agent-browser): projections masked live (view 1: proj0/proj2 = "?? ??", proj1 = own cards), human action bar (Fold/Call/Raise/all-in) works, showdown reveal fires, CVC self-play advances gens + stacks drift, ZERO console errors; screenshots qa_holdem_human.png + qa_holdem_cvc.png
+- DOCS: README.md (5 games, 55/55), PATTERNS.md Pattern 6 "Hidden information is a formula, not a hole" + patch-12 lesson, experiments/agent_ux_field_notes.md (decision-trace format, nudge telemetry, observed curves, 6 design guidance points), engine/PROVENANCE.md patch 12
+- Patch diff regenerated: quilt-playtest/patches/playtest-patches.diff = fdfed69 -> patched (8 files, patches 1-12); core suite 36/36 green; arcade 55/55 green
+
+Stage Summary:
+- quilt-arcade now 5 games / 55 checks green: 4 grid + 1 non-grid (holdem) covering hidden-info-as-formula, watchable per-hand strategy refinement, and honest control-group measurement
+- Engine now carries 12 playtest patches (upstream still unpatched); patch 12 (fresh-by-default effectful evaluation) is the newest and was found by the holdem sheet itself
+- Agent UX documented end-to-end (thoughts -> nudges -> receipts -> curves) in agent_ux_field_notes.md
+- Single zip of all projects assembled at download/quilt-portfolio-2026-09-25.zip (1.7MB, 5 projects + worklog; verified self-contained by extracting and re-running the scoreboard: 55/55)

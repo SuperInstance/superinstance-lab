@@ -1,7 +1,5 @@
 diff --git a/packages/core/src/cells/ai.ts b/packages/core/src/cells/ai.ts
-old mode 100644
-new mode 100755
-index 16e60a3..62cb61d
+index 16e60a3..62cb61d 100755
 --- a/packages/core/src/cells/ai.ts
 +++ b/packages/core/src/cells/ai.ts
 @@ -151,6 +151,25 @@ export async function evaluateAI(
@@ -30,13 +28,8 @@ index 16e60a3..62cb61d
    try {
      const result = await engine.call(config, { useCache: true });
      return { value: result, error: null };
-diff --git a/packages/core/src/cells/api.ts b/packages/core/src/cells/api.ts
-old mode 100644
-new mode 100755
 diff --git a/packages/core/src/cells/formula.ts b/packages/core/src/cells/formula.ts
-old mode 100644
-new mode 100755
-index 2ebe236..fff4558
+index 2ebe236..fff4558 100755
 --- a/packages/core/src/cells/formula.ts
 +++ b/packages/core/src/cells/formula.ts
 @@ -196,6 +196,14 @@ export function evaluateFormula(cell: Cell, ctx: CallerContext, allCells: Map<Ce
@@ -54,13 +47,8 @@ index 2ebe236..fff4558
      return value;
    } catch (err) {
      const message = err instanceof Error ? err.message : String(err);
-diff --git a/packages/core/src/cells/io.ts b/packages/core/src/cells/io.ts
-old mode 100644
-new mode 100755
 diff --git a/packages/core/src/cells/listener.ts b/packages/core/src/cells/listener.ts
-old mode 100644
-new mode 100755
-index 949883a..46cad9b
+index 949883a..46cad9b 100755
 --- a/packages/core/src/cells/listener.ts
 +++ b/packages/core/src/cells/listener.ts
 @@ -62,6 +62,9 @@ import type { Cell, CellValue, CellId } from '../types.js';
@@ -97,9 +85,7 @@ index 949883a..46cad9b
  
    return true;
 diff --git a/packages/core/src/cells/program.ts b/packages/core/src/cells/program.ts
-old mode 100644
-new mode 100755
-index aed7334..f82e390
+index aed7334..f82e390 100755
 --- a/packages/core/src/cells/program.ts
 +++ b/packages/core/src/cells/program.ts
 @@ -68,8 +68,13 @@ export interface ProgramRuntime {
@@ -119,9 +105,7 @@ index aed7334..f82e390
  
  /**
 diff --git a/packages/core/src/cells/router.ts b/packages/core/src/cells/router.ts
-old mode 100644
-new mode 100755
-index f5d1f41..d3921da
+index f5d1f41..d3921da 100755
 --- a/packages/core/src/cells/router.ts
 +++ b/packages/core/src/cells/router.ts
 @@ -88,11 +88,15 @@ export async function evaluateRouter(
@@ -142,16 +126,8 @@ index f5d1f41..d3921da
          if (rule.route.with && result.status === 'ready' && result.data && typeof result.data === 'object') {
            return { ...result, data: { ...(result.data as object), ...rule.route.with } };
          }
-diff --git a/packages/core/src/cells/sensor.ts b/packages/core/src/cells/sensor.ts
-old mode 100644
-new mode 100755
-diff --git a/packages/core/src/cells/value.ts b/packages/core/src/cells/value.ts
-old mode 100644
-new mode 100755
 diff --git a/packages/core/src/context.ts b/packages/core/src/context.ts
-old mode 100644
-new mode 100755
-index 90549d2..7b02a43
+index 90549d2..7b02a43 100755
 --- a/packages/core/src/context.ts
 +++ b/packages/core/src/context.ts
 @@ -156,8 +156,14 @@ export function evalWhen(when: string, ctx: CallerContext): boolean {
@@ -195,9 +171,7 @@ index 90549d2..7b02a43
 +  return `${base}|in:${stableJson(input)}`;
 +}
 diff --git a/packages/core/src/engine.ts b/packages/core/src/engine.ts
-old mode 100644
-new mode 100755
-index 7f495dd..7525d48
+index 7f495dd..c9d17a6 100755
 --- a/packages/core/src/engine.ts
 +++ b/packages/core/src/engine.ts
 @@ -101,7 +101,7 @@ import type {
@@ -280,7 +254,44 @@ index 7f495dd..7525d48
  
        case 'formula': {
          await this.refreshDeps(cell, fullCtx);
-@@ -336,7 +363,7 @@ export class QuiltEngine implements ProgramRuntime {
+@@ -278,23 +305,24 @@ export class QuiltEngine implements ProgramRuntime {
+       case 'program':
+       case 'router':
+       case 'ai': {
++        // PLAY-TEST PATCH 12: effectful cells are honest functions of the
++        // SHEET STATE, which contextKey cannot see. Serving them from the
++        // caller-aware cache froze a stateful sheet (the hold'em arbiter
++        // returned a stale verdict forever while match.seq read a stale 0
++        // from the read-cache). Default is now FRESH evaluation; declare
++        // `memo: true` on a pure cell to opt back into caching.
++        if (!cell.def.memo) {
++          const value = await this.evaluateEffectful(cell, fullCtx, undefined);
++          return value;
++        }
+         const key = contextKey(fullCtx);
+         const cached = cell.contextCache.get(key);
+         if (cached && cached.status === 'ready') {
+           return cached;
+         }
+-        if (this.inflight.has(id)) {
+-          return this.inflight.get(id)!;
+-        }
+-        const promise = this.evaluateEffectful(cell, fullCtx, undefined);
+-        this.inflight.set(id, promise);
+-        try {
+-          const value = await promise;
+-          cell.contextCache.set(key, value);
+-          return value;
+-        } finally {
+-          this.inflight.delete(id);
+-        }
++        const value2 = await this.evaluateEffectful(cell, fullCtx, undefined);
++        cell.contextCache.set(key, value2);
++        return value2;
+       }
+ 
+       case 'sensor':
+@@ -336,7 +364,7 @@ export class QuiltEngine implements ProgramRuntime {
      cell.contextCache.clear();
  
      await this.notify(id, newValue, prev);
@@ -289,17 +300,45 @@ index 7f495dd..7525d48
    }
  
    /**
-@@ -363,7 +390,8 @@ export class QuiltEngine implements ProgramRuntime {
+@@ -363,22 +391,28 @@ export class QuiltEngine implements ProgramRuntime {
        return cell.value;
      }
  
 -    const key = contextKey(fullCtx);
+-    const cached = cell.contextCache.get(key);
+-    if (cached && cached.status === 'ready') {
+-      return cached;
 +    // PLAY-TEST PATCH 10: include the call's input in the memo key.
++    // PLAY-TEST PATCH 12: ...and only memoize when the cell declares `memo: true`
++    // (a program is a function of its arguments AND of the sheet state).
 +    const key = callKey(fullCtx, input);
-     const cached = cell.contextCache.get(key);
-     if (cached && cached.status === 'ready') {
-       return cached;
-@@ -403,7 +431,7 @@ export class QuiltEngine implements ProgramRuntime {
++    if (cell.def.memo) {
++      const cached = cell.contextCache.get(key);
++      if (cached && cached.status === 'ready') {
++        return cached;
++      }
+     }
+-    if (this.inflight.has(id)) {
+-      return this.inflight.get(id)!;
++    const inflightKey = `${id}|${key}`;
++    if (this.inflight.has(inflightKey)) {
++      return this.inflight.get(inflightKey)!;
+     }
+     const promise = this.evaluateEffectful(cell, fullCtx, input);
+-    this.inflight.set(id, promise);
++    this.inflight.set(inflightKey, promise);
+     try {
+       const value = await promise;
+-      cell.contextCache.set(key, value);
++      if (cell.def.memo) cell.contextCache.set(key, value);
+       return value;
+     } finally {
+-      this.inflight.delete(id);
++      this.inflight.delete(inflightKey);
+     }
+   }
+ 
+@@ -403,7 +437,7 @@ export class QuiltEngine implements ProgramRuntime {
      cell.value = newValue;
  
      await this.notify(id, newValue, prev);
@@ -308,7 +347,7 @@ index 7f495dd..7525d48
    }
  
    // ===========================================================================
-@@ -484,7 +512,18 @@ export class QuiltEngine implements ProgramRuntime {
+@@ -484,7 +518,18 @@ export class QuiltEngine implements ProgramRuntime {
      if (cell.def.kind === 'api') {
        result = await evaluateApi(cell, ctx, input);
      } else if (cell.def.kind === 'program') {
@@ -328,7 +367,7 @@ index 7f495dd..7525d48
      } else if (cell.def.kind === 'router') {
        result = await evaluateRouter(cell, ctx, input, this);
      } else if (cell.def.kind === 'ai') {
-@@ -565,27 +604,60 @@ export class QuiltEngine implements ProgramRuntime {
+@@ -565,27 +610,60 @@ export class QuiltEngine implements ProgramRuntime {
     * Propagate a change to all dependents. Mark formula/value
     * dependents as stale and invalidate their cache. Fire listener
     * dependents whose conditions are met.
@@ -396,15 +435,19 @@ index 7f495dd..7525d48
      }
    }
  
-diff --git a/packages/core/src/gesture.ts b/packages/core/src/gesture.ts
-old mode 100644
-new mode 100755
-diff --git a/packages/core/src/index.ts b/packages/core/src/index.ts
-old mode 100644
-new mode 100755
-diff --git a/packages/core/src/parser.ts b/packages/core/src/parser.ts
-old mode 100644
-new mode 100755
 diff --git a/packages/core/src/types.ts b/packages/core/src/types.ts
-old mode 100644
-new mode 100755
+index 5db6aba..59252e5 100755
+--- a/packages/core/src/types.ts
++++ b/packages/core/src/types.ts
+@@ -346,6 +346,11 @@ export interface CellDef {
+   // program
+   code?: string;
+   language?: 'javascript' | 'python' | 'wasm';
++  // PLAY-TEST PATCH 12: opt-in memoization for effectful cells. Programs,
++  // routers and ai cells are functions of the SHEET STATE too, so by default
++  // the engine re-evaluates them on every get/call; `memo: true` declares a
++  // cell pure and restores caller-aware + input-aware caching.
++  memo?: boolean;
+ 
+   // sensor
+   source?: string;

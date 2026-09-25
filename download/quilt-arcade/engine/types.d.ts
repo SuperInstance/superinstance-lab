@@ -309,6 +309,7 @@ export interface CellDef {
     headers?: Record<string, string>;
     code?: string;
     language?: 'javascript' | 'python' | 'wasm';
+    memo?: boolean;
     source?: string;
     rate?: number;
     default?: unknown;
