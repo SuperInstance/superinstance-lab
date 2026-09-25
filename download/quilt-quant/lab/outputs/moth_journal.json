@@ -1,0 +1,79 @@
+[
+  {
+    "engine": "coin-toss-v1",
+    "job_id": "e85d3eed-d265-4067-9e08-61a1792c5456",
+    "what": "probe 64 shots",
+    "ms": 3521,
+    "mock": false
+  },
+  {
+    "engine": "qpixl-v1",
+    "job_id": "cd922643-1993-4095-8b2e-d02f8a73cd6a",
+    "what": "waveform+entropy",
+    "ms": 3701,
+    "mock": false
+  },
+  {
+    "engine": "qpixl-v1",
+    "job_id": "dc9f5991-62a8-42a1-8d96-23c15c43870e",
+    "what": "waveform+entropy",
+    "ms": 3449,
+    "mock": false
+  },
+  {
+    "engine": "graph-v1",
+    "job_id": "13dff902-d644-47a9-90d3-f825b19901c8",
+    "what": "entangle read baseline",
+    "ms": 6201,
+    "mock": false
+  },
+  {
+    "engine": "qpixl-v1",
+    "job_id": "5d658272-024f-4923-8fa3-a046c6e9d859",
+    "what": "waveform+entropy",
+    "ms": 3467,
+    "mock": false
+  },
+  {
+    "engine": "qpixl-v1",
+    "job_id": "0038c19a-a956-4c6b-a871-9ac832c68fcd",
+    "what": "waveform+entropy",
+    "ms": 3546,
+    "mock": false
+  },
+  {
+    "engine": "qpixl-v1",
+    "job_id": "f47f787b-6d2e-4ef2-b560-9eef1ee9103c",
+    "what": "waveform+entropy",
+    "ms": 3367,
+    "mock": false
+  },
+  {
+    "engine": "qpixl-v1",
+    "job_id": "e1eda732-85d4-4b92-91a3-6f11f5925b0b",
+    "what": "waveform+entropy",
+    "ms": 3497,
+    "mock": false
+  },
+  {
+    "engine": "qpixl-v1",
+    "job_id": "9fa9a2f2-6a19-4ba9-a4bc-e8f5204976dc",
+    "what": "waveform+entropy",
+    "ms": 3412,
+    "mock": false
+  },
+  {
+    "engine": "qpixl-v1",
+    "job_id": "ef1bb639-3f09-4d06-a279-a3125cfc5235",
+    "what": "waveform+entropy",
+    "ms": 3573,
+    "mock": false
+  },
+  {
+    "engine": "graph-v1",
+    "job_id": "a006e974-b6cf-4189-bfd1-dddd356b09bb",
+    "what": "entangle read learned",
+    "ms": 6073,
+    "mock": false
+  }
+]

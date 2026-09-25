@@ -1,5 +1,27 @@
 # quilt-quant — the trading desk as a spreadsheet
 
+**TWO archetypes now live here.**
+
+1. **`quant/` — the desk** (below): a human-operated trading desk as a
+   spreadsheet. Push a value, the whole desk re-prices. The trainer improves
+   strategies through an out-of-sample gate.
+2. **`lab/` — the sim-first agent lab** (the new one): *no human in the
+   loop at all.* A closed-loop agent whose architecture IS the simulation:
+   perception → belief → proposal → **simulation** → confirmation (with a
+   quantum entanglement veto) → action → learning → **pruning** → receipts.
+   Wired to the live moth-quantum API (true quantum entropy, waveform
+   round-trips, graph-state tomography) and to a fenced GLM analyst.
+   **The value is not in one trade — it is that every belief, veto and
+   receipt is a cell, and the decision process gets simpler over time.**
+
+   ```
+   cd lab && node play.mjs        # 19/19 checks, live moth, ~60s
+   open lab/outputs/e11_results.png
+   ```
+   Full write-up: **[lab/README.md](lab/README.md)**.
+
+---
+
 **Back-test trading strategies like it's child's play.** One instrument, one
 tape, and a desk where every indicator, every risk rule, and every metric is a
 CELL. Push one value and the whole desk re-prices: indicators → signal →

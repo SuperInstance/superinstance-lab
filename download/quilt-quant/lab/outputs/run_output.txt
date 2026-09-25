@@ -1,0 +1,115 @@
+╔═ SIM-FIRST AGENT LAB
+║ doctrine: M1 sense · M2 waveform · M3 propose · M4 SIMULATE
+║           M5 confirm · M6 act · M7 learn · M8 PRUNE
+║ cells: 61   engine: vendored quilt (patches 1-12)   llm: mock
+──────
+╠═ moth-quantum LIVE ═══════════════════════
+║ coin-toss 64 shots → 27H/37T (3521ms) — job e85d3eed…
+║ qpixl waveform read → 32 amplitudes, drift 0.0085 → 64 entropy floats
+──────
+╠═ perception (M2: numbers as waveform readings)
+║ P* = 41 bars (truth 41 ✓)   P2 = 13 (truth 13 ✓)
+║ regime CYCLE conf 0.98 (drift 0.0085 discounts ×0.98)   M2 ok
+──────
+╠═ world (M4) — baseline beliefs
+║ ████████████████████▅▄▄▄▄▄▄▄▄▅██████████████████████▇▇▇▇▇▅▄▄▅▇▇▆▅▅▄▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁  ret -2.8%  sharpe -1.20  dd 3.2%  trades 4
+║ gate: 8 refusals (dd-halt 0)   M4 receipt intact
+──────
+╠═ entanglement read #1 (graph-v1: feature qubits, hypothesized ZZ couplings)
+║ ZZ(mom,rev) = -0.937 (hypo -0.7)   agreement 0.5   dominant 1000
+║ proposal: FLAT [none] s=0.00 — no fresh crossing
+║ gate: ✓ CONFIRMED FLAT [none]
+──────
+╠═ learning (M7+M8) — 56 rounds, quantum entropy
+║ r01 ✓ mom_min+tp_atr         score   0.051 best   0.051
+║ r02 · trend_gap+tp_atr       score  -1.268 best   0.051
+║ r03 · rsi_lo+tp_atr          score   0.051 best   0.051
+║ r04 · rsi_hi+trend_gap       score  -1.721 best   0.051
+║ r05 · stop_atr+tp_atr        score  -0.188 best   0.051
+║ r06 · size+rsi_hi            score   0.051 best   0.051
+║ r07 ✓ spec_gate+stop_atr     score   0.460 best   0.460
+║ r08 · vol_cap+tp_atr         score   0.460 best   0.460
+║ r09 · mom_min+tp_atr         score   0.124 best   0.460
+║ r10 · rsi_lo+tp_atr          score   0.460 best   0.460
+║ r11 · size+stop_atr          score   0.459 best   0.460
+║ r12 · spec_gate+rsi_hi       score   0.460 best   0.460
+║ r13 · vol_cap+stop_atr       score   0.460 best   0.460
+║ r14 · mom_min+spec_gate      score   0.414 best   0.460
+║ r15 · trend_gap+tp_atr       score   0.460 best   0.460
+║ r16 · rsi_lo+tp_atr          score   0.124 best   0.460
+║ r17 · size+stop_atr          score   0.460 best   0.460
+║ r18 · vol_cap+stop_atr       score   0.460 best   0.460
+║ r19 · mom_min+trend_gap      score   0.460 best   0.460
+║ r20 · rsi_lo+tp_atr          score   0.460 best   0.460
+║ ── analyst digest: REGIME=CYCLE conf=0.98 P*=41 ratio=7.7 | score=0.460 best=0.460 rounds=20 | dormant=none | ZZ(mom,rev)=-0.94 a…
+║ ── analyst verdict: C  (mock)
+║ ── applied: explore: step_scale 1.00→1.60
+║ r21 · rsi_hi+mom_min         score   0.460 best   0.460
+║ r22 ✓ size+stop_atr          score   0.464 best   0.464
+║ r23 · spec_gate+stop_atr     score   0.421 best   0.464
+║ r24 ✓ vol_cap+stop_atr       score   0.570 best   0.570
+║ r25 · trend_gap+tp_atr       score   0.570 best   0.570
+║ r26 · rsi_lo+step_scale      score   0.570 best   0.570
+║ r27 · rsi_hi+tp_atr          score   0.570 best   0.570
+║ r28 · size+mom_min           score   0.570 best   0.570
+║ r29 · spec_gate+stop_atr     score   0.570 best   0.570
+║ r30 · vol_cap+stop_atr       score   0.570 best   0.570
+║ r31 · trend_gap+tp_atr       score   0.570 best   0.570
+║ r32 · rsi_lo+tp_atr          score   0.570 best   0.570
+║ r33 · rsi_hi+mom_min         score   0.570 best   0.570
+║ r34 ✓ size+stop_atr          score   0.581 best   0.581
+║ r35 · spec_gate+step_scale   score   0.581 best   0.581
+║ r36 · vol_cap+stop_atr       score   0.581 best   0.581
+║ r37 · trend_gap+mom_min      score   0.581 best   0.581
+║ r38 · rsi_lo+tp_atr          score   0.248 best   0.581
+║ r39 · rsi_hi+tp_atr          score   0.581 best   0.581
+║ r40 · size+stop_atr          score   0.579 best   0.581  ⛔ PRUNE w.size
+║ r41 · spec_gate+step_scale   score   0.581 best   0.581
+║ r42 · vol_cap+stop_atr       score   0.581 best   0.581
+║ r43 · trend_gap+step_scale   score   0.581 best   0.581
+║ r44 · rsi_lo+tp_atr          score   0.581 best   0.581
+║ r45 · rsi_hi+trend_gap       score   0.581 best   0.581
+║ r46 ✓ spec_gate+stop_atr     score   0.743 best   0.743
+║ r47 · vol_cap+stop_atr       score   0.743 best   0.743
+║ r48 · mom_min+tp_atr         score   0.743 best   0.743
+║ r49 · rsi_lo+spec_gate       score  -0.729 best   0.743
+║ r50 · rsi_hi+tp_atr          score   0.743 best   0.743
+║ r51 · vol_cap+rsi_lo         score   0.743 best   0.743
+║ r52 · mom_min+tp_atr         score   0.743 best   0.743
+║ r53 · trend_gap+stop_atr     score   0.743 best   0.743
+║ r54 · rsi_hi+tp_atr          score   0.743 best   0.743
+║ r55 · spec_gate+stop_atr     score   0.743 best   0.743
+║ r56 · vol_cap+stop_atr       score   0.743 best   0.743
+──────
+╠═ entanglement read #2 (learned state)
+║ ZZ(mom,rev) = -0.028   agreement 0.5
+╠═ before → after
+║ baseline: ████████████████████▅▄▄▄▄▄▄▄▄▅██████████████████████▇▇▇▇▇▅▄▄▅▇▇▆▅▅▄▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁  ret -2.8%  sharpe -1.20  dd 3.2%  trades 4
+║ learned : ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▁▁▁▁▁▁▁▁▁▂▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▆▅▅▃▃▃▃▃▃▅████████████████████████████████████████████  ret 0.7%  sharpe 0.76  dd 0.7%  trades 4
+║ best score -1.268 → 0.743   free weights 10 → 9 (dormant: size)
+║ lamp: · flat
+──────
+╠═ harness (independent reference stack)
+  ✓ M1 halts on a poisoned tape (NaN bar)
+  ✓ spectrum cross-check: sheet P* == independent DFT P*
+  ✓ world cross-check: sheet sim == independent settlement accounting
+  ✓ no price lookahead: policy at each entry sees only bars <= i
+  ✓ M3 refuses a reasonless proposal
+  ✓ M5 dd-halt vetoes a fresh entry
+  ✓ M5 entanglement veto blocks a CONFLICT proposal when |ZZ| >= 0.82
+  ✓ M6 fees + no-leverage verdict
+  ✓ M7 refuses a non-improvement
+  ✓ M8 prunes from data: 7 dead tries -> dormant; meta exempt
+  ✓ learning actually learned: final best > baseline score
+  ✓ dormancy is real: post-prune steps never move a dormant weight
+  ✓ receipt chain re-derives; tamper breaks it at the flipped byte
+  ✓ entropy discipline: pool floats in [0,1), cursor consistent
+  ✓ publish pattern: met.score formula == recomputed receipt score
+  ✓ analyst fence: adversarial digest still answers inside A–E
+  ✓ qpixl round-trip: decoded waveform correlates with the sent one
+  ✓ graph tomography: edges echoed, |ZZ| <= 1, agreement in [0,1]
+  ✓ champion bookkeeping: state.champion matches live cells
+
+sim-first-lab: 19/19 checks green in 61408ms
+
+  emitted outputs/: round_ledger.jsonl · equity_curves.json · moth_journal.json · summary.json

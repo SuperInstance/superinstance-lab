@@ -1,0 +1,91 @@
+{
+  "cells": 61,
+  "live": true,
+  "rounds": 56,
+  "baseline": {
+    "score": -1.2682228208654407,
+    "sharpe": -1.2047735143585585,
+    "dd": 0.03172465325344109,
+    "trades": 4
+  },
+  "final": {
+    "score": 0.7429537892993049,
+    "sharpe": 0.7560911501247737,
+    "dd": 0.006568680412734396,
+    "trades": 4
+  },
+  "dormant": [
+    "w.size"
+  ],
+  "participation": {
+    "w.mom_min": {
+      "tries": 10,
+      "wins": 1,
+      "maxd": 1.3195602316347685
+    },
+    "w.tp_atr": {
+      "tries": 21,
+      "wins": 1,
+      "maxd": 1.3195602316347685
+    },
+    "w.trend_gap": {
+      "tries": 10,
+      "wins": 0,
+      "maxd": 1.772831079453696
+    },
+    "w.rsi_lo": {
+      "tries": 10,
+      "wins": 0,
+      "maxd": 1.4714573466695695
+    },
+    "w.rsi_hi": {
+      "tries": 10,
+      "wins": 0,
+      "maxd": 1.772831079453696
+    },
+    "w.stop_atr": {
+      "tries": 20,
+      "wins": 5,
+      "maxd": 0.4085881285206659
+    },
+    "w.size": {
+      "tries": 7,
+      "wins": 2,
+      "maxd": 0.01078419536263786
+    },
+    "w.spec_gate": {
+      "tries": 10,
+      "wins": 2,
+      "maxd": 1.4714573466695695
+    },
+    "w.vol_cap": {
+      "tries": 10,
+      "wins": 1,
+      "maxd": 0.1057469433865641
+    }
+  },
+  "champion": {
+    "w.mom_min": 0.26,
+    "w.trend_gap": 0.004,
+    "w.rsi_lo": 38,
+    "w.rsi_hi": 62,
+    "w.stop_atr": 1.2168668477318578,
+    "w.tp_atr": 2.07684697720515,
+    "w.size": 0.21469465979102356,
+    "w.spec_gate": 0.17866587596094602,
+    "w.step_scale": 1.6,
+    "w.vol_cap": 2.2
+  },
+  "analyst": {
+    "mock": true,
+    "calls": 0,
+    "refused": 0
+  },
+  "entangle": {
+    "before": -0.9365230405647593,
+    "after": -0.028399630155574677,
+    "agreement": 0.5,
+    "mock": false
+  },
+  "moth_jobs": 11
+}
