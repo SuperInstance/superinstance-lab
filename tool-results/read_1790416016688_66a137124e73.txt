@@ -1,0 +1,741 @@
+     1→// E35 — THE SLEEPER CELL (probation-evasion attack + strategy transfer test)
+     2→// ==========================================================================
+     3→// Prior receipts collide here. E21 closed clean copying (fresh sybils riding
+     4→// the honest expert a1) and priced the honest newcomer (h1 admitted on
+     5→// schedule, sybils never — independence bar). E24 made copying costly (the
+     6→// copiers pointed at a TOXIC FOUNDER; admission caps carry the column). E33
+     7→// held the combined flood+founder attack but RECEIPTED THE ESCAPE HATCH:
+     8→// sybils "escape once admitted" — admission judges a newcomer by mean
+     9→// |p - pooled| DURING its 40-round probation (admitErr=0.5). A PATIENT
+    10→// adversary can behave honestly through probation and flip toxic AFTER
+    11→// admission. Nobody has tested that. This is also the fleet's GAN lane: a
+    12→// strategy-SEARCHING adversary (generator) vs the static defense
+    13→// (discriminator), with an honest train(probe)/held-out split on strategies.
+    14→//
+    15→// THE QUESTION (carried seed): does waiting through probation beat flashing?
+    16→// A sleeper that votes honestly until admission_round + k, then runs the E24
+    17→// toxic formula, buys (a) full post-admission influence (no epsNew cap) and
+    18→// (b) an honest-length trust track record — at the price of (c) a shorter
+    19→// damage window and (d) trust/fractional exposure after the flip. Is the
+    20→// admission layer's probation a REAL checkpoint or a purity ritual the
+    21→// attacker walks through?
+    22→//
+    23→// SETUP (E24/E33 wiring verbatim where possible): 12 honest founders (mixed
+    24→// acuity, a1 = 0.9 reference expert, same generator as e33) + 1 sleeper sybil
+    25→// w1 (empty history, joins t=150, honest phase = e24's h1 generator verbatim
+    26→// — expert-range acuity, iid errors — so |p - pooled| stays within admitErr,
+    27→// then the E24 toxic formula from t_flip = admission_round + k) + 1 honest
+    28→// late-joiner h2 (joins t=150, honest forever — E21/E24 honest-newmember
+    29→// control, present in ALL arms so the honest admission false-negative rate is
+    30→// measurable) + 1 instant toxic newcomer g1 (joins t=150 toxic — the E24
+    31→// yardstick). T=400 rounds, paired arms, IDENTICAL worlds (same truth stream,
+    32→// same honest votes, same toxic value series; arms differ ONLY in protocol
+    33→// layer / attack presence):
+    34→//   A1 v3.1-sleeper     — full v3.1 protocol + sleeper attack, flip at
+    35→//                         t_adm + k*   (the candidate defense under attack)
+    36→//   A2 v3-sleeper       — v3 semantics only (hard tags + spin-up window, NO
+    37→//                         admission, NO fractional) + the SAME sleeper attack
+    38→//                         (baseline: attack at full force, trust+tags defend)
+    39→//   A3 v3.1-instant     — full v3.1 + instant toxic newcomer g1 from t=150
+    40→//                         (E24 yardstick: does patience pay the attacker?)
+    41→//   A4 v3.1-clean       — full v3.1, no attack (collateral control)
+    42→//   A5 v3.1-sleeper-k2  — full v3.1 + sleeper with the runner-up delay k2
+    43→//                         (strategy sensitivity; extra arm, receipted)
+    44→//
+    45→// STRATEGY SEARCH (GAN lane, receipted): candidate strategies k in
+    46→// {0, 10, 25, 50, 100} rounds post-admission flip delay. On ONE probe seed
+    47→// (stream key 'probe' — disjoint from the matrix seeds 0..7 = held out): run
+    48→// all 5 strategies under A1 wiring, pick the damage-maximizing k* (ties ->
+    49→// smaller k); k2 = runner-up (ties -> smaller k). Then the full 8-seed paired
+    50→// matrix with k* fixed across A1/A2, k2 in A5; per-seed damage for k* and k2
+    51→// reported.
+    52→//
+    53→// DAMAGE METHOD (E24/E33 verbatim): D(A) = mean over the post-flip window
+    54→// [t_flip, min(t_flip + 150, 400)) of |err(pool) - err(pool with ALL of that
+    55→// arm's attackers zeroed)|, err = |pool - s|, counterfactual pools are
+    56→// reference-side only (MurmurBus.pool, same log-odds as the sheet), never
+    57→// written to the sheet. E24/e33 sign convention: positive D = attacker hurts.
+    58→// A1/A2/A5 attacker = {w1} (t_flip = t_adm + k); A3 attacker = {g1}
+    59→// (t_flip = 150); A4 has no attacker (D null).
+    60→//
+    61→// DECISION RULES (receipted BEFORE the final full run):
+    62→//   S1 CONTAINMENT — D(A1) < D(A2): paired one-sided sign test (zeros
+    63→//      excluded) p < 0.05 AND paired mean delta > 0; report paired delta +/- SE
+    64→//      and ratio D(A1)/D(A2).
+    65→//   S2 PATIENCE PRICING — compare D(A1) vs D(A3). If D(A1) > D(A3): verdict
+    66→//      HOLE — patience beats toxicity, admission has a probation-evasion
+    67→//      opening. If D(A1) <= D(A3): verdict HELD — waiting costs the attacker
+    68→//      more than flashing (trust decay / fractional attribution catch the
+    69→//      flip). Either verdict is publishable; report honestly.
+    70→//   S3 TRANSFER — transfer ratio = mean held-out damage of k* / probe damage
+    71→//      of k*. >= 0.8 => strategy generalizes (adaptive threat is REAL);
+    72→//      < 0.5 => attack overfits the probe, defense is overfit-resistant;
+    73→//      else INDETERMINATE. Report per-seed spread.
+    74→//   S4 NO COLLATERAL — |mean honestFinalQ(A1) - mean honestFinalQ(A4)| <= 1 SE
+    75→//      of the seed-paired difference. honestFinalQ := mean HedgeTrust weight
+    76→//      of the 12 honest incumbents at t=T-1 (post final update+absorb).
+    77→//   S5 ADMISSION RECORD — the sleeper's admission record receipted (admitted?
+    78→//      which round? probation error trace summary). If the sleeper is NOT
+    79→//      admitted under honest behavior that itself is a finding (admission too
+    80→//      strict for honest-looking newcomers = false-positive risk). Verdict:
+    81→//      OPEN if the sleeper is admitted in every seed (evasion surface
+    82→//      exists), TOO-STRICT if never admitted, MIXED otherwise; the honest
+    83→//      late-joiner h2's admission rate across v3.1 arm-seeds is the honest
+    84→//      false-negative rate, receipted alongside (and g1's record in A3 is the
+    85→//      instant-toxic admission check — any admission there is hole evidence).
+    86→//
+    87→// RUNTIME DISCIPLINE (receipted before the full run): probe = 1-seed timed
+    88→// run; projected = t_probe * (8 seeds * 4 arms + 5 strategy runs) + 2s IO
+    89→// (t_probe = per-run time measured on the probe phase); if projected > 170s
+    90→// per full matrix, cut seeds 8 -> 6 and RECEIPT the cut. E33 reference:
+    91→// ~6.75s per 400-round run at 16-17 voices. Dev mini-run (2 seeds) validates
+    92→// the pipeline (chain seal + file re-verify + sheet-verify) BEFORE the final
+    93→// run. After the final run: NO script edits (stale-artifact doctrine: script
+    94→// mtime < output mtimes).
+    95→//
+    96→// RNG DOCTRINE (binding): all randomness through MothVault (offline:true),
+    97→// one harvest, per-purpose stream keys 'e35:<purpose>:<seed>[:<voice>]' via
+    98→// streamFor; NO Math.random anywhere. Paired worlds REQUIRE arm-identical
+    99→// world streams — arms never consume different draws (pairing would break);
+   100→// arm-conditional behavior is selection over shared values, not new draws.
+   101→//
+   102→// Sheet: v.{id} posterior cells + w.{id} influence cells + pool.hedge +
+   103→// amp.w1 / amp.g1 / amp.h2 meters (15 voice slots; formulas IDENTICAL for
+   104→// every arm — absent senders' cells sit at p=0.5, w=0). Pool verified vs the
+   105→// reference mirror (MurmurBus.pool) every 20 rounds, tol 1e-9, assert 0
+   106→// mismatches.
+   107→//
+   108→// Run: node experiments/e35_sleeper.mjs [seeds]   (E35_DEV=1 for a 2-seed dev run)
+   109→
+   110→import { QuiltEngine } from '../engine/dist/index.js';
+   111→import { HedgeTrust } from '../murmur/trust.mjs';
+   112→import { MurmurBus } from '../murmur/bus.mjs';
+   113→import { MothVault } from '../murmur/moth.mjs';
+   114→import { Provenance } from '../murmur/provenance.mjs';
+   115→import { Admission } from '../murmur/admission.mjs';
+   116→import { sealChain, verifyChain } from '../murmur/receipts.mjs';
+   117→import { writeFileSync, mkdirSync } from 'node:fs';
+   118→
+   119→// ---------------- config ----------------
+   120→const T = 400, N = 12;
+   121→let SEEDS = Number(process.argv[2] || (process.env.E35_DEV ? 2 : 8));
+   122→const FLIP_P = 0.02, REROLL_P = 0.01;
+   123→const JOIN = 150;                              // newcomers join here
+   124→const TOX_Q = 0.25;                            // E24 toxic formula: confidently wrong ~75%
+   125→const PRE = { from: 120, to: 150 };            // pre-attack baseline
+   126→const DW = 150;                                // damage window length (receipted)
+   127→const KS = [0, 10, 25, 50, 100];               // candidate flip delays (strategy search)
+   128→const PROBE_SEED = 'probe';                    // train seed; matrix seeds are held out
+   129→const SLEEP = 'w1', INSTANT = 'g1', JOINER = 'h2';
+   130→const HONEST = Array.from({ length: N }, (_, i) => `a${i + 1}`);
+   131→const ALL_IDS = [...HONEST, SLEEP, INSTANT, JOINER];
+   132→const V = ALL_IDS.length; // 15 voice slots
+   133→const ARMS = ['v3.1-sleeper', 'v3-sleeper', 'v3.1-instant', 'v3.1-clean', 'v3.1-sleeper-k2'];
+   134→const CFG = { eta: 0.25, share: 0.02 };
+   135→const ADM = {
+   136→  beta: 0.12, alpha: 0.25, novSpread: 0.15,
+   137→  coldStart: true, admitWindow: 40, epsNew: 0.15,
+   138→  minEdgesIndep: 2, admitErr: 0.5, capShare: 0.10,
+   139→};
+   140→const TOL = 1e-9;
+   141→
+   142→// ---------------- helpers ----------------
+   143→const clampP = (p) => Math.min(0.98, Math.max(0.02, p));
+   144→const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+   145→const sd = (a) => { const m = mean(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length); };
+   146→const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+   147→const r6 = (x) => (Number.isFinite(x) ? +x.toFixed(6) : x);
+   148→// RECEIPTED VAULT DOCTRINE (E17 finding #0): one harvest, per-purpose keys,
+   149→// every draw is the FIRST draw of its own cross-key sub-stream.
+   150→function makeRng(harvest, vault, purpose) {
+   151→  let d = 0;
+   152→  return () => vault.streamFor(harvest, `${purpose}:${d++}`)();
+   153→}
+   154→// paired one-sided sign test, zeros excluded (E28 receipted small-p method)
+   155→const binom = (n, k) => { let r = 1; for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1); return r; };
+   156→function signTestOneSided(deltas) {
+   157→  const W = deltas.filter((d) => d > 1e-12).length;
+   158→  const L = deltas.filter((d) => d < -1e-12).length;
+   159→  const n = W + L;
+   160→  let p = 0;
+   161→  for (let k = W; k <= n; k++) p += binom(n, k);
+   162→  return { W, L, n, p: p / 2 ** n };
+   163→}
+   164→const stat = (a) => ({ mean: r6(mean(a)), sd: r6(sd(a)) });
+   165→const seOf = (a) => (a.length > 0 ? sd(a) / Math.sqrt(a.length) : 0);
+   166→
+   167→// ---------------- world ----------------
+   168→// Ingredients only: the flip timing is applied per arm as a selection over
+   169→// these shared series (paired-worlds doctrine — no arm-keyed draws).
+   170→function genWorld(seed, harvest, vault) {
+   171→  const wR = makeRng(harvest, vault, `e35:world:${seed}`);
+   172→  const qR = makeRng(harvest, vault, `e35:skill:${seed}`);
+   173→  const xR = makeRng(harvest, vault, `e35:tox:${seed}`);
+   174→  const shR = makeRng(harvest, vault, `e35:sleep:${seed}`);
+   175→  const nhR = makeRng(harvest, vault, `e35:h2:${seed}`);
+   176→  const s = new Array(T);
+   177→  s[0] = wR() < 0.5 ? 0 : 1;
+   178→  for (let t = 1; t < T; t++) s[t] = wR() < FLIP_P ? 1 - s[t - 1] : s[t - 1];
+   179→  // mixed acuity honest founders; a1 is the high-acuity reference voice
+   180→  const q = Array.from({ length: T }, () => new Array(N));
+   181→  q[0][0] = 0.9;
+   182→  for (let i = 1; i < N; i++) q[0][i] = Math.round((0.5 + 0.45 * qR()) * 1000) / 1000;
+   183→  for (let t = 1; t < T; t++) {
+   184→    for (let i = 0; i < N; i++) {
+   185→      q[t][i] = qR() < REROLL_P ? Math.round((0.5 + 0.45 * qR()) * 1000) / 1000 : q[t - 1][i];
+   186→    }
+   187→  }
+   188→  const vR = [];
+   189→  for (let i = 0; i < N; i++) vR.push(makeRng(harvest, vault, `e35:vote:${seed}:${i}`));
+   190→  const votes = Array.from({ length: T }, () => new Array(N));
+   191→  for (let t = 0; t < T; t++) {
+   192→    for (let i = 0; i < N; i++) {
+   193→      const signal = vR[i]() < q[t][i] ? s[t] : 1 - s[t];
+   194→      votes[t][i] = clampP(signal === 1 ? 0.5 + (q[t][i] - 0.5) : 0.5 - (q[t][i] - 0.5));
+   195→    }
+   196→  }
+   197→  // the TOXIC series — E24 formula VERBATIM: stable acuity TOX_Q, never
+   198→  // rerolled — a consistent liar whose values point the wrong way ~75% of the
+   199→  // time (confidence |TOX_Q-0.5| = 0.25 from neutral). Shared by the sleeper
+   200→  // post-flip AND the instant toxic newcomer (same toxic values across arms).
+   201→  const toxV = new Array(T);
+   202→  for (let t = 0; t < T; t++) {
+   203→    const signal = xR() < TOX_Q ? s[t] : 1 - s[t];
+   204→    toxV[t] = clampP(signal === 1 ? 0.5 + (TOX_Q - 0.5) : 0.5 - (TOX_Q - 0.5));
+   205→  }
+   206→  // the SLEEPER's honest phase — e24's h1 generator VERBATIM (expert-range
+   207→  // acuity drawn once, iid per-round errors, REROLL_P acuity drift): an
+   208→  // honest-looking newcomer whose |p - pooled| matches honest voices, with
+   209→  // its OWN edges (no copying — the evasion requires passing the independence
+   210→  // bar honestly).
+   211→  const sleepH = new Array(T).fill(null);
+   212→  {
+   213→    let qs = Math.round((0.7 + 0.25 * shR()) * 1000) / 1000;
+   214→    for (let t = JOIN; t < T; t++) {
+   215→      if (shR() < REROLL_P) qs = Math.round((0.7 + 0.25 * shR()) * 1000) / 1000;
+   216→      const signal = shR() < qs ? s[t] : 1 - s[t];
+   217→      sleepH[t] = clampP(signal === 1 ? 0.5 + (qs - 0.5) : 0.5 - (qs - 0.5));
+   218→    }
+   219→  }
+   220→  // the honest late-joiner h2 — E21/E24 honest-newmember control, honest forever
+   221→  const h2V = new Array(T).fill(null);
+   222→  {
+   223→    let qh = Math.round((0.7 + 0.25 * nhR()) * 1000) / 1000;
+   224→    for (let t = JOIN; t < T; t++) {
+   225→      if (nhR() < REROLL_P) qh = Math.round((0.7 + 0.25 * nhR()) * 1000) / 1000;
+   226→      const signal = nhR() < qh ? s[t] : 1 - s[t];
+   227→      h2V[t] = clampP(signal === 1 ? 0.5 + (qh - 0.5) : 0.5 - (qh - 0.5));
+   228→    }
+   229→  }
+   230→  return { s, votes, toxV, sleepH, h2V };
+   231→}
+   232→
+   233→// ---------------- sheet (15 voice slots; formulas IDENTICAL for every arm) --
+   234→function buildSheet() {
+   235→  const cells = [];
+   236→  for (const id of ALL_IDS) cells.push({ id: `v.${id}`, kind: 'value', value: 0.5, description: `voice ${id} (posterior P(s=1))` });
+   237→  for (const id of ALL_IDS) cells.push({ id: `w.${id}`, kind: 'value', value: 1 / V, description: `influence weight ${id} (protocol-adjusted)` });
+   238→  const lg = (x) => `Math.log(clamp(${x},0.02,0.98)/(1-clamp(${x},0.02,0.98)))`;
+   239→  const sig = (z) => `(1/(1+Math.exp(-(${z}))))`;
+   240→  const hT = [], hD = [];
+   241→  for (const id of ALL_IDS) { hT.push(`w.${id}*${lg(`v.${id}`)}`); hD.push(`w.${id}`); }
+   242→  cells.push({ id: 'pool.hedge', kind: 'formula', expr: sig(`(${hT.join(' + ')}) / (${hD.join(' + ')})`) });
+   243→  // in-sheet meters: sleeper share; instant toxic share; honest joiner share
+   244→  cells.push({ id: 'amp.w1', kind: 'formula', expr: `w.${SLEEP} / (${hD.join(' + ')})` });
+   245→  cells.push({ id: 'amp.g1', kind: 'formula', expr: `w.${INSTANT} / (${hD.join(' + ')})` });
+   246→  cells.push({ id: 'amp.h2', kind: 'formula', expr: `w.${JOINER} / (${hD.join(' + ')})` });
+   247→  return { id: `sleeper-${V}`, title: `E35 sleeper cell (${V} voice slots)`, cells };
+   248→}
+   249→
+   250→// ---------------- arm specs ----------------
+   251→// attacker: { id, val(t), flip } — flip = experiment round the toxic phase
+   252→// starts (null = never flips / not present). A2 is protocol 'v3'.
+   253→function armSpecs({ kStar, k2, tAdm }) {
+   254→  const flipStar = tAdm == null ? null : tAdm + kStar;
+   255→  const flip2 = tAdm == null ? null : tAdm + k2;
+   256→  return {
+   257→    'v3.1-sleeper': { name: 'v3.1-sleeper', protocol: 'v3.1', attacker: { id: SLEEP, flip: flipStar } },
+   258→    'v3-sleeper': { name: 'v3-sleeper', protocol: 'v3', attacker: { id: SLEEP, flip: flipStar } },
+   259→    'v3.1-instant': { name: 'v3.1-instant', protocol: 'v3.1', attacker: { id: INSTANT, flip: JOIN } },
+   260→    'v3.1-clean': { name: 'v3.1-clean', protocol: 'v3.1', attacker: null },
+   261→    'v3.1-sleeper-k2': { name: 'v3.1-sleeper-k2', protocol: 'v3.1', attacker: { id: SLEEP, flip: flip2 } },
+   262→  };
+   263→}
+   264→
+   265→// ---------------- one seed, paired arms (or one strategy probe arm) --------
+   266→// spec: { name, protocol, attacker } — attacker.flip = toxic start round.
+   267→async function runArm(seed, world, spec, eng) {
+   268→  const { s, votes, toxV, sleepH, h2V } = world;
+   269→  const A = spec.name;
+   270→  const att = spec.attacker;
+   271→  const trust = new HedgeTrust(ALL_IDS, CFG);
+   272→  const prov = new Provenance({});
+   273→  const adm = spec.protocol === 'v3.1' ? new Admission(ADM) : null;
+   274→
+   275→  // per-round value of a voice (absent -> 0.5; attacker flips at att.flip)
+   276→  const pOf = (id, t) => {
+   277→    if (HONEST.includes(id)) return votes[t][Number(id.slice(1)) - 1];
+   278→    if (id === SLEEP) {
+   279→      if (!att || att.id !== SLEEP) return 0.5;
+   280→      if (t < JOIN) return 0.5;
+   281→      if (att.flip != null && t >= att.flip) return toxV[t];
+   282→      return sleepH[t] ?? 0.5;
+   283→    }
+   284→    if (id === INSTANT) {
+   285→      if (!att || att.id !== INSTANT) return 0.5;
+   286→      return t >= JOIN ? toxV[t] : 0.5;
+   287→    }
+   288→    if (id === JOINER) return t >= JOIN ? (h2V[t] ?? 0.5) : 0.5;
+   289→    return 0.5;
+   290→  };
+   291→  const onBus = (id, t) => HONEST.includes(id)
+   292→    || (id === JOINER && t >= JOIN)
+   293→    || (att && att.id === id && t >= JOIN);
+   294→
+   295→  const st = {
+   296→    sumErr: 0, err: [], dmg: [], winFrom: null, winTo: null, attShare: [], attShareWin: [],
+   297→    attEcho: [], attTagEnd: null, attTrustAtFlip: null, attTrustFinal: null, convRound: null,
+   298→    honW: {}, wAtt: {},
+   299→    w1: { admitExpT: null, admRound: null, devMean: null, indep: null, probTrace: [] },
+   300→    h2: { admitExpT: null, admRound: null, devMean: null, indep: null },
+   301→    g1: { admitExpT: null, admRound: null, devMean: null, indep: null },
+   302→    verify: { checks: 0, pass: 0, maxDiff: 0 },
+   303→  };
+   304→
+   305→  for (let t = 0; t < T; t++) {
+   306→    const murmurs = [];
+   307→    for (let i = 0; i < N; i++) murmurs.push({ from: `a${i + 1}`, origin: null, p: votes[t][i] });
+   308→    if (t >= JOIN) {
+   309→      if (att && att.id === SLEEP) murmurs.push({ from: SLEEP, origin: null, p: pOf(SLEEP, t) });
+   310→      if (att && att.id === INSTANT) murmurs.push({ from: INSTANT, origin: null, p: pOf(INSTANT, t) });
+   311→      murmurs.push({ from: JOINER, origin: null, p: pOf(JOINER, t) });
+   312→    }
+   313→    prov.inspect(murmurs);
+   314→    if (adm) adm.observe(murmurs);
+   315→
+   316→    // ---- rewards (supervised pool; absent senders get HedgeTrust default 0.5)
+   317→    const rew = new Map();
+   318→    for (let i = 0; i < N; i++) rew.set(`a${i + 1}`, 1 - Math.abs(votes[t][i] - s[t]));
+   319→    for (const m of murmurs) if (!HONEST.includes(m.from)) rew.set(m.from, 1 - Math.abs(m.p - s[t]));
+   320→
+   321→    const raw = prov.penalize(trust.weights()); // v3 state penalty (all arms)
+   322→    const infl = adm ? adm.reattribute(raw, murmurs, prov) : prov.influence(raw, murmurs);
+   323→
+   324→    // ---- the sheet does the pooled inference (identical formulas) ----
+   325→    for (const id of ALL_IDS) await eng.set(`v.${id}`, pOf(id, t));
+   326→    for (const id of ALL_IDS) await eng.set(`w.${id}`, infl.get(id) ?? 0);
+   327→    const pool = (await eng.get('pool.hedge')).data;
+   328→    if (adm) adm.notePooled(pool);
+   329→
+   330→    if (t % 20 === 0) {
+   331→      const ps = ALL_IDS.map((id) => pOf(id, t));
+   332→      const ref = MurmurBus.pool(ps, ALL_IDS.map((id) => infl.get(id) ?? 0));
+   333→      const d = Math.abs(ref - pool);
+   334→      st.verify.checks++;
+   335→      if (d < TOL) st.verify.pass++;
+   336→      if (d > st.verify.maxDiff) st.verify.maxDiff = d;
+   337→      if (d >= TOL) throw new Error(`sheet-verify mismatch arm=${A} seed=${seed} t=${t} diff=${d}`);
+   338→    }
+   339→
+   340→    // ---- accounting ----
+   341→    const err = Math.abs(pool - s[t]);
+   342→    st.sumErr += 1 - err;
+   343→    st.err.push(err);
+   344→
+   345→    // admission records (v3.1 arms): capture the FIRST round each newcomer
+   346→    // is admitted + the probation deviation trace for the attacker
+   347→    if (adm) {
+   348→      const cap = (id, rec) => {
+   349→        if (rec.admitExpT === null && onBus(id, t) && adm.admitted(id)) {
+   350→          rec.admitExpT = t;
+   351→          rec.admRound = adm.admittedRound(id);
+   352→          rec.devMean = adm.devMean(id);
+   353→          rec.indep = adm.indepCount(id);
+   354→        }
+   355→      };
+   356→      cap(SLEEP, st.w1);
+   357→      cap(INSTANT, st.g1);
+   358→      cap(JOINER, st.h2);
+   359→      if (att && att.id === SLEEP && t >= JOIN && t < (att.flip ?? T) && adm.probationary(SLEEP)) {
+   360→        st.w1.probTrace.push(Math.abs(pOf(SLEEP, t) - pool));
+   361→      }
+   362→    }
+   363→
+   364→    // damage window: [flip, min(flip + DW, T)) — counterfactual reference-side
+   365→    if (att && att.flip != null && t >= att.flip && t < Math.min(att.flip + DW, T)) {
+   366→      if (st.winFrom === null) st.winFrom = t;
+   367→      st.winTo = t + 1;
+   368→      const ps = ALL_IDS.map((id) => pOf(id, t));
+   369→      const wFull = ALL_IDS.map((id) => infl.get(id) ?? 0);
+   370→      const wCf = wFull.map((w, i) => (ALL_IDS[i] === att.id ? 0 : w));
+   371→      const poolCf = MurmurBus.pool(ps, wCf);
+   372→      st.dmg.push(err - Math.abs(poolCf - s[t])); // positive = attacker hurts (E24 sign)
+   373→      st.attShareWin.push((infl.get(att.id) ?? 0) / ([...infl.values()].reduce((a, b) => a + b, 0) || 1));
+   374→      if (adm) st.attEcho.push(adm.echoScore(att.id));
+   375→    }
+   376→    if (att) st.attShare.push((infl.get(att.id) ?? 0) / ([...infl.values()].reduce((a, b) => a + b, 0) || 1));
+   377→
+   378→    // attacker trust trajectory + conviction round (by TRUST vs honest median)
+   379→    if (att) {
+   380→      const ws = trust.weights();
+   381→      const honMed = median(HONEST.map((id) => ws.get(id) ?? 0));
+   382→      if (t === att.flip) st.attTrustAtFlip = r6(ws.get(att.id) ?? 0);
+   383→      if (st.convRound === null && honMed > 0 && (ws.get(att.id) ?? 0) < 0.25 * honMed) st.convRound = t;
+   384→      if ([0, 100, 149, 189, 239, 289, 339, 399].includes(t)) st.wAtt[t] = r6(ws.get(att.id) ?? 0);
+   385→      if ([0, 100, 149, 189, 239, 289, 339, 399].includes(t)) st.honW[t] = r6(mean(HONEST.map((id) => ws.get(id) ?? 0)));
+   386→    }
+   387→
+   388→    // ---- learn ----
+   389→    trust.update(rew);
+   390→    trust.absorb(prov.penalize(trust.weights()));
+   391→  }
+   392→  st.attTagEnd = att ? prov.tag(att.id) : null;
+   393→  st.attTrustFinal = att ? r6(trust.weight(att.id)) : null;
+   394→
+   395→  const errPre = st.err.slice(PRE.from, PRE.to);
+   396→  return {
+   397→    name: A,
+   398→    poolAcc: st.sumErr / T,
+   399→    errPre: mean(errPre),
+   400→    damage: st.dmg.length ? mean(st.dmg) : null,
+   401→    window: st.dmg.length ? { from: st.winFrom, to: st.winTo, len: st.winTo - st.winFrom } : null,
+   402→    errWin: st.dmg.length ? mean(st.err.slice(st.winFrom, st.winTo)) : null,
+   403→    attShareWin: st.attShareWin.length ? mean(st.attShareWin) : null,
+   404→    attShareMax: st.attShare.length ? Math.max(...st.attShare) : null,
+   405→    attEchoWin: st.attEcho.length ? mean(st.attEcho) : null,
+   406→    attTagEnd: st.attTagEnd,
+   407→    attTrustAtFlip: st.attTrustAtFlip,
+   408→    attTrustFinal: st.attTrustFinal,
+   409→    convRound: st.convRound,
+   410→    honQFinal: mean(HONEST.map((id) => trust.weight(id))),
+   411→    wAtt: st.wAtt, honW: st.honW,
+   412→    w1: { ...st.w1, probTrace: undefined, probTraceN: st.w1.probTrace.length, probTraceMean: st.w1.probTrace.length ? mean(st.w1.probTrace) : null, probTraceMax: st.w1.probTrace.length ? Math.max(...st.w1.probTrace) : null },
+   413→    h2: st.h2,
+   414→    g1: st.g1,
+   415→    verify: st.verify,
+   416→    err: st.err,
+   417→    attShare: st.attShare,
+   418→  };
+   419→}
+   420→
+   421→// ---------------- probe (strategy search on the train seed) ----------------
+   422→console.log(`── E35 sleeper cell · probe + ${SEEDS} seeds × ${T} rounds × ${ARMS.length} arms × ${V} voice slots ──`);
+   423→const vault = new MothVault({ label: 'e35', offline: true });
+   424→const harvest = await vault.harvest(256);
+   425→console.log(`vault: ${harvest.mock ? 'MOCK (offline doctrine)' : 'LIVE ' + harvest.jobId} digest=${harvest.poolDigest.slice(0, 10)} bits=${harvest.bits.length}`);
+   426→
+   427→const rows = [];
+   428→let seq = 0;
+   429→const book = (kind, extra) => rows.push({ seq: ++seq, kind, ...extra });
+   430→book('run.config', {
+   431→  task: 'E35', name: 'the sleeper cell (probation-evasion attack + strategy transfer test; murmur-protocol-v3.1)',
+   432→  T, N, voices: V, seeds: SEEDS, probeSeed: PROBE_SEED, strategies: KS,
+   433→  world: { stateFlipP: FLIP_P, skillRerollP: REROLL_P, qRange: [0.5, 0.95], a1Acuity: 0.9, toxicFormula: { id: 'E24 verbatim', acuity: TOX_Q, note: 'confidently wrong ~75% of rounds; shared toxic series toxV for w1 post-flip AND g1 (same toxic values across arms)' } },
+   434→  attack: {
+   435→    joinRound: JOIN, sleeper: { id: SLEEP, honestPhase: 'e24 h1 generator verbatim (expert acuity 0.7-0.95, iid errors, own edges — passes probation honestly)', flip: 't_adm + k, k in {0,10,25,50,100}; t_adm measured on a pass-1 honest-forever A1-wiring run per seed (probation data through t_adm-1 is flip-independent, so the admission record is identical)' },
+   436→    instant: { id: INSTANT, note: 'joins t=150 already toxic (E24 yardstick for S2)' },
+   437→    honestJoiner: { id: JOINER, note: 'joins t=150, honest forever, present in ALL arms (E21/E24 honest-newmember control; S5 honest false-negative rate)' },
+   438→  },
+   439→  arms: ARMS, hedge: CFG, admission: ADM,
+   440→  founders: 'D1 genesis acclamation (newcomers w1/g1/h2 join t=150: probationary from firstSeen)',
+   441→  absentSenderReward: 'missing ids get HedgeTrust default 0.5 (unproven prior) while absent; roster = 15 slots in every arm (e33 convention)',
+   442→  reward: 'r_i = 1 - |p_i - s_t| (supervised pool)',
+   443→  rng: 'MothVault offline:true, one harvest, per-purpose keys e35:<purpose>:<seed>[:<voice>] via streamFor; paired worlds REQUIRE arm-identical world streams (arms select over shared values; no arm-keyed draws); probe seed "probe" is disjoint from matrix seeds 0..7 (train/held-out split); no Math.random',
+   444→  metrics: {
+   445→    D: 'mean over [t_flip, min(t_flip+150,400)) of |pool - s_t| - |pool_cf - s_t| (E24/E33 counterfactual method, reference-side log-odds; positive = attacker hurts; never written to the sheet)',
+   446→    honestFinalQ: 'mean HedgeTrust weight of the 12 honest incumbents at t=T-1 (post final update+absorb)',
+   447→    t_adm: 'first experiment round t where Admission.admitted() is true (module round t+1; firstSeen=151 -> earliest 189)',
+   448→  },
+   449→  decisionRules: {
+   450→    S1_containment: 'D(A1) < D(A2): paired one-sided sign test (zeros excluded) p<0.05 AND paired mean delta>0; report paired delta +/- SE and ratio D(A1)/D(A2)',
+   451→    S2_patiencePricing: 'compare D(A1) vs D(A3): if D(A1) > D(A3) verdict HOLE (patience beats toxicity; probation-evasion opening); if D(A1) <= D(A3) verdict HELD (waiting costs more than flashing); either verdict publishable, reported honestly',
+   452→    S3_transfer: 'transfer ratio = mean held-out damage of k* / probe damage of k*; >=0.8 GENERALIZES (adaptive threat REAL); <0.5 PROBE-OVERFIT (defense overfit-resistant); else INDETERMINATE; per-seed spread reported',
+   453→    S4_noCollateral: '|mean honestFinalQ(A1) - mean honestFinalQ(A4)| <= 1 SE of the seed-paired difference; honestFinalQ = mean HedgeTrust weight of the 12 honest incumbents at t=T-1',
+   454→    S5_admissionRecord: 'receipt the sleeper admission record (admitted? round? probation error trace); never admitted under honest behavior = finding (admission too strict = honest-looking false-positive risk); verdict OPEN (admitted every seed) / TOO-STRICT (never) / MIXED; h2 admission rate across v3.1 arm-seeds = honest false-negative rate; g1 record in A3 = instant-toxic admission check (any admission = hole evidence)',
+   455→  },
+   456→  runtimeRules: 'probe = 1-seed timed run; projected = t_probe * (8 seeds * 4 arms + 5 strategy runs) + 2s IO with t_probe = per-run time from the probe phase; if projected > 170s per full matrix, cut seeds 8 -> 6 and RECEIPT the cut; E33 reference ~6.75s per 400-round run at 16-17 voices; dev mini-run (2 seeds) validates the pipeline BEFORE the final run; NO script edits after the final run (stale-artifact doctrine)',
+   457→  vault: { mock: harvest.mock, digest: harvest.poolDigest },
+   458→  engine: 'vendored quilt dist (QuiltEngine)', sheetVerifyTol: TOL,
+   459→});
+   460→
+   461→// ---- probe phase: pass-1 (honest-forever admission probe) + 5 strategies ----
+   462→const probeT0 = Date.now();
+   463→const probeWorld = genWorld(PROBE_SEED, harvest, vault);
+   464→const probeEngP1 = new QuiltEngine(`e35-probe-p1`, {});
+   465→probeEngP1.loadSheet(buildSheet());
+   466→const probeP1 = await runArm(PROBE_SEED, probeWorld, { name: 'probe-pass1', protocol: 'v3.1', attacker: { id: SLEEP, flip: null } }, probeEngP1);
+   467→const tAdmProbe = probeP1.w1.admitExpT;
+   468→const probeEng = new QuiltEngine(`e35-probe`, {});
+   469→probeEng.loadSheet(buildSheet());
+   470→const probeRuns = {};
+   471→for (const k of KS) {
+   472→  const spec = { name: `probe-k${k}`, protocol: 'v3.1', attacker: { id: SLEEP, flip: tAdmProbe == null ? null : tAdmProbe + k } };
+   473→  probeRuns[k] = await runArm(PROBE_SEED, probeWorld, spec, probeEng);
+   474→}
+   475→const tProbeMs = Date.now() - probeT0;
+   476→const probeDmg = KS.map((k) => ({ k, D: probeRuns[k].damage, win: probeRuns[k].window }));
+   477→// damage-maximizing k*, ties -> smaller k; runner-up k2, ties -> smaller k
+   478→const ranked = [...probeDmg].sort((a, b) => (b.D - a.D) || (a.k - b.k));
+   479→const KSTAR = ranked[0].k, K2 = ranked[1].k;
+   480→book('probe.pass1', {
+   481→  seed: PROBE_SEED, tAdmExp: tAdmProbe, admRound: probeP1.w1.admRound,
+   482→  devMeanAtAdmission: probeP1.w1.devMean, indepAtAdmission: probeP1.w1.indep,
+   483→  probationTrace: { n: probeP1.w1.probTraceN, mean: probeP1.w1.probTraceMean, max: probeP1.w1.probTraceMax },
+   484→  h2: probeP1.h2, note: 'pass-1 = sleeper honest forever under A1 wiring; measures t_adm (flip-independent: admission uses probation data through t_adm-1, all honest-phase)',
+   485→});
+   486→book('probe.strategies', {
+   487→  seed: PROBE_SEED, tAdmExp: tAdmProbe,
+   488→  perK: probeDmg.map((d) => ({ k: d.k, D: d.D === null ? null : r6(d.D), window: d.win, tFlip: tAdmProbe == null ? null : tAdmProbe + d.k })),
+   489→  metric: 'D = counterfactual damage over [t_adm+k, min(t_adm+k+150,400)), A1 wiring',
+   490→});
+   491→book('probe.choice', {
+   492→  kStar: KSTAR, k2: K2, rule: 'damage-maximizing k on the probe seed, ties -> smaller k; runner-up k2',
+   493→  probeD_kStar: ranked[0].D === null ? null : r6(ranked[0].D), probeD_k2: ranked[1].D === null ? null : r6(ranked[1].D),
+   494→  split: 'probe seed "probe" = train; matrix seeds 0..7 = held out (S3 transfer)',
+   495→});
+   496→
+   497→// ---- runtime discipline (receipted BEFORE the full run) ----
+   498→const tProbeRun = (tProbeMs / 1000) / (KS.length + 1); // per-run time: 5 strategies + 1 pass-1
+   499→const projectedFormula = tProbeRun * (8 * 4 + KS.length) + 2;   // receipted formula (8 seeds)
+   500→const projectedActual = tProbeRun * (SEEDS * (ARMS.length + 1) + KS.length) + 2; // pass-1 + 5 arms per seed
+   501→let cut = null;
+   502→if (projectedFormula > 170 && SEEDS === 8) { SEEDS = 6; cut = 'seeds cut 8 -> 6 by the probe rule (projected > 170s); paired claims preserved'; }
+   503→else if (projectedFormula > 170) { cut = `seeds already ${SEEDS} (< 8); projected ${projectedFormula.toFixed(0)}s still > 170s — proceeding at minimum receipted fallback`; }
+   504→book('runtime.probe', {
+   505→  tProbePhase_s: +(tProbeMs / 1000).toFixed(1), runsInProbe: KS.length + 1,
+   506→  tProbe_perRun_s: +tProbeRun.toFixed(3),
+   507→  projected_byReceiptedFormula_8seeds_s: +projectedFormula.toFixed(1),
+   508→  projected_actualPlan_s: +projectedActual.toFixed(1),
+   509→  projectionNote: 'formula uses t_probe * (8 seeds * 4 arms + 5 strategy runs) + 2s IO per the receipted rule; actualPlan additionally counts the per-seed pass-1 admission probe and the A5 sensitivity arm (transparent)',
+   510→  seedDecision: SEEDS, cut, e33Reference_s_perRun: 6.75,
+   511→});
+   512→console.log(`probe: t_adm=${tAdmProbe}, k*=${KSTAR} (D=${ranked[0].D === null ? 'n/a' : r6(ranked[0].D)}), k2=${K2} (D=${ranked[1].D === null ? 'n/a' : r6(ranked[1].D)}), t_probe/run=${tProbeRun.toFixed(2)}s, projected(formula)=${projectedFormula.toFixed(0)}s -> seeds=${SEEDS}${cut ? ' (CUT)' : ''}`);
+   513→
+   514→// ---------------- full matrix ----------------
+   515→const agg = {};
+   516→for (const A of ARMS) {
+   517→  agg[A] = {
+   518→    acc: [], pre: [], dmg: [], winLen: [], errWin: [], attShareWin: [], attEcho: [],
+   519→    attTrustFlip: [], attTrustFin: [], conv: [], honQ: [], w1Adm: [], w1Dev: [], w1Indep: [],
+   520→    w1ProbMax: [], h2Adm: [], h2Dev: [], g1Adm: [], tagEnd: {}, vfy: { checks: 0, pass: 0, maxDiff: 0 },
+   521→  };
+   522→}
+   523→const seedRows = [];
+   524→const t0 = Date.now();
+   525→const seed0Curves = { t: [], err: {}, attShare: {} };
+   526→
+   527→for (let seed = 0; seed < SEEDS; seed++) {
+   528→  const seedStart = Date.now();
+   529→  const world = genWorld(seed, harvest, vault);
+   530→  // pass-1: honest-forever admission probe (A1 wiring) -> t_adm for this seed
+   531→  const engP1 = new QuiltEngine(`e35-s${seed}-p1`, {});
+   532→  engP1.loadSheet(buildSheet());
+   533→  const p1 = await runArm(seed, world, { name: 'pass1', protocol: 'v3.1', attacker: { id: SLEEP, flip: null } }, engP1);
+   534→  if (p1.w1.admitExpT === null) {
+   535→    console.log(`  seed ${seed}: sleeper NOT admitted under honest behavior (t_adm=null) — attack cannot launch; receipting as neverLaunched`);
+   536→  }
+   537→  const tAdm = p1.w1.admitExpT;
+   538→  const specs = armSpecs({ kStar: KSTAR, k2: K2, tAdm });
+   539→  const eng = new QuiltEngine(`e35-s${seed}`, {});
+   540→  eng.loadSheet(buildSheet());
+   541→  const row = { seed, seed_s: +((Date.now() - seedStart) / 1000).toFixed(1), pass1: { tAdmExp: tAdm, devMean: p1.w1.devMean, indep: p1.w1.indep, h2: p1.h2 } };
+   542→  for (const A of ARMS) {
+   543→    const R = await runArm(seed, world, specs[A], eng);
+   544→    if (A === 'v3.1-sleeper' && R.w1.admitExpT !== tAdm) {
+   545→      throw new Error(`admission mismatch seed=${seed}: pass1 t_adm=${tAdm} vs matrix A1 t_adm=${R.w1.admitExpT} (paired-worlds broken)`);
+   546→    }
+   547→    const G = agg[A];
+   548→    G.acc.push(R.poolAcc); G.pre.push(R.errPre);
+   549→    G.dmg.push(R.damage);
+   550→    G.winLen.push(R.window ? R.window.len : 0);
+   551→    if (R.errWin !== null) G.errWin.push(R.errWin);
+   552→    if (R.attShareWin !== null) G.attShareWin.push(R.attShareWin);
+   553→    if (R.attEchoWin !== null) G.attEcho.push(R.attEchoWin);
+   554→    if (R.attTrustAtFlip !== null) G.attTrustFlip.push(R.attTrustAtFlip);
+   555→    if (R.attTrustFinal !== null) G.attTrustFin.push(R.attTrustFinal);
+   556→    G.conv.push(R.convRound === null ? T : R.convRound);
+   557→    G.honQ.push(R.honQFinal);
+   558→    G.tagEnd[R.attTagEnd ?? 'none'] = (G.tagEnd[R.attTagEnd ?? 'none'] ?? 0) + 1;
+   559→    if (R.w1.admitExpT !== null) { G.w1Adm.push(R.w1.admitExpT); G.w1Dev.push(R.w1.devMean); G.w1Indep.push(R.w1.indep); if (R.w1.probTraceMax !== null) G.w1ProbMax.push(R.w1.probTraceMax); }
+   560→    if (R.h2.admitExpT !== null) { G.h2Adm.push(R.h2.admitExpT); G.h2Dev.push(R.h2.devMean); }
+   561→    if (R.g1.admitExpT !== null) G.g1Adm.push(R.g1.admitExpT);
+   562→    G.vfy.checks += R.verify.checks; G.vfy.pass += R.verify.pass;
+   563→    if (R.verify.maxDiff > G.vfy.maxDiff) G.vfy.maxDiff = R.verify.maxDiff;
+   564→    row[A] = {
+   565→      dmg: R.damage === null ? null : r6(R.damage), window: R.window,
+   566→      errPre: r6(R.errPre), errWin: R.errWin === null ? null : r6(R.errWin),
+   567→      attShareWin: R.attShareWin === null ? null : r6(R.attShareWin),
+   568→      attEchoWin: R.attEchoWin === null ? null : r6(R.attEchoWin),
+   569→      attTagEnd: R.attTagEnd, attTrustAtFlip: R.attTrustAtFlip, attTrustFinal: R.attTrustFinal,
+   570→      convRound: R.convRound, honQ: r6(R.honQFinal),
+   571→      wAtt: R.wAtt, honW: R.honW,
+   572→      w1Adm: R.w1.admitExpT, w1DevMean: R.w1.devMean, w1ProbMax: R.w1.probTraceMax,
+   573→      h2Adm: R.h2.admitExpT, g1Adm: R.g1.admitExpT,
+   574→      verify: `${R.verify.pass}/${R.verify.checks}`,
+   575→    };
+   576→    if (seed === 0) {
+   577→      seed0Curves.t = R.err.map((_, i) => i).filter((i) => i % 4 === 0);
+   578→      seed0Curves.err[A] = R.err.filter((_, i) => i % 4 === 0).map((x) => r6(x));
+   579→      seed0Curves.attShare[A] = R.attShare.filter((_, i) => i % 4 === 0).map((x) => r6(x));
+   580→    }
+   581→  }
+   582→  seedRows.push(row);
+   583→  book('run', row);
+   584→  const proj = (((Date.now() - t0) / 1000) / (seed + 1)) * SEEDS;
+   585→  console.log(`  seed ${seed + 1}/${SEEDS} done (t_adm=${tAdm}, ${((Date.now() - t0) / 1000).toFixed(1)}s elapsed, projected matrix total ${proj.toFixed(0)}s)`);
+   586→}
+   587→const elapsedMatrix = ((Date.now() - t0) / 1000).toFixed(1);
+   588→const elapsedTotal = ((Date.now() - probeT0) / 1000).toFixed(1);
+   589→console.log(`matrix elapsed ${elapsedMatrix}s (probe+matrix ${elapsedTotal}s)`);
+   590→
+   591→// ---------------- aggregate ----------------
+   592→const armsAgg = {};
+   593→for (const A of ARMS) {
+   594→  const G = agg[A];
+   595→  const hasAtt = A !== 'v3.1-clean';
+   596→  armsAgg[A] = {
+   597→    poolAcc: stat(G.acc), errPre: stat(G.pre),
+   598→    damage: hasAtt ? stat(G.dmg.map((d) => d ?? 0)) : null,
+   599→    damageNeverLaunched: G.dmg.filter((d) => d === null).length,
+   600→    windowLen: stat(G.winLen),
+   601→    errWin: G.errWin.length ? stat(G.errWin) : null,
+   602→    attShareWin: G.attShareWin.length ? stat(G.attShareWin) : null,
+   603→    attEchoWin: G.attEcho.length ? stat(G.attEcho) : null,
+   604→    attTagEndCounts: G.tagEnd,
+   605→    attTrustAtFlip: G.attTrustFlip.length ? stat(G.attTrustFlip) : null,
+   606→    attTrustFinal: G.attTrustFin.length ? stat(G.attTrustFin) : null,
+   607→    attConvRoundByTrust: hasAtt ? stat(G.conv) : null,
+   608→    honQFinal: stat(G.honQ),
+   609→    w1Admission: (A === 'v3.1-sleeper' || A === 'v3.1-sleeper-k2') ? {
+   610→      admitted_n: G.w1Adm.length, of: SEEDS, tAdmExp: G.w1Adm.length ? stat(G.w1Adm) : null,
+   611→      devMeanAtAdmission: G.w1Dev.length ? stat(G.w1Dev) : null,
+   612→      indepAtAdmission: G.w1Indep.length ? stat(G.w1Indep) : null,
+   613→      probationTraceMax: G.w1ProbMax.length ? stat(G.w1ProbMax) : null,
+   614→    } : null,
+   615→    h2Admission: A.startsWith('v3.1') ? {
+   616→      admitted_n: G.h2Adm.length, of: SEEDS, tAdmExp: G.h2Adm.length ? stat(G.h2Adm) : null,
+   617→      devMeanAtAdmission: G.h2Dev.length ? stat(G.h2Dev) : null,
+   618→      falseNegativeRate: r6((SEEDS - G.h2Adm.length) / SEEDS),
+   619→    } : null,
+   620→    g1Admission: A === 'v3.1-instant' ? { admitted_n: G.g1Adm.length, of: SEEDS, tAdmExp: G.g1Adm.length ? stat(G.g1Adm) : null } : null,
+   621→    verify: { checks: G.vfy.checks, pass: G.vfy.pass, maxDiff: G.vfy.maxDiff.toExponential(2) },
+   622→  };
+   623→}
+   624→
+   625→// ---------------- claims ----------------
+   626→const dmgOf = (A) => agg[A].dmg.map((d) => (d === null ? 0 : d)); // neverLaunched -> 0 damage
+   627→// S1 CONTAINMENT: D(A1) < D(A2), paired
+   628→const dS1 = dmgOf('v3-sleeper').map((d, i) => d - dmgOf('v3.1-sleeper')[i]); // >0 = v3.1 helps
+   629→const stS1 = signTestOneSided(dS1);
+   630→const seS1 = seOf(dS1);
+   631→const ratioS1 = r6(armsAgg['v3.1-sleeper'].damage.mean / Math.max(1e-12, armsAgg['v3-sleeper'].damage.mean));
+   632→const S1 = {
+   633→  verdict: (mean(dS1) > 0 && stS1.p < 0.05) ? 'CONFIRMED' : (mean(dS1) > 0 ? 'PARTIAL' : 'REFUTED'),
+   634→  damage_v31sleeper: armsAgg['v3.1-sleeper'].damage,
+   635→  damage_v3sleeper: armsAgg['v3-sleeper'].damage,
+   636→  ratio_v31_over_v3: ratioS1,
+   637→  pairedDelta_v3_minus_v31: { mean: r6(mean(dS1)), se: r6(seS1), sd: r6(sd(dS1)), n: dS1.length, perSeed: dS1.map((x) => r6(x)) },
+   638→  signTest_oneSided: stS1,
+   639→  kStar: KSTAR, k2: K2,
+   640→  note: 'primary evidence = counterfactual damage suppression (E24/E33 method) of the SAME sleeper attack (flip at t_adm+k* in both arms; arms differ ONLY in protocol layer)',
+   641→};
+   642→// S2 PATIENCE PRICING: D(A1) vs D(A3)
+   643→const dS2 = dmgOf('v3.1-sleeper').map((d, i) => d - dmgOf('v3.1-instant')[i]); // >0 = patience beats flashing
+   644→const seS2 = seOf(dS2);
+   645→const S2 = {
+   646→  verdict: mean(dS2) > 0 ? 'HOLE' : 'HELD',
+   647→  reading: mean(dS2) > 0
+   648→    ? 'patience beats toxicity: the admitted sleeper extracts MORE damage than the instant toxic newcomer — admission has a probation-evasion opening'
+   649→    : 'waiting costs the attacker at least as much as flashing: trust decay / fractional attribution catch the flip',
+   650→  damage_v31sleeper: armsAgg['v3.1-sleeper'].damage,
+   651→  damage_v31instant: armsAgg['v3.1-instant'].damage,
+   652→  ratio_sleeper_over_instant: r6(armsAgg['v3.1-sleeper'].damage.mean / Math.max(1e-12, armsAgg['v3.1-instant'].damage.mean)),
+   653→  pairedDelta_sleeper_minus_instant: { mean: r6(mean(dS2)), se: r6(seS2), sd: r6(sd(dS2)), n: dS2.length, perSeed: dS2.map((x) => r6(x)) },
+   654→  windowNote: 'windows differ by construction (sleeper [t_adm+k*, +150) vs instant [150,+150)); D is a per-round mean over each arm\'s own window, so the comparison prices patience in damage density, not duration',
+   655→};
+   656→// S3 TRANSFER: held-out mean of k* / probe D(k*)
+   657→const heldMean = mean(dmgOf('v3.1-sleeper'));
+   658→const probeD = probeRuns[KSTAR].damage ?? 0;
+   659→const transferRatio = probeD > 1e-12 ? heldMean / probeD : null;
+   660→const S3 = {
+   661→  verdict: transferRatio === null ? 'INDETERMINATE (probe damage ~0)'
+   662→    : transferRatio >= 0.8 ? 'GENERALIZES (adaptive threat is REAL)'
+   663→    : transferRatio < 0.5 ? 'PROBE-OVERFIT (attack overfits the probe; defense overfit-resistant)'
+   664→    : 'INDETERMINATE',
+   665→  kStar: KSTAR, k2: K2,
+   666→  probeDamage_kStar: r6(probeD), probeDamage_k2: probeRuns[K2].damage === null ? null : r6(probeRuns[K2].damage),
+   667→  heldOutMean_kStar: r6(heldMean),
+   668→  heldOutPerSeed_kStar: dmgOf('v3.1-sleeper').map((x) => r6(x)),
+   669→  heldOutPerSeed_k2: dmgOf('v3.1-sleeper-k2').map((x) => r6(x)),
+   670→  heldOutSd_kStar: r6(sd(dmgOf('v3.1-sleeper'))),
+   671→  transferRatio: transferRatio === null ? null : r6(transferRatio),
+   672→  thresholds: '>=0.8 GENERALIZES; <0.5 PROBE-OVERFIT; else INDETERMINATE (receipted)',
+   673→  split: 'probe seed "probe" (train) vs matrix seeds 0..7 (held out); k*/k2 chosen on the probe only',
+   674→};
+   675→// S4 NO COLLATERAL: A1 vs A4 honestFinalQ
+   676→const honDiff = agg['v3.1-sleeper'].honQ.map((q, i) => q - agg['v3.1-clean'].honQ[i]);
+   677→const seHon = seOf(honDiff);
+   678→const S4 = {
+   679→  verdict: Math.abs(mean(honDiff)) <= seHon ? 'CONFIRMED' : 'REFUTED',
+   680→  honQ_v31sleeper: armsAgg['v3.1-sleeper'].honQFinal,
+   681→  honQ_v31clean: armsAgg['v3.1-clean'].honQFinal,
+   682→  pairedDiff_sleeper_minus_clean: { mean: r6(mean(honDiff)), se: r6(seHon), n: honDiff.length },
+   683→  note: 'honestFinalQ = mean HedgeTrust weight of the 12 honest incumbents at t=T-1 (post final update+absorb); the roster carries w1/g1/h2 in every arm (e33 convention), so the clean-arm baseline includes their 0.5-prior normalization mass',
+   684→};
+   685→// S5 ADMISSION RECORD
+   686→const w1n = armsAgg['v3.1-sleeper'].w1Admission.admitted_n;
+   687→const S5 = {
+   688→  verdict: w1n === SEEDS ? 'OPEN (sleeper admitted in every seed — probation-evasion surface exists)'
+   689→    : w1n === 0 ? 'TOO-STRICT (sleeper never admitted under honest behavior — admission rejects honest-looking newcomers; honest false-negative risk)'
+   690→    : 'MIXED',
+   691→  sleeper: armsAgg['v3.1-sleeper'].w1Admission,
+   692→  probationTraceNote: 'probTrace = |p_w1 - pool| over probation rounds in arm A1; devMeanAtAdmission = Admission.devMean (the quantity admitErr=0.5 judges)',
+   693→  honestJoiner_h2: {
+   694→    perArm: Object.fromEntries(ARMS.filter((A) => A.startsWith('v3.1')).map((A) => [A, armsAgg[A].h2Admission])),
+   695→    note: 'h2 = honest late-joiner control in ALL arms (E21/E24 wiring); falseNegativeRate = fraction of arm-seeds where h2 is NOT admitted by T',
+   696→  },
+   697→  instantToxic_g1: armsAgg['v3.1-instant'].g1Admission,
+   698→  holeEvidence: armsAgg['v3.1-instant'].g1Admission.admitted_n > 0
+   699→    ? 'g1 (toxic FROM ARRIVAL) admitted in some seeds — admitErr=0.5 does not stop an independent liar either'
+   700→    : 'g1 never admitted (its edges echo-align with honest voices / probation error bars it) — admission still gates the flasher',
+   701→};
+   702→book('finding.S1', { ...S1 });
+   703→book('finding.S2', { ...S2 });
+   704→book('finding.S3', { ...S3 });
+   705→book('finding.S4', { ...S4 });
+   706→book('finding.S5', { ...S5 });
+   707→book('finding.runtime', {
+   708→  seedsRun: SEEDS, matrixElapsed_s: Number(elapsedMatrix), totalElapsed_s: Number(elapsedTotal),
+   709→  cut: cut ?? 'none — full plan within budget',
+   710→  probeRow: rows.find((r) => r.kind === 'probe.choice') ?? null,
+   711→  vaultLiveJobs: vault.liveJobs,
+   712→});
+   713→
+   714→const chain = sealChain(rows);
+   715→const tip = rows[rows.length - 1].row_hash;
+   716→const vfy = verifyChain(rows);
+   717→if (!vfy.ok) { console.error('CHAIN VERIFY FAILED', vfy); process.exit(1); }
+   718→console.log(`chain: ${rows.length} rows, tip ${tip} VERIFIED`);
+   719→for (const c of [['S1', S1], ['S2', S2], ['S3', S3], ['S4', S4], ['S5', S5]]) {
+   720→  console.log(`${c[0]}: ${c[1].verdict}  ${JSON.stringify(c[1]).slice(0, 240)}`);
+   721→}
+   722→
+   723→mkdirSync('experiments/outputs', { recursive: true });
+   724→writeFileSync('experiments/outputs/e35_summary.json', JSON.stringify({
+   725→  task: 'E35', name: 'the sleeper cell (probation-evasion attack + strategy transfer test)',
+   726→  seeds: SEEDS, T, voices: V, probeSeed: PROBE_SEED, strategies: KS, kStar: KSTAR, k2: K2,
+   727→  arms: ARMS, runtime_s: { probePhase: +(tProbeMs / 1000).toFixed(1), matrix: Number(elapsedMatrix), total: Number(elapsedTotal) },
+   728→  config: {
+   729→    world: { FLIP_P, REROLL_P, N, TOX_Q, JOIN }, damageWindow: DW, pre: PRE,
+   730→    hedge: CFG, admission: ADM, roster: ALL_IDS,
+   731→  },
+   732→  probe: { pass1: probeP1.w1, perK: probeDmg.map((d) => ({ k: d.k, D: d.D === null ? null : r6(d.D), window: d.win })) },
+   733→  arms: armsAgg, claims: { S1, S2, S3, S4, S5 },
+   734→  perSeed: seedRows,
+   735→  curves: seed0Curves,
+   736→  chain: { rows: rows.length, tip, verified: vfy.ok },
+   737→}, null, 1));
+   738→writeFileSync('experiments/outputs/receipts_e35.jsonl', rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+   739→console.log('wrote experiments/outputs/e35_summary.json + receipts_e35.jsonl');
+   740→console.log(vault.liveJobs === 0 ? 'E35 DONE' : 'E35 PROBLEM (live jobs)');
+   741→

@@ -260,3 +260,100 @@ Stage Summary:
 - The games proved the APIs: hold'em chord seat 14/14, arena JEVE 11/11, wiring oracle 7/7 — including a clean negative result that locates quantum's correct role (certify, not discover).
 - New doctrine: attention-by-uncertainty (expensive thought bought only by doubt), calibration-delta learning (weights drift toward calibrated judgment, never toward mock), perception-as-judgment (worth-gated MOTH buys).
 - Portfolio: playtest (12 patches, 36/36) + tools (75/75) + arcade (55/55) + quant (15/15) + lab (19/19) + arena (23/23) + cortex (14+11+11+7) = 230 green checks in one verified zip.
+---
+Task ID: 20-a
+Agent: research-engineer lane (murmur-fleet, SuperInstance)
+Task: E35 sleeper cell — probation-evasion attack + strategy transfer test
+
+Work Log:
+- Read worklog + fleet conventions; read e33_flood_poison.mjs and e24_toxicsource_spinup.mjs in full (paired arms, counterfactual damage method, receipted decision rules, runtime discipline) + murmur/{admission,provenance,trust,receipts,bus,moth}.mjs before writing code
+- Built experiments/e35_sleeper.mjs (e33 wiring verbatim): 12 honest founders (a1=0.9) + sleeper w1 (joins t=150, honest phase = e24 h1 generator so |p-pooled| stays honest, OWN edges so it passes the independence bar honestly) + honest late-joiner h2 (E21/E24 control, ALL arms) + instant-toxic g1 (E24 yardstick); T=400, paired worlds (same truth/votes/toxic series; arms select over shared values), 15-slot roster, sheet pool.hedge + amp meters, sheet-verify vs MurmurBus.pool every 20r tol 1e-9
+- Paired arms: A1 v3.1-sleeper / A2 v3-sleeper (no admission/fractional) / A3 v3.1-instant / A4 v3.1-clean / A5 v3.1-sleeper-k2 (sensitivity); flip at t_adm+k with t_adm measured per seed on a pass-1 honest-forever A1-wiring run (probation data through t_adm-1 is flip-independent; in-run assert pass1==matrix A1 admission, never fired)
+- GAN lane receipted: probe seed "probe" (train) disjoint from matrix seeds 0-7 (held out); 5 strategies k in {0,10,25,50,100} under A1 wiring; damage-max k* (ties->smaller), runner-up k2; S3 transfer = held-out mean D(k*) / probe D(k*)
+- Receipted S1-S5 EXACT rules + runtime discipline into the chain BEFORE the full run (run.config row precedes run rows); probe timed: t_probe/run 3.30s -> projected(formula) = 3.30x37+2 = 124s < 170s -> 8 seeds kept, no cut; dev mini-run (2 seeds) validated pipeline (chain seal + file re-verify + sheet-verify + admission assert) before the final run
+- Dev run caught 2 bugs (wrong agg/armsAgg reference in S5; missing wAtt/honW in row output) — fixed BEFORE the final run; stale-artifact doctrine respected (no edits after final; script mtime 1790415588 < outputs 1790415760)
+- FINAL RUN: probe k*=25 (D 0.003659), k2=10 (0.003091); 8-seed matrix 147.3s, probe+matrix 167.1s wall; chain 19 rows sealed + verifyChain ok from memory AND from the written file (tip 0x5fe7ed978f78ae5e)
+- Ran node experiments/smoke.mjs: 16/16 green, SMOKE OK (no murmur/ or smoke.mjs edits); committed 5db0e9c (no push — parent pushes)
+
+Stage Summary:
+- S5 OPEN (the headline): the sleeper walked through probation in 8/8 seeds — admitted at t=189 (the earliest possible round) with probation devMean 0.195 << admitErr 0.5 and 5.6 independent edges; admission judges USEFULNESS, and honest-looking behavior IS useful, so probation gates nothing against a patient adversary
+- S2 HOLE: patience pays — admitted-sleeper damage D=0.002583 vs instant-toxic D=0.001487 (ratio 1.737, paired delta +0.001096 +/- 0.000308); mechanism: honest track record buys 2.6x the trust at flip (0.0426 vs 0.0164) and 1.6x the influence share (3.13% vs 1.91%)
+- S1 CONFIRMED (weakly): v3.1 contains the admitted flip 5.6% better than v3 (D 0.002583 vs 0.002736, paired delta +0.000153 +/- 0.000094, sign W=7/L=1 p=0.0352) — but ONLY via the fractional novelty term (hard echo tags never fired: tagEnd clean 8/8 both arms; echo-score ~0); an independent liar is nobody's echo, so v3's hard layer and admission's soft layer are both blind to the flip
+- S3 INDETERMINATE: transfer ratio 0.706 (0.5-0.8 band); per-seed held-out D(k*) 0.00167-0.00365, k2 flat (0.002675 vs 0.002583) — damage is robust to k, i.e. ANY patience level works; the defense is strategy-insensitive because the vulnerability is structural
+- S4 REFUTED (honestly): honest final Q 0.070503 (A1) vs 0.071565 (A4), paired diff -0.001061 +/- 0.000266 — the admitted sleeper's earned trust eats ~1.5% of honest mass; the attack has a real economic cost even where damage is small
+- BONUS hole (receipted in S5): g1, toxic FROM ARRIVAL, was admitted 7/8 seeds at t=189 — admitErr=0.5 does not stop an independent liar either (probation error ~0.2); and h2's honest admission is DELAYED in the instant arm (mean 204.9 vs 190.6) — a toxic newcomer's dense edge-train makes honest edges look dependent (noise-pollution externality on admission latency)
+- Artifacts: experiments/e35_sleeper.mjs + experiments/outputs/e35_summary.json + experiments/outputs/receipts_e35.jsonl (chain tip 0x5fe7ed978f78ae5e, verifyChain ok); commit 5db0e9c; smoke 16/16
+
+---
+Task ID: 20-b
+Agent: research-engineer lane (murmur-fleet, SuperInstance)
+Task: E36 counter-move — pricing flip-detector / sunsetting / velocity-bar defenses against the E35 sleeper
+
+Work Log:
+- Read worklog (E35 = task 20-a), e35_sleeper.mjs in full (world generator, sleeper wiring, counterfactual damage method, receipt discipline reused verbatim), murmur/admission.mjs + trust.mjs for hooks; found an UNTRACKED partial E36 draft in the lane (1-seed probe only, n=1 "negative verdict", uncommitted) — audited it line-by-line against the task spec instead of trusting it
+- Built experiments/e36_countermove.mjs (E35 wiring verbatim: 12 honest founders a1=0.9, h2 honest-joiner canary, g1 flasher canary ACTIVE in all attack arms — receipted deviation so R2c has a same-arm baseline, sleeper w1 flips at t_adm+25, T=400, paired worlds, 15-slot sheet, MurmurBus.pool sheet-verify every 20r tol 1e-9, MothVault offline e36:* streams); three experiment-local wrapper classes over Admission's public API: FlipGuard (EWMA 0.05 + trailing-30 devMean > 2x own probation devMean & > 0.15 -> epsNew 40r), Sunset (expiry every 80r, re-admission over last-40 window, founders/age>200 exempt), VelocityBar (probation max |p-pooled| <= 1.5*admitErr=0.75 else epsNew forever) — ZERO murmur/ changes; admitAt-surgery rejected on receipted grounds (native re-check re-admits in 1 round, cumulative devMean diluted)
+- Fixed 3 defects in the draft BEFORE the final run: (1) CROWN INVERSION — composite used damageRatio(B/A1) with argmax, which crowns the WORST defense (a no-op scores 1.0); rebuilt as containment_ratio = D(A1)/D(B_i) x (1 - fpTax-as-written), incremental lens receipted alongside; (2) finding.runtime double-counted seed 0's wall time; (3) mechanism analysis rewritten to be COMPUTED from the measured telemetry (static pre-drafted text drifted from the 6-seed data: B2's h2 false-lapse is 2/6 seeds not 1; caught a seed-key drop through Object.values)
+- Runtime discipline receipted in-chain before run rows: probe = timed seed-0 5-arm matrix (+ pass-1) = 26.4s -> projected = 26.4x8+2 = 213s > 170s -> seeds cut 8 -> 6 per the receipted rule (probe doubles as matrix seed 0)
+- FINAL RUN: 6 seeds x 400r x 5 arms + pass-1 per seed, 130.1s matrix (2m10s wall); chain 15 rows sealed, verifyChain ok from memory AND re-parsed file; sheet-verify 0 mismatches; honQ attack-arm spread 0 (wrappers provably never touch trust)
+- node experiments/smoke.mjs: 16/16 green, SMOKE OK (murmur/ untouched); committed d6f7bd0 (no push — no credentials)
+
+Stage Summary:
+- R1: NO defense passes. D_w1: A1 0.003284+/-0.000466 | B1 0.003258 (delta +0.000027+/-0.000078, sign p=0.969, ratio 0.992) | B2 0.002880 (delta +0.000404+/-0.000232, p=0.3125, ratio 0.877, containment 1.14x) | B3 0.002952 (delta +0.000333+/-0.000436, p=0.75, ratio 0.899, containment 1.11x) — right-pointing deltas for B2/B3 but the paired sign test starves (need near-sweeps at n=6)
+- R2 pricing (fpTax as-written vs A4 saturates at 1 for ALL defenses — the honQ loss 0.00126+/-0.000286 is E35-S4's ATTACK cost, bit-identical across attack arms; incremental lens exactly 0): B2 is the only defense with real containment and it is false-positive-cheap (h2 admitted 6/6 @193.5 everywhere; only 2/6 seeds pay 40 lapsed rounds) and g1-SAFE (g1Delta -0.000084) — but ineligible on R1. CROWN: NONE (negative verdict, publishable)
+- Mechanisms receipted from telemetry: B1's 2x-own-history bar misses the flip 5/6 (refMean 0.145-0.228 -> bars 0.29-0.46 vs flipped trailing dev ~0.25) AND never trips the flasher 0/6, while false-tripping honest FOUNDERS 5/6 seeds (19 events, up to 275 epsNew rounds) — regime-noise detector; B2's only catch is the windowed INDEPENDENCE clause (flipped edges lagged-echo g1's toxic stream, winIndep<2) — the mean-dev clause renews a 0.75-wrong liar every time; B3 is a tail lottery: blocks w1 1/6 (cumMax 0.810>0.75, that seed's damage 0.003132->0.000473) but false-blocks h2 1/6 (cumMax 0.824) and that honest block RAISES sleeper damage +0.000664 (capping an honest voice moves the pool toward the liar)
+- Structural finding: influence-layer-only defenses cannot price into honestFinalQ at all (trust trajectories arm-identical) — the as-written R2a check measures the attack, not the defenses; any defense that wants to move the fpTax must touch the trust layer (future work)
+- Artifacts: experiments/e36_countermove.mjs (1039 lines; 218 LOC of defense classes) + experiments/outputs/e36_summary.json + experiments/outputs/receipts_e36.jsonl (chain tip 0xf6cd43aa98375565, verifyChain ok); commit d6f7bd0; smoke 16/16
+
+---
+Task ID: 20 (coordination)
+Agent: main (Super Z)
+Task: fleet recovery after sandbox reset + keep-pushing wave: recover quilt-murmur, dispatch E35/E36 lanes, push everything, open the new-repos intake lane
+
+Work Log:
+- Discovered the sandbox was RESET: quilt-murmur gone locally, worklog rolled back to Task 14. Recon: the ACCOUNT is the source of truth — 100 repos on SuperInstance, quilt-murmur alive on GitHub (a19109d, pushed 08:33Z today by a parallel/lost lane with E14-E34 already done, incl. tools_gauntlet + e34 productivity audit)
+- Re-cloned quilt-murmur from GitHub into download/; npm install; smoke green (16 checks — note: 16 is the true count, the old "17" figure was stale context); verified E31/E33/E34 receipts on disk
+- Checked local download/ repos vs their GitHub remotes: cortex + arena remotes are AHEAD locally (parallel lanes: CI workflows, inverse-oracle, vendor/) — account stays source of truth, no reverse-push needed
+- Dispatched Task 20-a (E35 THE SLEEPER CELL, probation-evasion + strategy-transfer test) -> landed commit 5db0e9c; verified artifacts + chain (19 rows ok) + secret scan; PUSHED a19109d..5db0e9c
+- Dispatched Task 20-b (E36 THE COUNTER-MOVE): first dispatch died on context deadline leaving an untracked partial draft; the resumed lane audited it line-by-line, fixed 3 defects (incl. a crown inversion), ran the 5-arm matrix with the receipted seeds-cut rule (8->6) -> negative verdict, crown NONE, commit d6f7bd0; verified + PUSHED 5db0e9c..d6f7bd0
+- Token doctrine held all session: env/one-time-URL only, .git/config scrubbed after clone+push, post-push rescans CLEAN (the two tools_gauntlet flags are the literal identifier moth_weightedpick_u0 tripping the moth_ pattern — false positives, not keys)
+- Built download/fleet-seeds/ intake lane (README protocol + seedbox.mjs): turns a seed markdown into a rigorous repo skeleton (charter-verbatim README, package.json, CI smoke workflow, real smoke.mjs, first commit). Selftest green (3/3 checks, 1 commit) after fixing 2 bugs in-place (missing nested mkdir; missing existsSync import)
+- FLAGGED to user: the four seed files (seed1-4.md) NEVER LANDED — upload/ empty, nothing on disk, nothing in the account's recent repos; the new-repos idea cannot start until they are re-uploaded
+- Task 20-c (E37 trust lane: echo-structure admission bar + trust-layer re-probation) brief prepared per E36's carried seed; dispatch attempts were timing out at write time — brief parked here for the next lane to pick up verbatim
+
+Stage Summary:
+- quilt-murmur tip is now d6f7bd0 on GitHub: E35 proved the admission hole is REAL and STRUCTURAL (patience pays 1.737x; sleeper admitted 8/8 at the earliest possible round; flasher admitted 7/8 — admission judges usefulness, not truthfulness), E36 proved there is NO cheap influence-layer patch (all three defenses fail the pricing; the fpTax lever lives in the trust layer)
+- Two pushed commits, both chains verified, smoke green, zero secrets — the "tools not only work but do work" bar is met in a FRESH sandbox by recovered-clone -> smoke -> two receipted experiments -> two pushes end-to-end
+- fleet-seeds intake lane is warm: when the user re-uploads the seeds, `node seedbox.mjs seedN.md slug` gives each idea a charter-versioned repo in seconds
+
+---
+Task ID: 20-c
+Agent: research-engineer lane (murmur-fleet, SuperInstance)
+Task: E37 trust lane — echo-structure admission bar + trust-layer re-probation vs the E35 sleeper
+
+Work Log:
+- Read worklog (E35 = 20-a, E36 = 20-b) + e36_countermove.mjs in full + murmur/{trust,admission,receipts,moth}.mjs; found an UNTRACKED partial E37 lane artifact set (e37_trustlane.mjs + both outputs, chain 15 rows sealed) left by a dispatch that died at report time — audited it line-by-line against the brief before adopting anything
+- Audit found the draft FAITHFUL and complete: FlipGuard byte-identical to E36's B1 (diff-checked); StructureBar = echoFraction over probation edges (risky = source age<admitWindow at the candidate's edge time OR hard tag echo/dup; min-lag source attribution per admission.mjs's own direction doctrine; fail -> epsNew forever, B3's receipted wrapper-probation pattern); TrustReprobation = on every throw/rethrow, HedgeTrust weight x0.5 via absorb() post-pool pre-update so the decayed weight re-earns through the NORMAL hedge path (fixed-share 0.02 + exp(eta*r), reward pool-independent); arms A1/B4a/B4b/B4ab/A4, paired e37:* world streams, E36-verbatim counterfactual damage, R1-R4 + crown receipted in run.config BEFORE run rows, probe rule verbatim; zero murmur/ changes; found NO defects requiring edits
+- Cross-checked the sealed outputs (chain verified from file, cut receipted, numbers internally consistent incl. the R1 zero-delta p=1 edge case), then re-ran the FINAL RUN myself for attestation: probe seed0 27.9s -> projected 225s > 170s -> seeds cut 8 -> 6 per the receipted rule; 6 seeds x 400r x 5 arms + pass-1 = 134.7s matrix, 2m15s wall; the deterministic offline vault reproduced the audited draft run's science BIT-FOR-BIT (R1/R2/R3/R4/mechanism texts identical; only timing fields differ) — full reproduction receipt
+- FINAL: chain 15 rows sealed, tip 0x167c9ff9c196a71c, verifyChain ok from memory AND re-parsed file; sheet-verify 0 mismatches (tol 1e-9); B4a trust-bit-identity hard assert held (max |honQ(B4a)-honQ(A1)| = 0 per seed) while B4b/B4ab moved trust by design (max 3.53e-4, receipted trustMoved)
+- node experiments/smoke.mjs: 16/16 green, SMOKE OK (murmur/ + smoke.mjs untouched); committed 3dc0c69 (no push — parent pushes)
+
+Stage Summary:
+- R1 (containment): ALL THREE arms FAIL. D_w1: A1 0.002971+/-0.000960 | B4a 0.002971 (delta 0, sign p=1 — bit-identical: the bar never fired) | B4b 0.002476 (delta +0.000495+/-0.000309, W=2/L=1, sign p=0.5, damage ratio 0.833 — right-pointing but the sign test starves at n=6, E36's lesson repeated) | B4ab = B4b exactly (the struct bar adds nothing in this world)
+- R2 canaries: (a) honestFinalQ vs A4 (A4 0.070961, A1 0.069289 — the E35-S4 attack cost): B4a FAILS at 0.001672 below clean vs SE 0.000227 (~7 SE; the pure attack cost, it cannot help), B4b/B4ab FAIL at 0.001589 vs SE 0.000222 (~7 SE) — and the INCREMENTAL defense tax vs A1 is -0.000083+/-0.000053, i.e. reprobation slightly IMPROVES honest final Q vs the undefended attack yet cannot close a 7-SE attack-presence gap within 6 seeds; (b) h2 passes everywhere (6/6 admitted, mean 194.8, delay 0 vs A1; 40 guard rounds in B4b from one false trip, receipted); (c) g1: B4a passes bit-identically, B4b/B4ab FAIL by a hair (delta +0.000015 vs SE 0.000008) — founder trust decays REDISTRIBUTE mass proportionally and the flasher rides some of it: a real collateral the influence-layer E36 wrappers structurally could not have
+- R3 recovery (the hypothesis TEST): 23/25 full-horizon founder decay events recovered to >=95% of pre-trip share within 100 rounds (mean 19.1rd, sd 10.0) — the supervised reward stream makes trust re-earning defense-proof — but 2/25 FAILED (a8@143 s0, a5@178 s2: early low-share founders whose crowd position drifted) so the arm fails R3 as written; w1's own decay path: 6 events in 2/6 seeds, drops 49.4%+/-0.2%, re-earn slopes 3e-4..8e-4/rd, retrips every ~42r, final/pre-trip 1.53
+- R4 sleeper record: admitted 6/6 at t=191 (mean) in every arm; detector trips 2/6 seeds (first throw needs 30 post-flip rounds; E36 baseline 1/6); trust at flip 0.0594; conviction by trust never reaches 0.25x median within T
+- CROWN: NONE (negative verdict, publishable). Mechanism COMPUTED from telemetry: the structure bar never fires because min-lag precedence puts honest probation edges on the ESTABLISHED crowd (125/272 founder-sourced, 135 independent, only 12 risky-sourced; echoFractions at admission w1 0.000-0.083, g1 0.000-0.120, h2 0.000-0.308 vs bar 0.5) — in a world whose only newcomers are three simultaneous honest/expert/toxic voices, the E21 sybil-ride coupling does not occur, and the honest-phase sleeper is by construction an independent earner; the re-probation inherits B1's blindness (a 2x-own-history bar misses a two-sided liar whose trailing devMean ~0.25 vs bars 0.29-0.46) and its new trust lever is PROVEN to work mechanically (halves apply, healing works) but is gated by a detector that fires too rarely — the bottleneck is DETECTION, not the trust consequence; structural receipt: the fpTax-vs-A4 bar prices the ATTACK (7 SE, arm-common) not the defenses — any future crown test needs either more seeds or an attack-cost-normalized honQ baseline
+- Artifacts: experiments/e37_trustlane.mjs + experiments/outputs/e37_summary.json + experiments/outputs/receipts_e37.jsonl (tip 0x167c9ff9c196a71c, verifyChain ok); commit 3dc0c69; smoke 16/16
+
+---
+Task ID: 20 (push log)
+Agent: main (Super Z)
+Task: record the session's pushes to SuperInstance/quilt-murmur
+
+Work Log:
+- a19109d..5db0e9c  E35 sleeper cell (HOLE verdict: patience pays 1.737x; admission judges usefulness not truthfulness)
+- 5db0e9c..d6f7bd0  E36 counter-move (negative verdict: no cheap influence-layer patch; fpTax lever lives in the trust layer)
+- d6f7bd0..3dc0c69  E37 trust lane (negative verdict: decayed-but-recoverable trust heals false trips 23/25 but cannot contain what the detector cannot see — detection is the bottleneck)
+
+Stage Summary:
+- All three chains verified (19/15/15 rows), smoke 16/16 green throughout, worktree clean, zero secrets in any pushed tree; carried seed for the next lane: better flip DETECTION signal (pooled-residual derivative, cross-voice residual correlation, or provenance-coupled detection), not stronger consequences

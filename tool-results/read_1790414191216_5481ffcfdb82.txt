@@ -1,0 +1,748 @@
+     1→     1→// E33 — FLOOD COPYING A TOXIC FOUNDER (combined attack at cap scale)
+     2→     2→// ==================================================================
+     3→     3→// Prior receipts collide here. E21 closed clean copying (3 fresh sybils
+     4→     4→// riding the honest high-acuity expert a1: influence-real, error-masked).
+     5→     5→// E24 made it costly (the copiers pointed at a TOXIC FOUNDER x1: the spin-up
+     6→     6→// ride converts to pooled error; fractional attribution is CORROBORATION-
+     7→     7→// STARVED against poison, so admission caps — epsNew x capShare — carry that
+     8→     8→// column). The COMBINATION — a sybil flood that copies a toxic founder, at
+     9→     9→// cap scale — has never been run, and the INTERACTION between the two attack
+    10→    10→// halves (sub- vs super-additivity) has never been measured.
+    11→    11→//
+    12→    12→// THE QUESTION (carried seed): does the admission cap (capShare 0.10) hold
+    13→    13→// when the flood is COPYING A TOXIC FOUNDER — the newcomers' echoed source is
+    14→    14→// itself poison? And does the combined attack extract MORE than its parts
+    15→    15→// (super-additive: fresh clean weight amplifies entrenched poison) or LESS
+    16→    16→// (sub-additive: cap/fractional forces the flood to compete with its own
+    17→    17→// source for the same exploited trust)?
+    18→    18→//
+    19→    19→// SETUP: 12 honest founders (mixed acuity, a1 = 0.9 reference) + toxic
+    20→    20→// founder x1 (acuity 0.25, E24 formula verbatim, toxic from genesis) + 3
+    21→    21→// sybils (empty history, join t=150, copy-lag 1/1/2). 400 rounds, 8 seeds,
+    22→    22→// 4 paired arms (identical worlds — same truth stream, same honest votes,
+    23→    23→// same toxic values, same reward streams; arms differ ONLY in which voices
+    24→    24→// are on the bus and which protocol layer runs):
+    25→    25→//   v3-combined      — founder + flood copying x1, Provenance only (v3
+    26→    26→//                      semantics: hard tags + spin-up window; NO admission,
+    27→    27→//                      NO fractional) — the attack's full force.
+    28→    28→//   v3.1-combined    — full protocol over the same attack (the candidate).
+    29→    29→//   v3.1-founder-only— toxic founder, NO sybils (founder half isolated).
+    30→    30→//   v3.1-flood-only  — sybils copying honest a1, NO founder (flood half
+    31→    31→//                      isolated; in a founderless world the flood's best
+    32→    32→//                      target is the honest expert — E21's attack verbatim).
+    33→    33→//
+    34→    34→// DECISION RULES (receipted BEFORE the full run):
+    35→    35→//   C1 CAP INVARIANT — under v3.1-combined, per-seed max sybil aggregate
+    36→    36→//      share over t >= WIN.from + admitWindow (=190, admission windows
+    37→    37→//      closed) must be <= capShare + 0.02 slack (=0.12). ANY sybil admission
+    38→    38→//      in any v3.1 arm is receipted as an admission-bug candidate; a share
+    39→    39→//      violation with zero admissions is a cap-bug candidate. Full-trajectory
+    40→    40→//      max share + its round reported alongside.
+    41→    41→//   C2 COMBINED DEFENSE — D(v3.1-combined) < D(v3-combined): paired
+    42→    42→//      one-sided sign test (zeros excluded) p < 0.05 AND paired mean delta
+    43→    43→//      > 0; report paired delta +/- SE and ratio. D(A) = mean over the
+    44→    44→//      copying window [150,300) of |err(pool) - err(pool with ALL of arm A's
+    45→    45→//      attackers zeroed)| (E24 counterfactual method, reference-side
+    46→    46→//      log-odds; never written to the sheet).
+    47→    47→//   C3 INTERACTION — I_cross = D(v3.1-combined) - D(v3.1-founder-only)
+    48→    48→//      - D(v3.1-flood-only), per-seed paired; I +/- SE = mean(I_i) +/-
+    49→    49→//      sd(I_i)/sqrt(n); classify SUB-ADDITIVE (I < -SE) / SUPER-ADDITIVE
+    50→    50→//      (I > SE) / INDETERMINATE (|I| <= SE). Secondary CLEAN factorial
+    51→    51→//      inside each combined arm (all three counterfactuals from the SAME
+    52→    52→//      pool, copy target held fixed): I_within = D(both) - D(x1 only)
+    53→    53→//      - D(syb only), computed under v3.1-combined AND v3-combined as the
+    54→    54→//      mechanism diagnostic. Strategic receipt: capBind rounds (rounds where
+    55→    55→//      the cap actually redistributed mass) — if 0, sub-additivity is NOT
+    56→    56→//      cap-enforced competition; candidate mechanism is the receipted
+    57→    57→//      direction-blind novelty coupling (copiers park the source's values in
+    58→    58→//      their own histories, collapsing the source's novelty to the alpha
+    59→    59→//      floor). Caveat receipted: D(flood-only) copies a1 (honest) and is
+    60→    60→//      typically NEGATIVE (helping), so I_cross inherits a positive offset —
+    61→    61→//      I_cross <= 0 despite the offset is strong evidence of sub-additivity.
+    62→    62→//   C4 NO COLLATERAL — |mean(honestFinalQ_v3.1-combined) -
+    63→    63→//      mean(honestFinalQ_v3.1-founder-only)| <= 1 SE of the seed-paired
+    64→    64→//      difference. honestFinalQ := mean HedgeTrust weight of the 12 honest
+    65→    65→//      incumbents at t=T-1 (post final update+absorb). Directional note:
+    66→    66→//      comb - found > -SE (the cap must not make honest voices WORSE).
+    67→    67→//
+    68→    68→// RUNTIME RULES (receipted before the full run): probe = 1-seed timed run;
+    69→    69→// projected = t_probe * seeds + 2s IO; if projected > 170s, cut seeds 8 -> 6
+    70→    70→// and RECEIPT the cut. Dev mini-run (2 seeds) validates the full pipeline
+    71→    71→// (chain seal + file re-verify + sheet-verify) BEFORE the final run. After
+    72→    72→// the final run: NO script edits (stale-artifact doctrine: script mtime <
+    73→    73→// output mtimes).
+    74→    74→//
+    75→    75→// RNG DOCTRINE (binding): all randomness through MothVault (offline:true),
+    76→    76→// one harvest, per-purpose stream keys 'e33:<purpose>:seed:<seed>[:<voice>]'
+    77→    77→// via streamFor; NO Math.random anywhere. Paired worlds REQUIRE arm-identical
+    78→    78→// world streams — arms never consume different draws (pairing would break);
+    79→    79→// arm-conditional behavior is selection over shared values, not new draws.
+    80→    80→//
+    81→    81→// Sheet: v.{id} posterior cells + w.{id} influence cells + pool.hedge +
+    82→    82→// amp.syb / amp.founder meters (16 voice ids; formulas IDENTICAL for every
+    83→    83→// arm — absent senders' cells sit at p=0.5, w=0). Pool verified vs the
+    84→    84→// reference mirror (MurmurBus.pool) every 20 rounds, tol 1e-9, assert 0
+    85→    85→// mismatches. Counterfactual pools are reference-side only.
+    86→    86→//
+    87→    87→// Run: node experiments/e33_flood_poison.mjs [seeds]
+    88→    88→
+    89→    89→import { QuiltEngine } from '../engine/dist/index.js';
+    90→    90→import { HedgeTrust } from '../murmur/trust.mjs';
+    91→    91→import { MurmurBus } from '../murmur/bus.mjs';
+    92→    92→import { MothVault } from '../murmur/moth.mjs';
+    93→    93→import { Provenance } from '../murmur/provenance.mjs';
+    94→    94→import { Admission } from '../murmur/admission.mjs';
+    95→    95→import { sealChain, verifyChain } from '../murmur/receipts.mjs';
+    96→    96→import { writeFileSync, mkdirSync } from 'node:fs';
+    97→    97→
+    98→    98→// ---------------- config ----------------
+    99→    99→const T = 400, N = 12, SEEDS = Number(process.argv[2] || 8);
+   100→   100→const FLIP_P = 0.02, REROLL_P = 0.01;
+   101→   101→const TOXIC = 'x1';                            // the toxic founder (E24 formula)
+   102→   102→const TOX_Q = 0.25;                            // confidently wrong ~75% of rounds
+   103→   103→const WIN = { from: 150, to: 300 };            // copying window (attack leg)
+   104→   104→const POST = WIN.from + 40;                    // t>=190: admission windows closed (C1 domain)
+   105→   105→const PRE = { from: 120, to: 150 };            // pre-attack baseline
+   106→   106→const FLOOD = [
+   107→   107→  { id: 's1', lag: 1 },
+   108→   108→  { id: 's2', lag: 1 },
+   109→   109→  { id: 's3', lag: 2 },
+   110→   110→];
+   111→   111→const HONEST = Array.from({ length: N }, (_, i) => `a${i + 1}`);
+   112→   112→const ALL_IDS = [...HONEST, TOXIC, ...FLOOD.map((e) => e.id)];
+   113→   113→const V = ALL_IDS.length; // 16 voice slots
+   114→   114→const SYB_IDS = FLOOD.map((e) => e.id);
+   115→   115→const POISON = [TOXIC, ...SYB_IDS];
+   116→   116→const ARMS = ['v3-combined', 'v3.1-combined', 'v3.1-founder-only', 'v3.1-flood-only'];
+   117→   117→const CFG = { eta: 0.25, share: 0.02 };
+   118→   118→const ADM = {
+   119→   119→  beta: 0.12, alpha: 0.25, novSpread: 0.15,
+   120→   120→  coldStart: true, admitWindow: 40, epsNew: 0.15,
+   121→   121→  minEdgesIndep: 2, admitErr: 0.5, capShare: 0.10,
+   122→   122→};
+   123→   123→const CAP_SLACK = 0.02;
+   124→   124→const TOL = 1e-9;
+   125→   125→const hasFlood = (A) => !A.endsWith('founder-only');
+   126→   126→const hasFounder = (A) => !A.endsWith('flood-only');
+   127→   127→const attackersOf = (A) => [...(hasFounder(A) ? [TOXIC] : []), ...(hasFlood(A) ? SYB_IDS : [])];
+   128→   128→
+   129→   129→// ---------------- helpers ----------------
+   130→   130→const clampP = (p) => Math.min(0.98, Math.max(0.02, p));
+   131→   131→const gauss = (u1, u2) => Math.sqrt(-2 * Math.log(Math.max(1e-9, u1))) * Math.cos(2 * Math.PI * u2);
+   132→   132→const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+   133→   133→const sd = (a) => { const m = mean(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length); };
+   134→   134→const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+   135→   135→const r6 = (x) => (Number.isFinite(x) ? +x.toFixed(6) : x);
+   136→   136→// RECEIPTED VAULT DOCTRINE (E17 finding #0): one harvest, per-purpose keys,
+   137→   137→// every draw is the FIRST draw of its own cross-key sub-stream.
+   138→   138→function makeRng(harvest, vault, purpose) {
+   139→   139→  let d = 0;
+   140→   140→  return () => vault.streamFor(harvest, `${purpose}:${d++}`)();
+   141→   141→}
+   142→   142→// paired one-sided sign test, zeros excluded (E28 receipted small-p method)
+   143→   143→const binom = (n, k) => { let r = 1; for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1); return r; };
+   144→   144→function signTestOneSided(deltas) {
+   145→   145→  const W = deltas.filter((d) => d > 1e-12).length;
+   146→   146→  const L = deltas.filter((d) => d < -1e-12).length;
+   147→   147→  const n = W + L;
+   148→   148→  let p = 0;
+   149→   149→  for (let k = W; k <= n; k++) p += binom(n, k);
+   150→   150→  return { W, L, n, p: p / 2 ** n };
+   151→   151→}
+   152→   152→
+   153→   153→// ---------------- world ----------------
+   154→   154→function genWorld(seed, harvest, vault) {
+   155→   155→  const wR = makeRng(harvest, vault, `e33:world:${seed}`);
+   156→   156→  const qR = makeRng(harvest, vault, `e33:skill:${seed}`);
+   157→   157→  const xR = makeRng(harvest, vault, `e33:tox:${seed}`);
+   158→   158→  const s = new Array(T);
+   159→   159→  s[0] = wR() < 0.5 ? 0 : 1;
+   160→   160→  for (let t = 1; t < T; t++) s[t] = wR() < FLIP_P ? 1 - s[t - 1] : s[t - 1];
+   161→   161→  // mixed acuity honest founders; a1 is the high-acuity reference voice
+   162→   162→  const q = Array.from({ length: T }, () => new Array(N));
+   163→   163→  q[0][0] = 0.9;
+   164→   164→  for (let i = 1; i < N; i++) q[0][i] = Math.round((0.5 + 0.45 * qR()) * 1000) / 1000;
+   165→   165→  for (let t = 1; t < T; t++) {
+   166→   166→    for (let i = 0; i < N; i++) {
+   167→   167→      q[t][i] = qR() < REROLL_P ? Math.round((0.5 + 0.45 * qR()) * 1000) / 1000 : q[t - 1][i];
+   168→   168→    }
+   169→   169→  }
+   170→   170→  const vR = [];
+   171→   171→  for (let i = 0; i < N; i++) vR.push(makeRng(harvest, vault, `e33:vote:${seed}:${i}`));
+   172→   172→  const votes = Array.from({ length: T }, () => new Array(N));
+   173→   173→  for (let t = 0; t < T; t++) {
+   174→   174→    for (let i = 0; i < N; i++) {
+   175→   175→      const signal = vR[i]() < q[t][i] ? s[t] : 1 - s[t];
+   176→   176→      votes[t][i] = clampP(signal === 1 ? 0.5 + (q[t][i] - 0.5) : 0.5 - (q[t][i] - 0.5));
+   177→   177→    }
+   178→   178→  }
+   179→   179→  // the TOXIC founder — E24 formula VERBATIM: stable acuity TOX_Q, present
+   180→   180→  // from genesis, never rerolled — a consistent liar whose values point the
+   181→   181→  // wrong way ~75% of the time (confidence |TOX_Q-0.5| = 0.25 from neutral).
+   182→   182→  const toxV = new Array(T);
+   183→   183→  for (let t = 0; t < T; t++) {
+   184→   184→    const signal = xR() < TOX_Q ? s[t] : 1 - s[t];
+   185→   185→    toxV[t] = clampP(signal === 1 ? 0.5 + (TOX_Q - 0.5) : 0.5 - (TOX_Q - 0.5));
+   186→   186→  }
+   187→   187→  // the sybil block, TWO copy targets (arm-selected, same lags 1/1/2):
+   188→   188→  //   sybX — copies the TOXIC founder (combined arms; E24 construction)
+   189→   189→  //   sybA — copies honest high-acuity a1 (flood-only arm; E21 construction)
+   190→   190→  // ABSENT before t=150 (cold start!), copying inside [150,300), degenerate
+   191→   191→  // noise after (the adversary keeps the mic warm but has nothing to say).
+   192→   192→  const sybX = FLOOD.map(() => new Array(T));
+   193→   193→  const sybA = FLOOD.map(() => new Array(T));
+   194→   194→  for (let e = 0; e < FLOOD.length; e++) {
+   195→   195→    const { lag } = FLOOD[e];
+   196→   196→    const nxR = makeRng(harvest, vault, `e33:sybx:${seed}:${e}`);
+   197→   197→    const naR = makeRng(harvest, vault, `e33:syba:${seed}:${e}`);
+   198→   198→    for (let t = 0; t < T; t++) {
+   199→   199→      if (t < WIN.from) { sybX[e][t] = null; sybA[e][t] = null; }
+   200→   200→      else if (t < WIN.to) {
+   201→   201→        sybX[e][t] = toxV[t - lag];
+   202→   202→        sybA[e][t] = votes[t - lag][0];
+   203→   203→      } else {
+   204→   204→        sybX[e][t] = clampP(0.5 + gauss(nxR(), nxR()) * 0.3);
+   205→   205→        sybA[e][t] = clampP(0.5 + gauss(naR(), naR()) * 0.3);
+   206→   206→      }
+   207→   207→    }
+   208→   208→  }
+   209→   209→  const r = votes.map((row, t) => row.map((p) => 1 - Math.abs(p - s[t])));
+   210→   210→  const rTox = toxV.map((p, t) => 1 - Math.abs(p - s[t]));
+   211→   211→  const rSybX = sybX.map((col) => col.map((p, t) => (p === null ? null : 1 - Math.abs(p - s[t]))));
+   212→   212→  const rSybA = sybA.map((col) => col.map((p, t) => (p === null ? null : 1 - Math.abs(p - s[t]))));
+   213→   213→  return { s, q, votes, toxV, sybX, sybA, r, rTox, rSybX, rSybA };
+   214→   214→}
+   215→   215→
+   216→   216→// ---------------- sheet (16 voice slots; formulas IDENTICAL for every arm) --
+   217→   217→function buildSheet() {
+   218→   218→  const cells = [];
+   219→   219→  for (const id of ALL_IDS) cells.push({ id: `v.${id}`, kind: 'value', value: 0.5, description: `voice ${id} (posterior P(s=1))` });
+   220→   220→  for (const id of ALL_IDS) cells.push({ id: `w.${id}`, kind: 'value', value: 1 / V, description: `influence weight ${id} (protocol-adjusted)` });
+   221→   221→  const lg = (x) => `Math.log(clamp(${x},0.02,0.98)/(1-clamp(${x},0.02,0.98)))`;
+   222→   222→  const sig = (z) => `(1/(1+Math.exp(-(${z}))))`;
+   223→   223→  const hT = [], hD = [];
+   224→   224→  for (const id of ALL_IDS) { hT.push(`w.${id}*${lg(`v.${id}`)}`); hD.push(`w.${id}`); }
+   225→   225→  cells.push({ id: 'pool.hedge', kind: 'formula', expr: sig(`(${hT.join(' + ')}) / (${hD.join(' + ')})`) });
+   226→   226→  // in-sheet meters: sybil flood aggregate share; toxic founder share
+   227→   227→  cells.push({ id: 'amp.syb', kind: 'formula', expr: `(${SYB_IDS.map((e) => `w.${e}`).join(' + ')}) / (${hD.join(' + ')})` });
+   228→   228→  cells.push({ id: 'amp.founder', kind: 'formula', expr: `w.${TOXIC} / (${hD.join(' + ')})` });
+   229→   229→  return { id: `flood-${V}`, title: `E33 flood copying a toxic founder (${V} voice slots)`, cells };
+   230→   230→}
+   231→   231→
+   232→   232→// ---------------- one seed, four paired arms ----------------
+   233→   233→async function runSeed(seed, world, harvest, vault) {
+   234→   234→  const { s, votes, toxV, sybX, sybA, r, rTox, rSybX, rSybA } = world;
+   235→   235→  const eng = new QuiltEngine(`e33-fp-s${seed}`, {});
+   236→   236→  eng.loadSheet(buildSheet());
+   237→   237→
+   238→   238→  const trust = {}, provX = {}, admX = {};
+   239→   239→  for (const A of ARMS) { trust[A] = new HedgeTrust(ALL_IDS, CFG); provX[A] = new Provenance({}); }
+   240→   240→  for (const A of ARMS) if (A.startsWith('v3.1')) admX[A] = new Admission(ADM);
+   241→   241→
+   242→   242→  const st0 = () => ({
+   243→   243→    sumErr: 0, sumErrPost: 0, err: [], sybShare: [], fndShare: [],
+   244→   244→    dmgAll: [], dmgX1: [], dmgSyb: [], attErrShare: [], x1ErrShare: [], sybErrShare: [],
+   245→   245→    sybMax: { v: 0, t: null }, sybMaxPost: { v: 0, t: null },
+   246→   246→    fndMax: { v: 0, t: null },
+   247→   247→    verify: { checks: 0, pass: 0, maxDiff: 0 },
+   248→   248→    soft: { sybN: 0, sybCatch: 0, honN: 0, honFP: 0, honM: 0, x1E: 0, x1N: 0, sybM: 0, sybMN: 0 },
+   249→   249→    convRound: null, wX1: {}, wX1r: {}, honW: {},
+   250→   250→    capBoundRounds: 0, sybAdmitT: {}, cm: null,
+   251→   251→  });
+   252→   252→  const out = {};
+   253→   253→  for (const A of ARMS) out[A] = st0();
+   254→   254→
+   255→   255→  // per-arm ground truth for the confusion table (present ids only)
+   256→   256→  const truthOf = (A) => {
+   257→   257→    const m = new Map();
+   258→   258→    for (const id of HONEST) m.set(id, 'clean');
+   259→   259→    if (hasFounder(A)) m.set(TOXIC, 'clean'); // independent liar: provenance must NOT flag it
+   260→   260→    if (hasFlood(A)) for (const e of SYB_IDS) m.set(e, 'echo');
+   261→   261→    return m;
+   262→   262→  };
+   263→   263→  const presentIds = (A) => [...HONEST, ...(hasFounder(A) ? [TOXIC] : []), ...(hasFlood(A) ? SYB_IDS : [])];
+   264→   264→
+   265→   265→  // posterior value of a voice slot in arm A at round t (absent -> 0.5)
+   266→   266→  const pOf = (id, t, A) => {
+   267→   267→    if (HONEST.includes(id)) return votes[t][Number(id.slice(1)) - 1];
+   268→   268→    if (id === TOXIC) return hasFounder(A) ? toxV[t] : 0.5;
+   269→   269→    const ei = SYB_IDS.indexOf(id);
+   270→   270→    if (ei < 0) return 0.5;
+   271→   271→    if (!hasFlood(A)) return 0.5;
+   272→   272→    const src = A.endsWith('flood-only') ? sybA : sybX;
+   273→   273→    return src[ei][t] ?? 0.5;
+   274→   274→  };
+   275→   275→
+   276→   276→  for (let t = 0; t < T; t++) {
+   277→   277→    // ---- murmurs per arm (protocol v3.1 envelopes; ABSENT senders are not on the bus)
+   278→   278→    const murmurs = {};
+   279→   279→    for (const A of ARMS) {
+   280→   280→      const ms = [];
+   281→   281→      for (let i = 0; i < N; i++) ms.push({ from: `a${i + 1}`, origin: null, p: votes[t][i] });
+   282→   282→      if (hasFounder(A)) ms.push({ from: TOXIC, origin: null, p: toxV[t] });
+   283→   283→      if (hasFlood(A) && t >= WIN.from) {
+   284→   284→        const src = A.endsWith('flood-only') ? sybA : sybX;
+   285→   285→        FLOOD.forEach((S, e) => ms.push({ from: S.id, origin: null, p: src[e][t] }));
+   286→   286→      }
+   287→   287→      murmurs[A] = ms;
+   288→   288→    }
+   289→   289→    for (const A of ARMS) provX[A].inspect(murmurs[A]);
+   290→   290→    for (const A of ARMS) if (admX[A]) admX[A].observe(murmurs[A]);
+   291→   291→
+   292→   292→    // ---- rewards per voice (supervised pool; absent senders get no reward)
+   293→   293→    const rew = {};
+   294→   294→    for (const A of ARMS) {
+   295→   295→      const rw = new Map();
+   296→   296→      for (let i = 0; i < N; i++) rw.set(`a${i + 1}`, r[t][i]);
+   297→   297→      if (hasFounder(A)) rw.set(TOXIC, rTox[t]);
+   298→   298→      if (hasFlood(A) && t >= WIN.from) {
+   299→   299→        const rs = A.endsWith('flood-only') ? rSybA : rSybX;
+   300→   300→        FLOOD.forEach((S, e) => rw.set(S.id, rs[e][t]));
+   301→   301→      }
+   302→   302→      rew[A] = rw;
+   303→   303→    }
+   304→   304→
+   305→   305→    for (const A of ARMS) {
+   306→   306→      const st = out[A];
+   307→   307→      const raw = provX[A].penalize(trust[A].weights()); // v3 state penalty (all arms)
+   308→   308→      const infl = admX[A]
+   309→   309→        ? admX[A].reattribute(raw, murmurs[A], provX[A])
+   310→   310→        : provX[A].influence(raw, murmurs[A]);
+   311→   311→
+   312→   312→      // ---- the sheet does the pooled inference (identical formulas) ----
+   313→   313→      for (const id of ALL_IDS) await eng.set(`v.${id}`, pOf(id, t, A));
+   314→   314→      for (const id of ALL_IDS) await eng.set(`w.${id}`, infl.get(id) ?? 0);
+   315→   315→      const pool = (await eng.get('pool.hedge')).data;
+   316→   316→      const syb = (await eng.get('amp.syb')).data;
+   317→   317→      const fnd = (await eng.get('amp.founder')).data;
+   318→   318→      if (admX[A]) admX[A].notePooled(pool);
+   319→   319→
+   320→   320→      if (t % 20 === 0) {
+   321→   321→        const ps = ALL_IDS.map((id) => pOf(id, t, A));
+   322→   322→        const ref = MurmurBus.pool(ps, ALL_IDS.map((id) => infl.get(id) ?? 0));
+   323→   323→        const d = Math.abs(ref - pool);
+   324→   324→        st.verify.checks++;
+   325→   325→        if (d < TOL) st.verify.pass++;
+   326→   326→        if (d > st.verify.maxDiff) st.verify.maxDiff = d;
+   327→   327→        if (d >= TOL) throw new Error(`sheet-verify mismatch arm=${A} seed=${seed} t=${t} diff=${d}`);
+   328→   328→      }
+   329→   329→
+   330→   330→      // ---- accounting ----
+   331→   331→      const err = Math.abs(pool - s[t]);
+   332→   332→      st.sumErr += 1 - err;
+   333→   333→      if (t >= WIN.from) st.sumErrPost += 1 - err;
+   334→   334→      st.err.push(err);
+   335→   335→      st.sybShare.push(syb);
+   336→   336→      st.fndShare.push(fnd);
+   337→   337→      if (t >= WIN.from) {
+   338→   338→        if (syb > st.sybMax.v) st.sybMax = { v: syb, t };
+   339→   339→        if (t >= POST && syb > st.sybMaxPost.v) st.sybMaxPost = { v: syb, t };
+   340→   340→      }
+   341→   341→      if (hasFounder(A) && fnd > st.fndMax.v) st.fndMax = { v: fnd, t };
+   342→   342→
+   343→   343→      const Z = [...infl.values()].reduce((a, b) => a + b, 0) || 1;
+   344→   344→      if (t >= WIN.from && t < WIN.to) {
+   345→   345→        // influence-weighted error decomposition (denominator receipted:
+   346→   346→        // sum over ALL voices with w>0 — copiers ride their own values)
+   347→   347→        let denom = 0, attWE = 0, x1WE = 0, sybWE = 0;
+   348→   348→        for (const id of ALL_IDS) {
+   349→   349→          const w = infl.get(id) ?? 0;
+   350→   350→          if (w <= 0) continue;
+   351→   351→          const we = w * Math.abs(pOf(id, t, A) - s[t]);
+   352→   352→          denom += we;
+   353→   353→          if (hasFounder(A) && id === TOXIC) x1WE += we;
+   354→   354→          if (hasFlood(A) && SYB_IDS.includes(id)) sybWE += we;
+   355→   355→          if (attackersOf(A).includes(id)) attWE += we;
+   356→   356→        }
+   357→   357→        if (denom > 1e-12) {
+   358→   358→          st.attErrShare.push(attWE / denom);
+   359→   359→          if (hasFounder(A)) st.x1ErrShare.push(x1WE / denom);
+   360→   360→          if (hasFlood(A)) st.sybErrShare.push(sybWE / denom);
+   361→   361→        }
+   362→   362→        // counterfactual damage (reference-side only; same log-odds formula
+   363→   363→        // as the sheet): zero the attacker subsets, re-pool, diff the errors
+   364→   364→        const ps = ALL_IDS.map((id) => pOf(id, t, A));
+   365→   365→        const wFull = ALL_IDS.map((id) => infl.get(id) ?? 0);
+   366→   366→        const attSet = new Set(attackersOf(A));
+   367→   367→        const wCfAll = wFull.map((w, i) => (attSet.has(ALL_IDS[i]) ? 0 : w));
+   368→   368→        const wCfX1 = wFull.map((w, i) => (ALL_IDS[i] === TOXIC ? 0 : w));
+   369→   369→        const wCfSyb = wFull.map((w, i) => (SYB_IDS.includes(ALL_IDS[i]) ? 0 : w));
+   370→   370→        const poolCfAll = MurmurBus.pool(ps, wCfAll);
+   371→   371→        st.dmgAll.push(err - Math.abs(poolCfAll - s[t]));
+   372→   372→        if (hasFounder(A) && hasFlood(A)) { // clean factorial (both subsets live)
+   373→   373→          const poolCfX1 = MurmurBus.pool(ps, wCfX1);
+   374→   374→          const poolCfSyb = MurmurBus.pool(ps, wCfSyb);
+   375→   375→          st.dmgX1.push(err - Math.abs(poolCfX1 - s[t]));
+   376→   376→          st.dmgSyb.push(err - Math.abs(poolCfSyb - s[t]));
+   377→   377→        }
+   378→   378→      }
+   379→   379→
+   380→   380→      // ---- soft-layer + admission accounting (v3.1 arms) ----
+   381→   381→      if (admX[A]) {
+   382→   382→        st.capBoundRounds = admX[A].capBoundRounds;
+   383→   383→        if (t >= WIN.from && t < WIN.to) {
+   384→   384→          for (const e of SYB_IDS) { st.soft.sybN++; if (admX[A].echoScore(e) >= 0.5) st.soft.sybCatch++; }
+   385→   385→          for (const id of HONEST) {
+   386→   386→            st.soft.honN++;
+   387→   387→            const sc = admX[A].echoScore(id);
+   388→   388→            if (sc > 0.75) st.soft.honFP++;
+   389→   389→            const mf = admX[A].lastMult.get(id);
+   390→   390→            if (mf != null) st.soft.honM += mf;
+   391→   391→          }
+   392→   392→          for (const e of SYB_IDS) {
+   393→   393→            const mf = admX[A].lastMult.get(e);
+   394→   394→            if (mf != null) { st.soft.sybM += mf; st.soft.sybMN++; }
+   395→   395→          }
+   396→   396→          if (hasFounder(A)) { const xe = admX[A].echoScore(TOXIC); st.soft.x1E += xe; st.soft.x1N++; }
+   397→   397→        }
+   398→   398→        if (t >= WIN.from && hasFlood(A)) {
+   399→   399→          for (const e of SYB_IDS) {
+   400→   400→            if (st.sybAdmitT[e] == null && admX[A].admitted(e)) st.sybAdmitT[e] = t;
+   401→   401→          }
+   402→   402→        }
+   403→   403→      }
+   404→   404→
+   405→   405→      // ---- toxic conviction (by TRUST; measured in every x1-bearing arm) ----
+   406→   406→      if (hasFounder(A)) {
+   407→   407→        const ws = trust[A].weights();
+   408→   408→        const honMed = median(HONEST.map((id) => ws.get(id) ?? 0));
+   409→   409→        if (st.convRound === null && honMed > 0 && (ws.get(TOXIC) ?? 0) < 0.25 * honMed) st.convRound = t;
+   410→   410→        if ([0, 50, 100, 149, 200, 300, 399].includes(t)) {
+   411→   411→          st.wX1[t] = r6(ws.get(TOXIC) ?? 0);
+   412→   412→          st.wX1r[t] = honMed > 0 ? r6((ws.get(TOXIC) ?? 0) / honMed) : null;
+   413→   413→          st.honW[t] = r6(mean(HONEST.map((id) => ws.get(id) ?? 0)));
+   414→   414→        }
+   415→   415→      }
+   416→   416→
+   417→   417→      if (t === WIN.to - 1) st.cm = provX[A].confusion(truthOf(A), presentIds(A));
+   418→   418→
+   419→   419→      // ---- learn ----
+   420→   420→      trust[A].update(rew[A]);
+   421→   421→      trust[A].absorb(provX[A].penalize(trust[A].weights()));
+   422→   422→    }
+   423→   423→  }
+   424→   424→
+   425→   425→  // ---- per-seed derived stats ----
+   426→   426→  const res = { verify: {}, extra: {} };
+   427→   427→  for (const A of ARMS) {
+   428→   428→    const st = out[A];
+   429→   429→    const errPre = st.err.slice(PRE.from, PRE.to);
+   430→   430→    const m0 = mean(errPre);
+   431→   431→    res.verify[A] = {
+   432→   432→      poolAcc: st.sumErr / T,
+   433→   433→      poolAccPost: st.sumErrPost / (T - WIN.from),
+   434→   434→      errPre: m0,
+   435→   435→      errAtk: mean(st.err.slice(WIN.from, WIN.to)),
+   436→   436→      spike: mean(st.err.slice(WIN.from, WIN.to)) - m0,
+   437→   437→      damage: mean(st.dmgAll),                       // D(A): all of A's attackers
+   438→   438→      damageX1: st.dmgX1.length ? mean(st.dmgX1) : null,
+   439→   439→      damageSyb: st.dmgSyb.length ? mean(st.dmgSyb) : null,
+   440→   440→      attErrShare: st.attErrShare.length ? mean(st.attErrShare) : null,
+   441→   441→      x1ErrShare: st.x1ErrShare.length ? mean(st.x1ErrShare) : null,
+   442→   442→      sybErrShare: st.sybErrShare.length ? mean(st.sybErrShare) : null,
+   443→   443→      sybMax: st.sybMax, sybMaxPost: st.sybMaxPost, fndMax: st.fndMax,
+   444→   444→      fndShareAtk: mean(st.fndShare.slice(WIN.from, WIN.to)),
+   445→   445→      fndShareFinal: st.fndShare[T - 1],
+   446→   446→      convRound: st.convRound,
+   447→   447→      honQFinal: mean(HONEST.map((id) => trust[A].weight(id))),
+   448→   448→      x1QFinal: hasFounder(A) ? trust[A].weight(TOXIC) : null,
+   449→   449→      wX1: st.wX1, wX1r: st.wX1r, honW: st.honW,
+   450→   450→      verify: st.verify,
+   451→   451→      capBoundRounds: admX[A] ? st.capBoundRounds : null,
+   452→   452→      sybAdmitT: admX[A] && hasFlood(A) ? st.sybAdmitT : null,
+   453→   453→      soft: admX[A] ? {
+   454→   454→        sybilCatch: st.soft.sybN > 0 ? st.soft.sybCatch / st.soft.sybN : null,
+   455→   455→        honestSoftFP: st.soft.honN > 0 ? st.soft.honFP / st.soft.honN : null,
+   456→   456→        honestMFrac: st.soft.honN > 0 ? st.soft.honM / st.soft.honN : null,
+   457→   457→        x1EchoScore: (hasFounder(A) && st.soft.x1N > 0) ? st.soft.x1E / st.soft.x1N : null,
+   458→   458→        sybMFrac: st.soft.sybMN > 0 ? st.soft.sybM / st.soft.sybMN : null,
+   459→   459→      } : null,
+   460→   460→      cm: st.cm,
+   461→   461→    };
+   462→   462→  }
+   463→   463→  // detector latency for the flood from arm v3-combined's event log
+   464→   464→  const detLat = {};
+   465→   465→  for (const e of SYB_IDS) {
+   466→   466→    const ev = provX['v3-combined'].events.find((x) => x.from === e && x.tag === 'echo');
+   467→   467→    detLat[e] = ev ? ev.t - WIN.from : null;
+   468→   468→  }
+   469→   469→  res.extra.detLat = detLat;
+   470→   470→  // curves for seed 0 (sampled every 4th round; cheap — arrays already exist)
+   471→   471→  res.curves = { err: {}, syb: {}, fnd: {} };
+   472→   472→  for (const A of ARMS) {
+   473→   473→    res.curves.err[A] = out[A].err.filter((_, i) => i % 4 === 0).map((x) => r6(x));
+   474→   474→    res.curves.syb[A] = out[A].sybShare.filter((_, i) => i % 4 === 0).map((x) => r6(x));
+   475→   475→    res.curves.fnd[A] = out[A].fndShare.filter((_, i) => i % 4 === 0).map((x) => r6(x));
+   476→   476→  }
+   477→   477→  return res;
+   478→   478→}
+   479→   479→
+   480→   480→// ---------------- main ----------------
+   481→   481→console.log(`── E33 flood copying a toxic founder · ${SEEDS} seeds × ${T} rounds × ${ARMS.length} arms × ${V} voice slots ──`);
+   482→   482→const vault = new MothVault({ label: 'e33', offline: true });
+   483→   483→const harvest = await vault.harvest(256);
+   484→   484→console.log(`vault: ${harvest.mock ? 'MOCK (offline doctrine)' : 'LIVE ' + harvest.jobId} digest=${harvest.poolDigest.slice(0, 10)} bits=${harvest.bits.length}`);
+   485→   485→
+   486→   486→const rows = [];
+   487→   487→let seq = 0;
+   488→   488→const book = (kind, extra) => rows.push({ seq: ++seq, kind, ...extra });
+   489→   489→book('run.config', {
+   490→   490→  task: 'E33', name: 'flood copying a toxic founder (combined attack at cap scale; murmur-protocol-v3.1)',
+   491→   491→  T, N, voices: V, seeds: SEEDS,
+   492→   492→  world: { stateFlipP: FLIP_P, skillRerollP: REROLL_P, qRange: [0.5, 0.95], a1Acuity: 0.9, toxicFounder: { id: TOXIC, acuity: TOX_Q, formula: 'E24 verbatim', note: 'confidently wrong ~75% of rounds; present from genesis; demoted only by TRUST' } },
+   493→   493→  attack: { joinRound: WIN.from, endRound: WIN.to, sybils: FLOOD, copyTargets: { combined: 'x1 (toxic founder)', founderOnly: 'n/a', floodOnly: 'a1 (honest high-acuity)' }, poisonBlock: POISON, note: '3 fresh sybils (EMPTY history) join t=150 with copy-lags 1/1/2; copy x1 in the combined arms, a1 in the flood-only arm; degenerate to noise after t=300 (E24/E21 convention)' },
+   494→   494→  arms: ARMS, hedge: CFG, admission: ADM, capSlack: CAP_SLACK,
+   495→   495→  founders: 'D1 genesis acclamation (x1 is a founder: admission never gates it; only trust does — receipted division of labor)',
+   496→   496→  absentSenderReward: 'missing ids get HedgeTrust default 0.5 (unproven prior) while absent',
+   497→   497→  reward: 'r_i = 1 - |p_i - s_t| (supervised pool)',
+   498→   498→  rng: 'MothVault offline:true, one harvest, per-purpose keys e33:<purpose>:seed:<seed>[:<voice>] via streamFor; paired worlds REQUIRE arm-identical world streams (arms select over shared values; no arm-keyed draws); no Math.random',
+   499→   499→  metrics: {
+   500→   500→    D: 'mean over copying window [150,300) of |err(pool) - err(pool with ALL of arm A attackers zeroed)| (E24 counterfactual method, reference-side log-odds)',
+   501→   501→    dmgX1_dmgSyb: 'combined arms only: single-subset counterfactuals from the SAME pool (clean factorial)',
+   502→   502→    I_cross: 'D(v3.1-combined) - D(v3.1-founder-only) - D(v3.1-flood-only), per-seed paired',
+   503→   503→    I_within: 'D(both) - D(x1 only) - D(syb only) inside a combined arm (copy target fixed)',
+   504→   504→    sybilShare: 'amp.syb sheet meter = sum w_s / sum_all w (protocol-adjusted influence share)',
+   505→   505→    founderShare: 'amp.founder sheet meter = w_x1 / sum_all w',
+   506→   506→    honestFinalQ: 'mean HedgeTrust weight of the 12 honest incumbents at t=T-1 (post final absorb)',
+   507→   507→    attackerErrShare: 'sum_{j in attackers} w_j*|v_j - s_t| / sum_{ALL j with w>0} (denominator receipted)',
+   508→   508→  },
+   509→   509→  decisionRules: {
+   510→   510→    C1_capInvariant: 'v3.1-combined: per-seed max sybil aggregate share over t>=WIN.from+admitWindow (=190, admission windows closed) <= capShare+0.02 (=0.12); ANY sybil admission in any v3.1 arm = admission-bug candidate; share violation with zero admissions = cap-bug candidate; full-trajectory max + round reported',
+   511→   511→    C2_combinedDefense: 'D(v3.1-combined) < D(v3-combined): paired one-sided sign test (zeros excluded) p<0.05 AND paired mean delta>0; report delta+/-SE and ratio',
+   512→   512→    C3_interaction: 'I_cross per-seed paired; SUB-ADDITIVE if I<-SE, SUPER-ADDITIVE if I>SE, else INDETERMINATE; I_within (both combined arms) = mechanism diagnostic; capBind rounds receipted (0 => sub-additivity is NOT cap-enforced; candidate = direction-blind novelty coupling dragging the source to the alpha floor); caveat: flood-only copies honest a1 so D(flood-only) is typically NEGATIVE (helping) — I_cross inherits a positive offset, so I_cross<=0 despite the offset is strong evidence of sub-additivity',
+   513→   513→    C4_noCollateral: '|mean(honQ v3.1-combined) - mean(honQ v3.1-founder-only)| <= 1 SE of the seed-paired difference; directional note comb-found > -SE (cap must not make honest voices worse)',
+   514→   514→  },
+   515→   515→  runtimeRules: 'probe = 1-seed timed run; projected = t_probe * seeds + 2s IO; if projected > 170s cut seeds 8 -> 6 and RECEIPT the cut; dev mini-run (2 seeds) validates pipeline (chain seal + file re-verify + sheet-verify) BEFORE the final run; NO script edits after the final run (stale-artifact doctrine)',
+   516→   516→  vault: { mock: harvest.mock, digest: harvest.poolDigest },
+   517→   517→  engine: 'vendored quilt dist (QuiltEngine)', sheetVerifyTol: TOL,
+   518→   518→});
+   519→   519→if (process.env.E33_PROBE) {
+   520→   520→  try { book('probe', JSON.parse(process.env.E33_PROBE)); } catch { /* malformed probe env: ignore */ }
+   521→   521→}
+   522→   522→
+   523→   523→const agg = {};
+   524→   524→for (const A of ARMS) {
+   525→   525→  agg[A] = {
+   526→   526→    acc: [], accPost: [], pre: [], atk: [], spike: [], dmg: [], dmgX1: [], dmgSyb: [],
+   527→   527→    attErr: [], x1Err: [], sybErr: [], sybMax: [], sybMaxT: [], sybMaxPost: [], sybMaxPostT: [],
+   528→   528→    fndMax: [], fndMaxT: [], fndAtk: [], fndFin: [], conv: [], honQ: [], x1Q: [],
+   529→   529→    vfy: { checks: 0, pass: 0, maxDiff: 0 }, cm: {},
+   530→   530→    soft: { sybCatch: [], honFP: [], honM: [], x1E: [], sybM: [] },
+   531→   531→    capBound: [], lat: [], sybAdm: [], sybAdmT: [],
+   532→   532→  };
+   533→   533→}
+   534→   534→const seed0Curves = { t: [], sybShare: {}, fndShare: {}, err: {} };
+   535→   535→const t0 = Date.now();
+   536→   536→
+   537→   537→for (let seed = 0; seed < SEEDS; seed++) {
+   538→   538→  const seedStart = Date.now();
+   539→   539→  const world = genWorld(seed, harvest, vault);
+   540→   540→  const res = await runSeed(seed, world, harvest, vault);
+   541→   541→  const row = { seed, seed_s: +((Date.now() - seedStart) / 1000).toFixed(1) };
+   542→   542→  for (const A of ARMS) {
+   543→   543→    const R = res.verify[A], G = agg[A];
+   544→   544→    G.acc.push(R.poolAcc); G.accPost.push(R.poolAccPost); G.pre.push(R.errPre);
+   545→   545→    G.atk.push(R.errAtk); G.spike.push(R.spike);
+   546→   546→    G.dmg.push(R.damage);
+   547→   547→    if (R.damageX1 !== null) G.dmgX1.push(R.damageX1);
+   548→   548→    if (R.damageSyb !== null) G.dmgSyb.push(R.damageSyb);
+   549→   549→    if (R.attErrShare !== null) G.attErr.push(R.attErrShare);
+   550→   550→    if (R.x1ErrShare !== null) G.x1Err.push(R.x1ErrShare);
+   551→   551→    if (R.sybErrShare !== null) G.sybErr.push(R.sybErrShare);
+   552→   552→    G.sybMax.push(R.sybMax.v); G.sybMaxT.push(R.sybMax.t);
+   553→   553→    G.sybMaxPost.push(R.sybMaxPost.v); G.sybMaxPostT.push(R.sybMaxPost.t);
+   554→   554→    if (hasFounder(A)) { G.fndMax.push(R.fndMax.v); G.fndMaxT.push(R.fndMax.t); G.fndAtk.push(R.fndShareAtk); G.fndFin.push(R.fndShareFinal); G.conv.push(R.convRound === null ? T : R.convRound); G.x1Q.push(R.x1QFinal); }
+   555→   555→    G.honQ.push(R.honQFinal);
+   556→   556→    G.vfy.checks += R.verify.checks; G.vfy.pass += R.verify.pass;
+   557→   557→    if (R.verify.maxDiff > G.vfy.maxDiff) G.vfy.maxDiff = R.verify.maxDiff;
+   558→   558→    for (const [k, v] of Object.entries(R.cm ?? {})) G.cm[k] = (G.cm[k] ?? 0) + v;
+   559→   559→    if (R.soft) {
+   560→   560→      if (R.soft.sybilCatch !== null) G.soft.sybCatch.push(R.soft.sybilCatch);
+   561→   561→      if (R.soft.honestSoftFP !== null) G.soft.honFP.push(R.soft.honestSoftFP);
+   562→   562→      if (R.soft.honestMFrac !== null) G.soft.honM.push(R.soft.honestMFrac);
+   563→   563→      if (R.soft.x1EchoScore !== null) G.soft.x1E.push(R.soft.x1EchoScore);
+   564→   564→      if (R.soft.sybMFrac !== null) G.soft.sybM.push(R.soft.sybMFrac);
+   565→   565→    }
+   566→   566→    if (R.capBoundRounds !== null) G.capBound.push(R.capBoundRounds);
+   567→   567→    if (R.sybAdmitT) for (const [e, tt] of Object.entries(R.sybAdmitT)) { if (tt != null) { G.sybAdm.push(e); G.sybAdmT.push(tt); } }
+   568→   568→    for (const e of SYB_IDS) if (res.extra.detLat[e] !== null) G.lat.push(res.extra.detLat[e]);
+   569→   569→    row[A] = {
+   570→   570→      poolAcc: r6(R.poolAcc), errAtk: r6(R.errAtk),
+   571→   571→      dmg: r6(R.damage), dmgX1: R.damageX1 === null ? null : r6(R.damageX1), dmgSyb: R.damageSyb === null ? null : r6(R.damageSyb),
+   572→   572→      sybMax: r6(R.sybMax.v), sybMaxT: R.sybMax.t, sybMaxPost: r6(R.sybMaxPost.v), sybMaxPostT: R.sybMaxPost.t,
+   573→   573→      fndMax: r6(R.fndMax.v), convRound: R.convRound, honQ: r6(R.honQFinal),
+   574→   574→      capBound: R.capBoundRounds, admitted: R.sybAdmitT ? SYB_IDS.filter((e) => R.sybAdmitT[e] != null) : null,
+   575→   575→      verify: `${R.verify.pass}/${R.verify.checks}`, maxDiff: R.verify.maxDiff.toExponential(2),
+   576→   576→    };
+   577→   577→  }
+   578→   578→  book('run', row);
+   579→   579→  if (seed === 0) {
+   580→   580→    seed0Curves.t = res.curves.err['v3-combined'].map((_, i) => i * 4);
+   581→   581→    for (const A of ARMS) { seed0Curves.err[A] = res.curves.err[A]; seed0Curves.sybShare[A] = res.curves.syb[A]; seed0Curves.fndShare[A] = res.curves.fnd[A]; }
+   582→   582→  }
+   583→   583→  const proj = (((Date.now() - t0) / 1000) / (seed + 1)) * SEEDS;
+   584→   584→  console.log(`  seed ${seed + 1}/${SEEDS} done (${((Date.now() - t0) / 1000).toFixed(1)}s elapsed, projected total ${proj.toFixed(0)}s)`);
+   585→   585→}
+   586→   586→
+   587→   587→const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+   588→   588→console.log(`elapsed ${elapsed}s`);
+   589→   589→
+   590→   590→// ---------------- aggregate + claims + chain ----------------
+   591→   591→const stat = (a) => ({ mean: r6(mean(a)), sd: r6(sd(a)) });
+   592→   592→const seOf = (a) => (a.length > 0 ? sd(a) / Math.sqrt(a.length) : 0);
+   593→   593→const maxWith = (vals, ts) => {
+   594→   594→  let bi = 0;
+   595→   595→  for (let i = 1; i < vals.length; i++) if (vals[i] > vals[bi]) bi = i;
+   596→   596→  return { v: r6(vals[bi]), seed: bi, t: ts[bi] };
+   597→   597→};
+   598→   598→const armsAgg = {};
+   599→   599→for (const A of ARMS) {
+   600→   600→  const G = agg[A];
+   601→   601→  armsAgg[A] = {
+   602→   602→    poolAcc: stat(G.acc), poolAccPost: stat(G.accPost), errPre: stat(G.pre), errAtk: stat(G.atk), spike: stat(G.spike),
+   603→   603→    damage: stat(G.dmg),
+   604→   604→    damageX1: G.dmgX1.length ? stat(G.dmgX1) : null,
+   605→   605→    damageSyb: G.dmgSyb.length ? stat(G.dmgSyb) : null,
+   606→   606→    attErrShare: G.attErr.length ? stat(G.attErr) : null,
+   607→   607→    x1ErrShare: G.x1Err.length ? stat(G.x1Err) : null,
+   608→   608→    sybErrShare: G.sybErr.length ? stat(G.sybErr) : null,
+   609→   609→    sybShareMax: { perSeed: stat(G.sybMax), globalMax: maxWith(G.sybMax, G.sybMaxT) },
+   610→   610→    sybShareMaxPostWindow: { perSeed: stat(G.sybMaxPost), globalMax: maxWith(G.sybMaxPost, G.sybMaxPostT) },
+   611→   611→    fndShareMax: hasFounder(A) ? { perSeed: stat(G.fndMax), globalMax: maxWith(G.fndMax, G.fndMaxT) } : null,
+   612→   612→    fndShareAtk: hasFounder(A) ? stat(G.fndAtk) : null,
+   613→   613→    fndShareFinal: hasFounder(A) ? stat(G.fndFin) : null,
+   614→   614→    toxicConvRound: hasFounder(A) ? stat(G.conv) : null,
+   615→   615→    honQFinal: stat(G.honQ),
+   616→   616→    x1QFinal: hasFounder(A) ? stat(G.x1Q) : null,
+   617→   617→    verify: { checks: G.vfy.checks, pass: G.vfy.pass, maxDiff: G.vfy.maxDiff.toExponential(2) },
+   618→   618→    confusionAtkEnd: G.cm,
+   619→   619→    soft: G.soft.sybCatch.length ? {
+   620→   620→      sybilCatch: stat(G.soft.sybCatch), honestSoftFP: stat(G.soft.honFP),
+   621→   621→      honestMFrac: stat(G.soft.honM), x1EchoScore: G.soft.x1E.length ? stat(G.soft.x1E) : null,
+   622→   622→      sybMFrac: stat(G.soft.sybM),
+   623→   623→    } : null,
+   624→   624→  };
+   625→   625→  if (A.startsWith('v3.1')) {
+   626→   626→    armsAgg[A].capBoundRounds = G.capBound.length ? stat(G.capBound) : { mean: 0, sd: 0 };
+   627→   627→    armsAgg[A].detectorLatency = G.lat.length ? stat(G.lat) : null;
+   628→   628→    armsAgg[A].sybilsAdmitted = { count: G.sybAdm.length, of: SEEDS * SYB_IDS.length, rounds: G.sybAdmT };
+   629→   629→  }
+   630→   630→}
+   631→   631→
+   632→   632→// paired per-seed deltas (same seed, same world — pure protocol/attack effect)
+   633→   633→const dmg = (A) => agg[A].dmg;
+   634→   634→const dC2 = dmg('v3-combined').map((d, i) => d - dmg('v3.1-combined')[i]); // >0 = protocol helps
+   635→   635→const st2 = signTestOneSided(dC2);
+   636→   636→const se2 = seOf(dC2);
+   637→   637→const dIx = dmg('v3.1-combined').map((d, i) => d - dmg('v3.1-founder-only')[i] - dmg('v3.1-flood-only')[i]);
+   638→   638→const seIx = seOf(dIx);
+   639→   639→const IxMean = mean(dIx);
+   640→   640→const dW31 = dmg('v3.1-combined').map((d, i) => d - agg['v3.1-combined'].dmgX1[i] - agg['v3.1-combined'].dmgSyb[i]);
+   641→   641→const seW31 = seOf(dW31);
+   642→   642→const dW3 = dmg('v3-combined').map((d, i) => d - agg['v3-combined'].dmgX1[i] - agg['v3-combined'].dmgSyb[i]);
+   643→   643→const seW3 = seOf(dW3);
+   644→   644→const honQDiff = agg['v3.1-combined'].honQ.map((q, i) => q - agg['v3.1-founder-only'].honQ[i]);
+   645→   645→const seQ = seOf(honQDiff);
+   646→   646→
+   647→   647→const C1max = armsAgg['v3.1-combined'].sybShareMaxPostWindow;
+   648→   648→const anyAdmitted = ARMS.filter((A) => A.startsWith('v3.1')).reduce((a, A) => a + armsAgg[A].sybilsAdmitted.count, 0);
+   649→   649→const shareBarHeld = C1max.globalMax.v <= ADM.capShare + CAP_SLACK;
+   650→   650→const floodBarHeld = armsAgg['v3.1-flood-only'].sybShareMaxPostWindow.globalMax.v <= ADM.capShare + CAP_SLACK;
+   651→   651→const claims = {
+   652→   652→  C1_capInvariant: {
+   653→   653→    verdict: (shareBarHeld && anyAdmitted === 0) ? 'CONFIRMED'
+   654→   654→      : (!shareBarHeld && anyAdmitted > 0) ? 'VIOLATED (share>cap+slack via admission; admission bug candidate)'
+   655→   655→      : (!shareBarHeld) ? 'VIOLATED (share>cap+slack with zero admissions; cap bug candidate)'
+   656→   656→      : 'VIOLATED (admission bug candidate: sybils admitted -> cap exited; combined share bar held but only via trust-floor economics)',
+   657→   657→    capShare: ADM.capShare, slack: CAP_SLACK, bar: ADM.capShare + CAP_SLACK,
+   658→   658→    domain: `t >= ${POST} (admission windows closed)`,
+   659→   659→    shareBarHeld_v31combined: shareBarHeld,
+   660→   660→    shareBarHeld_v31floodOnly: floodBarHeld,
+   661→   661→    sybShareMaxPostWindow: C1max,
+   662→   662→    sybShareMax_fullTrajectory: armsAgg['v3.1-combined'].sybShareMax,
+   663→   663→    sybShareMax_floodOnlyPostWindow: armsAgg['v3.1-flood-only'].sybShareMaxPostWindow,
+   664→   664→    sybShareMax_v3_fullTrajectory: armsAgg['v3-combined'].sybShareMax,
+   665→   665→    sybilsAdmitted_total: anyAdmitted,
+   666→   666→    capBoundRounds_v31combined: armsAgg['v3.1-combined'].capBoundRounds,
+   667→   667→    note: 'a violation is receipted as an admission bug candidate (sybils admitted -> cap no longer applies) or a cap bug candidate (never admitted yet over the bar). capBoundRounds>0 means the flood-breaker actually redistributed mass; 0 means the invariant held with slack via epsNew + trust + the independence bar alone',
+   668→   668→  },
+   669→   669→  C2_combinedDefense: {
+   670→   670→    verdict: (mean(dC2) > 0 && st2.p < 0.05) ? 'CONFIRMED' : (mean(dC2) > 0 ? 'PARTIAL' : 'REFUTED'),
+   671→   671→    damage_v3combined: armsAgg['v3-combined'].damage,
+   672→   672→    damage_v31combined: armsAgg['v3.1-combined'].damage,
+   673→   673→    ratio_v31_over_v3: r6(armsAgg['v3.1-combined'].damage.mean / Math.max(1e-12, armsAgg['v3-combined'].damage.mean)),
+   674→   674→    pairedDelta_v3_minus_v31: { mean: r6(mean(dC2)), se: r6(se2), sd: r6(sd(dC2)), n: dC2.length },
+   675→   675→    signTest_oneSided: st2,
+   676→   676→    attErrShare_v3: armsAgg['v3-combined'].attErrShare, attErrShare_v31: armsAgg['v3.1-combined'].attErrShare,
+   677→   677→    sybShareMax_v3: armsAgg['v3-combined'].sybShareMax, sybShareMax_v31: armsAgg['v3.1-combined'].sybShareMax,
+   678→   678→    note: 'primary evidence = counterfactual damage suppression (E24 method) under the FULL combined attack (founder + flood copying it)',
+   679→   679→  },
+   680→   680→  C3_interaction: {
+   681→   681→    verdict: (IxMean < -seIx) ? 'SUB-ADDITIVE' : (IxMean > seIx ? 'SUPER-ADDITIVE' : 'INDETERMINATE (|I| <= 1 SE)'),
+   682→   682→    perArmDamageMeans: {
+   683→   683→      v31combined: r6(armsAgg['v3.1-combined'].damage.mean),
+   684→   684→      v31founderOnly: r6(armsAgg['v3.1-founder-only'].damage.mean),
+   685→   685→      v31floodOnly: r6(armsAgg['v3.1-flood-only'].damage.mean),
+   686→   686→    },
+   687→   687→    I_cross: { mean: r6(IxMean), se: r6(seIx), sd: r6(sd(dIx)), n: dIx.length, perSeed: dIx.map((x) => r6(x)) },
+   688→   688→    I_within_v31combined: { mean: r6(mean(dW31)), se: r6(seW31), n: dW31.length, note: 'clean factorial inside the arm: D(both) - D(x1 only) - D(syb only), copy target fixed' },
+   689→   689→    I_within_v3combined: { mean: r6(mean(dW3)), se: r6(seW3), n: dW3.length },
+   690→   690→    capBindRounds_v31combined: armsAgg['v3.1-combined'].capBoundRounds,
+   691→   691→    capBindRounds_v31floodOnly: armsAgg['v3.1-flood-only'].capBoundRounds,
+   692→   692→    founderEchoScore_v31combined: armsAgg['v3.1-combined'].soft ? armsAgg['v3.1-combined'].soft.x1EchoScore : null,
+   693→   693→    founderShareAtk_v31combined: armsAgg['v3.1-combined'].fndShareAtk,
+   694→   694→    founderShareAtk_v31founderOnly: armsAgg['v3.1-founder-only'].fndShareAtk,
+   695→   695→    note: 'strategic question receipted: does the cap force sybils to compete with the founder for the same exploited trust, making the attack sub-additive? I_cross carries the flood-only caveat (its copiers ride honest a1 and typically HELP, biasing I_cross positive); I_within holds the copy target fixed and isolates the mechanism; capBindRounds says whether the CAP was even active. If I_within_v31 < I_within_v3, the fractional novelty coupling (copiers collapse their source\'s novelty to the alpha floor) is the sub-additivity mechanism, not the cap',
+   696→   696→  },
+   697→   697→  C4_noCollateral: {
+   698→   698→    verdict: (Math.abs(mean(honQDiff)) <= seQ) ? 'CONFIRMED' : 'REFUTED',
+   699→   699→    honQ_v31combined: armsAgg['v3.1-combined'].honQFinal,
+   700→   700→    honQ_v31founderOnly: armsAgg['v3.1-founder-only'].honQFinal,
+   701→   701→    pairedDiff_comb_minus_found: { mean: r6(mean(honQDiff)), se: r6(seQ), n: honQDiff.length },
+   702→   702→    directionalNotWorse: (mean(honQDiff) > -seQ) ? 'OK (comb - found > -1 SE)' : 'WORSE (comb - found < -1 SE)',
+   703→   703→    note: 'honestFinalQ = mean HedgeTrust weight of the 12 honest incumbents at t=T-1; the cap must not make honest voices worse when the flood copies poison',
+   704→   704→  },
+   705→   705→};
+   706→   706→book('finding.C1', { ...claims.C1_capInvariant });
+   707→   707→book('finding.C2', { ...claims.C2_combinedDefense });
+   708→   708→book('finding.C3', { ...claims.C3_interaction });
+   709→   709→book('finding.C4', { ...claims.C4_noCollateral });
+   710→   710→book('finding.runtime', {
+   711→   711→  seedsRun: SEEDS, elapsed_s: Number(elapsed),
+   712→   712→  cut: SEEDS < 8 ? 'seeds cut 8 -> 6 by the probe rule (projected > 170s); paired claims preserved' : 'none — full plan within budget',
+   713→   713→  probeRow: rows.find((r) => r.kind === 'probe') ?? null,
+   714→   714→  vaultLiveJobs: vault.liveJobs,
+   715→   715→});
+   716→   716→
+   717→   717→const chain = sealChain(rows);
+   718→   718→const tip = rows[rows.length - 1].row_hash;
+   719→   719→const vfy = verifyChain(rows);
+   720→   720→if (!vfy.ok) { console.error('CHAIN VERIFY FAILED', vfy); process.exit(1); }
+   721→   721→console.log(`chain: ${rows.length} rows, tip ${tip.slice(0, 16)} VERIFIED`);
+   722→   722→for (const c of ['C1_capInvariant', 'C2_combinedDefense', 'C3_interaction', 'C4_noCollateral']) {
+   723→   723→  console.log(`${c}: ${claims[c].verdict}  ${JSON.stringify(claims[c]).slice(0, 240)}`);
+   724→   724→}
+   725→   725→
+   726→   726→mkdirSync('experiments/outputs', { recursive: true });
+   727→   727→writeFileSync('experiments/outputs/e33_summary.json', JSON.stringify({
+   728→   728→  task: 'E33', name: 'flood copying a toxic founder (combined attack at cap scale)',
+   729→   729→  seeds: SEEDS, T, voices: V, arms: ARMS, runtime_s: Number(elapsed),
+   730→   730→  config: {
+   731→   731→    world: { FLIP_P, REROLL_P, N, TOXIC, TOX_Q }, attack: WIN, postWindow: POST, pre: PRE,
+   732→   732→    hedge: CFG, admission: ADM, capSlack: CAP_SLACK, sybils: FLOOD, poisonBlock: POISON,
+   733→   733→  },
+   734→   734→  arms: armsAgg, claims,
+   735→   735→  paired: {
+   736→   736→    C2_delta_v3_minus_v31: { mean: r6(mean(dC2)), se: r6(se2), signTest: st2 },
+   737→   737→    C3_I_cross: { mean: r6(IxMean), se: r6(seIx) },
+   738→   738→    C3_I_within_v31: { mean: r6(mean(dW31)), se: r6(seW31) },
+   739→   739→    C3_I_within_v3: { mean: r6(mean(dW3)), se: r6(seW3) },
+   740→   740→    C4_honQ_diff_comb_minus_found: { mean: r6(mean(honQDiff)), se: r6(seQ) },
+   741→   741→  },
+   742→   742→  curves: seed0Curves,
+   743→   743→  chain: { rows: rows.length, tip, verified: vfy.ok },
+   744→   744→}, null, 1));
+   745→   745→writeFileSync('experiments/outputs/receipts_e33.jsonl', rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+   746→   746→console.log('wrote experiments/outputs/e33_summary.json + receipts_e33.jsonl');
+   747→   747→console.log(vault.liveJobs === 0 ? 'E33 DONE' : 'E33 PROBLEM (live jobs)');
+   748→   748→
