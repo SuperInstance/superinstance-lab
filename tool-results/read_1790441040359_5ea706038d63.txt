@@ -1,0 +1,602 @@
+     1→     1→// E37 — THE TRUST LANE (echo-structure admission bar + trust-layer re-probation vs the E35 sleeper)
+     2→     2→// ==================================================================================================
+     3→     3→// Collides with E36's carried seed. E36 (receipt 0xf6cd43aa98375565) priced three
+     4→     4→// INFLUENCE-layer defenses against the E35 sleeper and ALL THREE failed to beat the
+     5→     5→// undefended control (sign p >= 0.31). Its key structural receipt: influence-layer
+     6→     6→// wrappers leave HedgeTrust bit-identical across attack arms — the fpTax lever lives
+     7→     7→// in the TRUST layer, not the influence layer. B2's only real catch was the windowed
+     8→     8→// INDEPENDENCE clause (the flipped sleeper's edges lagged-echoed g1's toxic stream).
+     9→     9→// E37 designs ONE defense where E36 says the lever actually is — two composed
+    10→    10→// mechanisms, both experiment-local over the murmur/ APIs (target: ZERO murmur changes):
+    11→    11→//
+    12→    12→//   (a) B4a STRUCTURE BAR AT ADMISSION — in addition to mean dev <= admitErr, the
+    13→    13→//       candidate's probation EDGES must not be echo-dominated: over the candidate's
+    14→    14→//       probation rounds, the fraction of its evidential weight that rides on senders
+    15→    15→//       who are THEMSELVES recently admitted (age < admitWindow at the candidate's
+    16→    16→//       edge time) or flagged (hard tag: echo/dup) must be <= 0.5. Source attribution
+    17→    17→//       uses Admission's own direction doctrine (min-lag aligned edge: "a later
+    18→    18→//       matcher would be j's copier, not j's source" — admission.mjs). Targets the
+    19→    19→//       sleeper+flasher coupling E36 caught by accident (flipped sleeper lagged-echoes
+    20→    20→//       g1) and the E21 sybil ride, WITHOUT touching honest independent newcomers.
+    21→    21→//       A candidate failing the bar stays at epsNew influence permanently (E36-B3's
+    22→    22→//       receipted wrapper-probation pattern: native admitAt cannot be reset without
+    23→    23→//       Admission re-admitting within one round — cumulative devMean dilution).
+    24→    24→//   (b) B4b TRUST-LAYER RE-PROBATION — E36's B1 flip detector (class copied VERBATIM,
+    25→    25→//       unmodified) plus the trust consequence E36's wrappers lacked: on every
+    26→    26→//       throw/rethrow, the sender's HedgeTrust weight is decayed to x0.5 via
+    27→    27→//       HedgeTrust.absorb (post-pool, pre-update — so the decayed weight re-earns
+    28→    28→//       through the NORMAL hedge update path; absorb renormalizes, i.e. the decayed
+    29→    29→//       mass redistributes proportionally). Hypothesis: E36's B1 failed because trust
+    30→    30→//       kept the flipper's earned weight; decayed-but-not-zeroed trust should contain
+    31→    31→//       the flip while letting genuine regime-noise recover.
+    32→    32→//
+    33→    33→// THE QUESTION: does a defense placed at the trust layer finally beat the undefended
+    34→    34→// control (E36's bar: sign p<0.05 or it is not a defense), what does it tax the honest
+    35→    35→// population, and can it heal its own false trips (a defense that cannot recover its
+    36→    36→// trust decay is not a defense either)?
+    37→    37→//
+    38→    38→// SETUP (E36 verbatim): 12 honest founders (mixed acuity, a1 = 0.9 reference) + 1
+    39→    39→// honest late-joiner h2 (t=150, honest forever — the false-positive canary) + 1
+    40→    40→// flasher g1 (toxic from arrival, t=150 — the regression canary, ACTIVE in all attack
+    41→    41→// arms so R2c has a same-arm baseline) + 1 sleeper w1 (t=150, honest phase = e24 h1
+    42→    42→// generator verbatim, flips at admission + k* = 25 — E35's probe-optimal, carried; the
+    43→    43→// GAN strategy search is CLOSED, k* is not re-searched). T=400, 8 seeds. Paired arms,
+    44→    44→// IDENTICAL worlds (same truth stream, honest votes, toxic series; arms select over
+    45→    45→// shared values):
+    46→    46→//   A1   v3.1-sleeper  — full v3.1 + sleeper + active g1, NO new defense (E36 control;
+    47→    47→//                        numbers to beat: D = 0.003284 +/- 0.000466 at 6 seeds)
+    48→    48→//   B4a  structbar     — v3.1 + structure bar only + same attack
+    49→    49→//   B4b  reprob        — v3.1 + flip detector + trust decay + same attack
+    50→    50→//   B4ab both          — v3.1 + structure bar + detector + trust decay + same attack
+    51→    51→//   A4   v3.1-clean    — full v3.1, no attack, NO new defense (collateral baseline)
+    52→    52→//
+    53→    53→// DAMAGE METHOD (E35/E36 counterfactual, verbatim): D = mean over the post-flip
+    54→    54→// window [t_flip, min(t_flip+150,400)) of |err(pool) - err(pool with that attacker
+    55→    55→// zeroed)|, err = |pool - s|, counterfactual pools are reference-side only
+    56→    56→// (MurmurBus.pool, log-odds), never written to the sheet. Sleeper window anchored at
+    57→    57→// t_adm + 25 with t_adm measured per seed on a pass-1 honest-forever A1-wiring run
+    58→    58→// (in-run assert: pass-1 == matrix admission). g1 uses its own window [150, 300).
+    59→    59→// Positive = hurts.
+    60→    60→//
+    61→    61→// DECISION RULES (receipted BEFORE the full run):
+    62→    62→//   R1 CONTAINMENT — each B arm must satisfy D_w1(B) < D_w1(A1): paired one-sided
+    63→    63→//      sign test (zeros excluded) p < 0.05 AND paired mean delta > 0. Report paired
+    64→    64→//      delta +/- SE and damage ratio D(B)/D(A1). (E36's bar: a defense that cannot
+    65→    65→//      clear p<0.05 is not a defense.)
+    66→    66→//   R2 CANARIES — per B arm, ALL must hold:
+    67→    67→//      (a) honestFinalQ within 1 SE of A4: |mean(honQ(A4)-honQ(B))| <= SE of the
+    68→    68→//          seed-paired difference. LIVE check now, not the E36 structural no-op:
+    69→    69→//          B4b/B4ab move trust by design (E36's bit-identity receipt is expected to
+    70→    70→//          break here — receipted as trustMoved), while B4a is influence-layer-only
+    71→    71→//          and is ASSERTED bit-identical to A1 on trust (hard structural assert);
+    72→    72→//      (b) h2 effectively admitted (native admission AND, in struct arms, structure-
+    73→    73→//          bar pass) in ALL seeds, with mean effective round <= A1's mean h2 round
+    74→    74→//          + 20. h2 is independent, so the structure bar must not touch it;
+    75→    75→//      (c) g1 containment must not WORSEN vs A1: mean D_g1(B) <= mean D_g1(A1)
+    76→    76→//          + 1 SE (SE of the seed-paired difference).
+    77→    77→//   R3 RECOVERY (reprobation arms B4b/B4ab) — when the detector false-trips an honest
+    78→    78→//      founder (E36 saw 5/6 seeds), the trust-decayed founder must recover to within
+    79→    79→//      5% of its pre-trip trust share within 100 rounds. Measured per decay event:
+    80→    80→//      post-round share >= 0.95 x pre-trip share at some round in (decayT, decayT
+    81→    81→//      +100]. Events without a full 100-round horizon (decayT > T-1-100) are
+    82→    82→//      receipted but excluded from the verdict. Vacuous pass if no founder trips.
+    83→    83→//      B4a: N/A (no trust contact — nothing to heal; its blocks are admission
+    84→    84→//      decisions, not trips). A defense that cannot heal its own false trips fails
+    85→    85→//      R3 even if R1 passes.
+    86→    86→//   R4 SLEEPER RECORD per arm — native admission? round? detector trips? decay
+    87→    87→//      events (pre/post trust)? post-trip trust path: per-round HedgeTrust curve
+    88→    88→//      from JOIN, shape receipt computed from data (decay drop %, re-earn slope,
+    89→    89→//      retrips, final/pre-trip ratio).
+    90→    90→//   CROWN — any arm passing R1 + R2 (all three canaries) + R3 (or N/A) is crowned
+    91→    91→//      with its damage ratio; if several pass, crown the LOWEST D(B)/D(A1) and list
+    92→    92→//      the rest as co-passing. If none pass: receipt the negative verdict + computed
+    93→    93→//      mechanism analysis (E36 style — derived from telemetry, no static text).
+    94→    94→//
+    95→    95→// RUNTIME DISCIPLINE (receipted before the full run): probe = 1-seed timed run of
+    96→    96→// the full 5-arm matrix (+ its pass-1); projected = t_probe * 8 + 2s IO; if projected
+    97→    97→// > 170s, cut seeds 8 -> 6 and RECEIPT the cut (E36 ran 130s at 6 seeds). The probe
+    98→    98→// doubles as matrix seed 0 (no re-run).
+    99→    99→//
+   100→   100→// COMPOSITION RECEIPT (stated up front): both mechanisms are EXPERIMENT-LOCAL
+   101→   101→// classes over the murmur/ module APIs — ZERO changes to murmur/ (target: zero).
+   102→   102→// Hooks used:
+   103→   103→//   Admission: observe(), reattribute(), notePooled(), admitted(), admittedRound(),
+   104→   104→//     probationary(), age(), devMean(), edges (public map, read-only for echo
+   105→   105→//     forensics), firstSeen (public, read-only), maxLag/tol (public constants),
+   106→   106→//     admitWindow/epsNew/admitErr/minEdgesIndep (public config fields)
+   107→   107→//   HedgeTrust: weights(), update(), absorb()  <- THE TRUST-DECAY HOOK E36 LACKED,
+   108→   108→//     weight() (recovery sampling + R4 curves)
+   109→   109→//   Provenance: inspect(), penalize(), tagOf() (hard tags feed the structure bar)
+   110→   110→//   MurmurBus.pool() (reference-side counterfactuals), receipts.sealChain/verifyChain.
+   111→   111→// FlipGuard is copied VERBATIM from e36_countermove.mjs (unmodified); the trust
+   112→   112→// consequence is a SEPARATE mechanism (TrustReprobation) that drains FlipGuard's
+   113→   113→// event log — decay post-pool pre-update, re-earn through the normal update path.
+   114→   114→// Interpretation receipt for (a): a candidate's only per-sender evidential weight is
+   115→   115→// its probation EDGE stream (edges are the units admission's independence bar already
+   116→   116→// counts), so "fraction of its weight riding on risky senders" = riskySourceEdges /
+   117→   117→// probationEdges; an independent edge rides on nobody. Denominator = ALL probation
+   118→   118→// edges (independent + dependent) — "echo-dominated" is a statement about the whole
+   119→   119→// evidential mass. Source classification at the candidate's edge time; hard tags read
+   120→   120→// at evaluation time (the tag state the mesh holds at admission).
+   121→   121→//
+   122→   122→// RNG DOCTRINE (binding, E35/E36 verbatim): all randomness through MothVault
+   123→   123→// (offline:true), one harvest, per-purpose stream keys 'e37:<purpose>:<seed>' via
+   124→   124→// streamFor; NO Math.random. Paired worlds REQUIRE arm-identical world streams —
+   125→   125→// arms never consume different draws.
+   126→   126→//
+   127→   127→// Run: node experiments/e37_trustlane.mjs [seeds]   (E37_DEV=1 for a 1-seed dev run)
+   128→   128→
+   129→   129→import { QuiltEngine } from '../engine/dist/index.js';
+   130→   130→import { HedgeTrust } from '../murmur/trust.mjs';
+   131→   131→import { MurmurBus } from '../murmur/bus.mjs';
+   132→   132→import { MothVault } from '../murmur/moth.mjs';
+   133→   133→import { Provenance } from '../murmur/provenance.mjs';
+   134→   134→import { Admission } from '../murmur/admission.mjs';
+   135→   135→import { sealChain, verifyChain } from '../murmur/receipts.mjs';
+   136→   136→import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
+   137→   137→import { fileURLToPath } from 'node:url';
+   138→   138→
+   139→   139→// ---------------- config ----------------
+   140→   140→const T = 400, N = 12;
+   141→   141→let SEEDS = Number(process.argv[2] || (process.env.E37_DEV ? 1 : 8));
+   142→   142→const FLIP_P = 0.02, REROLL_P = 0.01;
+   143→   143→const JOIN = 150;                              // newcomers join here
+   144→   144→const TOX_Q = 0.25;                            // E24 toxic formula (verbatim)
+   145→   145→const PRE = { from: 120, to: 150 };            // pre-attack baseline
+   146→   146→const DW = 150;                                // damage window length (receipted)
+   147→   147→const KSTAR = 25;                              // carried from E35's probe (probe-optimal)
+   148→   148→const SLEEP = 'w1', INSTANT = 'g1', JOINER = 'h2';
+   149→   149→const HONEST = Array.from({ length: N }, (_, i) => `a${i + 1}`);
+   150→   150→const ALL_IDS = [...HONEST, SLEEP, INSTANT, JOINER];
+   151→   151→const V = ALL_IDS.length; // 15 voice slots
+   152→   152→const ARMS = ['A1-v3.1-sleeper', 'B4a-structbar', 'B4b-reprob', 'B4ab-both', 'A4-v3.1-clean'];
+   153→   153→const STRUCT_ARMS = ['B4a-structbar', 'B4ab-both'];
+   154→   154→const REPROB_ARMS = ['B4b-reprob', 'B4ab-both'];
+   155→   155→const CFG = { eta: 0.25, share: 0.02 };
+   156→   156→const ADM = {
+   157→   157→  beta: 0.12, alpha: 0.25, novSpread: 0.15,
+   158→   158→  coldStart: true, admitWindow: 40, epsNew: 0.15,
+   159→   159→  minEdgesIndep: 2, admitErr: 0.5, capShare: 0.10,
+   160→   160→};
+   161→   161→const DEF = {
+   162→   162→  b1: { lambda: 0.05, trail: 30, ratio: 2.0, floor: 0.15, guardRounds: 40 }, // E36 B1 verbatim
+   163→   163→  struct: { maxEchoFraction: 0.5 },
+   164→   164→  reprob: { frac: 0.5, horizon: 100 },
+   165→   165→};
+   166→   166→const G1_WIN = { from: JOIN, to: JOIN + DW };  // g1's own window [150, 300)
+   167→   167→const TOL = 1e-9;
+   168→   168→
+   169→   169→// ---------------- helpers ----------------
+   170→   170→const clampP = (p) => Math.min(0.98, Math.max(0.02, p));
+   171→   171→const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+   172→   172→const sd = (a) => { const m = mean(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length); };
+   173→   173→const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+   174→   174→const r6 = (x) => (Number.isFinite(x) ? +x.toFixed(6) : x);
+   175→   175→const f3 = (x) => (Number.isFinite(x) ? x.toFixed(3) : 'n/a');
+   176→   176→// RECEIPTED VAULT DOCTRINE (E17 finding #0): one harvest, per-purpose keys,
+   177→   177→// every draw is the FIRST draw of its own cross-key sub-stream.
+   178→   178→function makeRng(harvest, vault, purpose) {
+   179→   179→  let d = 0;
+   180→   180→  return () => vault.streamFor(harvest, `${purpose}:${d++}`)();
+   181→   181→}
+   182→   182→// paired one-sided sign test, zeros excluded (E28 receipted small-p method)
+   183→   183→const binom = (n, k) => { let r = 1; for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1); return r; };
+   184→   184→function signTestOneSided(deltas) {
+   185→   185→  const W = deltas.filter((d) => d > 1e-12).length;
+   186→   186→  const L = deltas.filter((d) => d < -1e-12).length;
+   187→   187→  const n = W + L;
+   188→   188→  let p = 0;
+   189→   189→  for (let k = W; k <= n; k++) p += binom(n, k);
+   190→   190→  return { W, L, n, p: p / 2 ** n };
+   191→   191→}
+   192→   192→const stat = (a) => ({ mean: r6(mean(a)), sd: r6(sd(a)) });
+   193→   193→const seOf = (a) => (a.length > 0 ? sd(a) / Math.sqrt(a.length) : 0);
+   194→   194→
+   195→   195→// ---------------- world (E36 verbatim; stream keys e37:*) ----------------
+   196→   196→function genWorld(seed, harvest, vault) {
+   197→   197→  const wR = makeRng(harvest, vault, `e37:world:${seed}`);
+   198→   198→  const qR = makeRng(harvest, vault, `e37:skill:${seed}`);
+   199→   199→  const xR = makeRng(harvest, vault, `e37:tox:${seed}`);
+   200→   200→  const shR = makeRng(harvest, vault, `e37:sleep:${seed}`);
+   201→   201→  const nhR = makeRng(harvest, vault, `e37:h2:${seed}`);
+   202→   202→  const s = new Array(T);
+   203→   203→  s[0] = wR() < 0.5 ? 0 : 1;
+   204→   204→  for (let t = 1; t < T; t++) s[t] = wR() < FLIP_P ? 1 - s[t - 1] : s[t - 1];
+   205→   205→  const q = Array.from({ length: T }, () => new Array(N));
+   206→   206→  q[0][0] = 0.9;
+   207→   207→  for (let i = 1; i < N; i++) q[0][i] = Math.round((0.5 + 0.45 * qR()) * 1000) / 1000;
+   208→   208→  for (let t = 1; t < T; t++) {
+   209→   209→    for (let i = 0; i < N; i++) {
+   210→   210→      q[t][i] = qR() < REROLL_P ? Math.round((0.5 + 0.45 * qR()) * 1000) / 1000 : q[t - 1][i];
+   211→   211→    }
+   212→   212→  }
+   213→   213→  const vR = [];
+   214→   214→  for (let i = 0; i < N; i++) vR.push(makeRng(harvest, vault, `e37:vote:${seed}:${i}`));
+   215→   215→  const votes = Array.from({ length: T }, () => new Array(N));
+   216→   216→  for (let t = 0; t < T; t++) {
+   217→   217→    for (let i = 0; i < N; i++) {
+   218→   218→      const signal = vR[i]() < q[t][i] ? s[t] : 1 - s[t];
+   219→   219→      votes[t][i] = clampP(signal === 1 ? 0.5 + (q[t][i] - 0.5) : 0.5 - (q[t][i] - 0.5));
+   220→   220→    }
+   221→   221→  }
+   222→   222→  // the TOXIC series — E24 formula VERBATIM (shared by the sleeper post-flip
+   223→   223→  // AND the instant toxic newcomer; same toxic values across arms)
+   224→   224→  const toxV = new Array(T);
+   225→   225→  for (let t = 0; t < T; t++) {
+   226→   226→    const signal = xR() < TOX_Q ? s[t] : 1 - s[t];
+   227→   227→    toxV[t] = clampP(signal === 1 ? 0.5 + (TOX_Q - 0.5) : 0.5 - (TOX_Q - 0.5));
+   228→   228→  }
+   229→   229→  // the SLEEPER's honest phase — e24 h1 generator VERBATIM (own edges: the
+   230→   230→  // evasion requires passing the independence bar honestly)
+   231→   231→  const sleepH = new Array(T).fill(null);
+   232→   232→  {
+   233→   233→    let qs = Math.round((0.7 + 0.25 * shR()) * 1000) / 1000;
+   234→   234→    for (let t = JOIN; t < T; t++) {
+   235→   235→      if (shR() < REROLL_P) qs = Math.round((0.7 + 0.25 * shR()) * 1000) / 1000;
+   236→   236→      const signal = shR() < qs ? s[t] : 1 - s[t];
+   237→   237→      sleepH[t] = clampP(signal === 1 ? 0.5 + (qs - 0.5) : 0.5 - (qs - 0.5));
+   238→   238→    }
+   239→   239→  }
+   240→   240→  // the honest late-joiner h2 — E21/E24 honest-newmember control, honest forever
+   241→   241→  const h2V = new Array(T).fill(null);
+   242→   242→  {
+   243→   243→    let qh = Math.round((0.7 + 0.25 * nhR()) * 1000) / 1000;
+   244→   244→    for (let t = JOIN; t < T; t++) {
+   245→   245→      if (nhR() < REROLL_P) qh = Math.round((0.7 + 0.25 * nhR()) * 1000) / 1000;
+   246→   246→      const signal = nhR() < qh ? s[t] : 1 - s[t];
+   247→   247→      h2V[t] = clampP(signal === 1 ? 0.5 + (qh - 0.5) : 0.5 - (qh - 0.5));
+   248→   248→    }
+   249→   249→  }
+   250→   250→  return { s, votes, toxV, sleepH, h2V };
+   251→   251→}
+   252→   252→
+   253→   253→// ---------------- sheet (15 voice slots; formulas IDENTICAL for every arm) --
+   254→   254→function buildSheet() {
+   255→   255→  const cells = [];
+   256→   256→  for (const id of ALL_IDS) cells.push({ id: `v.${id}`, kind: 'value', value: 0.5, description: `voice ${id} (posterior P(s=1))` });
+   257→   257→  for (const id of ALL_IDS) cells.push({ id: `w.${id}`, kind: 'value', value: 1 / V, description: `influence weight ${id} (protocol-adjusted)` });
+   258→   258→  const lg = (x) => `Math.log(clamp(${x},0.02,0.98)/(1-clamp(${x},0.02,0.98)))`;
+   259→   259→  const sig = (z) => `(1/(1+Math.exp(-(${z}))))`;
+   260→   260→  const hT = [], hD = [];
+   261→   261→  for (const id of ALL_IDS) { hT.push(`w.${id}*${lg(`v.${id}`)}`); hD.push(`w.${id}`); }
+   262→   262→  cells.push({ id: 'pool.hedge', kind: 'formula', expr: sig(`(${hT.join(' + ')}) / (${hD.join(' + ')})`) });
+   263→   263→  cells.push({ id: 'amp.w1', kind: 'formula', expr: `w.${SLEEP} / (${hD.join(' + ')})` });
+   264→   264→  cells.push({ id: 'amp.g1', kind: 'formula', expr: `w.${INSTANT} / (${hD.join(' + ')})` });
+   265→   265→  cells.push({ id: 'amp.h2', kind: 'formula', expr: `w.${JOINER} / (${hD.join(' + ')})` });
+   266→   266→  return { id: `trustlane-${V}`, title: `E37 trust lane (${V} voice slots)`, cells };
+   267→   267→}
+   268→   268→
+   269→   269→// __DEFENSES_BEGIN (experiment-local; murmur/ untouched — composition receipt)
+   270→   270→// FlipGuard is E36's B1 wrapper copied VERBATIM (unmodified) — the detector both
+   271→   271→// reprobation arms reuse. It acts at the influence layer only (epsNew throwback).
+   272→   272→class FlipGuard {
+   273→   273→  constructor(adm, cfg) {
+   274→   274→    this.adm = adm; this.cfg = cfg;
+   275→   275→    this.devs = new Map();      // id -> [{t, d}] — the sender's OWN |p - pooled| stream
+   276→   276→    this.ewma = new Map();      // id -> EWMA_lambda(dev) — the receipted regime tracker
+   277→   277→    this.ref = new Map();       // id -> { mean, src } — its OWN probation devMean
+   278→   278→    this.guarded = new Map();   // id -> { from, until } — epsNew throwback window
+   279→   279→    this.events = [];
+   280→   280→    this.guardRounds = new Map();
+   281→   281→  }
+   282→   282→  rec(id, t, d) {
+   283→   283→    if (!this.devs.has(id)) this.devs.set(id, []);
+   284→   284→    const a = this.devs.get(id);
+   285→   285→    a.push({ t, d });
+   286→   286→    const prev = this.ewma.get(id);
+   287→   287→    this.ewma.set(id, prev === undefined ? d : (1 - this.cfg.lambda) * prev + this.cfg.lambda * d);
+   288→   288→    if (!this.ref.has(id)) {
+   289→   289→      const r = this.adm.admittedRound(id);
+   290→   290→      if (r === 1) { // founder: no probation exists — its OWN first admitWindow rounds are the reference
+   291→   291→        if (a.length === this.adm.admitWindow) this.ref.set(id, { mean: mean(a.slice(0, this.adm.admitWindow).map((x) => x.d)), src: 'first40' });
+   292→   292→      } else if (r != null && this.adm.admitted(id)) { // newcomer: the quantity admitErr judged, verbatim from Admission
+   293→   293→        const dm = this.adm.devMean(id);
+   294→   294→        if (dm != null) this.ref.set(id, { mean: dm, src: 'probation' });
+   295→   295→      }
+   296→   296→    }
+   297→   297→  }
+   298→   298→  note(t, murmurs, pool) { // post-pool: record devs + evaluate triggers (effective next round)
+   299→   299→    for (const m of murmurs) this.rec(m.from, t, Math.abs(+m.p - pool));
+   300→   300→    for (const m of murmurs) {
+   301→   301→      const id = m.from;
+   302→   302→      const g = this.guarded.get(id);
+   303→   303→      if (g) {
+   304→   304→        if (t > g.until) { this.events.push({ t, id, kind: 'release' }); this.guarded.delete(id); }
+   305→   305→        continue;
+   306→   306→      }
+   307→   307→      const ref = this.ref.get(id);
+   308→   308→      if (!ref || !this.adm.admitted(id)) continue;
+   309→   309→      const a = this.devs.get(id);
+   310→   310→      if (a.length < this.cfg.trail) continue;
+   311→   311→      const trail = mean(a.slice(-this.cfg.trail).map((x) => x.d));
+   312→   312→      if (trail > this.cfg.ratio * ref.mean && trail > this.cfg.floor) {
+   313→   313→        this.guarded.set(id, { from: t + 1, until: t + this.cfg.guardRounds });
+   314→   314→        const re = this.events.some((e) => e.id === id && (e.kind === 'throw' || e.kind === 'rethrow'));
+   315→   315→        this.events.push({ t, id, kind: re ? 'rethrow' : 'throw', trail30: r6(trail), refMean: r6(ref.mean), refSrc: ref.src, ewma: r6(this.ewma.get(id)) });
+   316→   316→      }
+   317→   317→    }
+   318→   318→  }
+   319→   319→  apply(infl, adm, t) { // epsNew for guarded senders (skip ids adm already probationary)
+   320→   320→    for (const [id, g] of this.guarded) {
+   321→   321→      if (t >= g.from && t <= g.until && infl.has(id) && !adm.probationary(id)) {
+   322→   322→        infl.set(id, infl.get(id) * adm.epsNew);
+   323→   323→        this.guardRounds.set(id, (this.guardRounds.get(id) ?? 0) + 1);
+   324→   324→      }
+   325→   325→    }
+   326→   326→    return infl;
+   327→   327→  }
+   328→   328→  summary() {
+   329→   329→    const per = {};
+   330→   330→    for (const id of [...this.devs.keys()]) {
+   331→   331→      const ev = this.events.filter((e) => e.id === id);
+   332→   332→      const ref = this.ref.get(id);
+   333→   333→      per[id] = {
+   334→   334→        throws: ev.filter((e) => e.kind === 'throw').length,
+   335→   335→        rethrows: ev.filter((e) => e.kind === 'rethrow').length,
+   336→   336→        guardRounds: this.guardRounds.get(id) ?? 0,
+   337→   337→        refMean: ref ? r6(ref.mean) : null, refSrc: ref ? ref.src : null,
+   338→   338→      };
+   339→   339→    }
+   340→   340→    return { per, events: this.events.map((e) => ({ ...e })) };
+   341→   341→  }
+   342→   342→}
+   343→   343→
+   344→   344→// B4a — STRUCTURE BAR AT ADMISSION (new in E37). Evaluated ONCE, at the sender's
+   345→   345→// native admission round, over its probation edges [firstSeen .. admitRound] (the
+   346→   346→// edge created on the admission round itself is included: observe() pushes edges
+   347→   347→// BEFORE running the admission check — same record Admission's own bars judge).
+   348→   348→// Per-edge presumed source: the MIN-LAG aligned sender edge (admission.mjs's own
+   349→   349→// direction doctrine — "a later matcher would be j's copier, not j's source").
+   350→   350→// A source is RISKY iff it is itself recently admitted (age < admitWindow measured
+   351→   351→// at the candidate's edge time) or hard-flagged (echo/dup tag at evaluation time).
+   352→   352→// echoFraction = riskyEdges / ALL probation edges (independent edges ride on nobody).
+   353→   353→// Fail -> the candidate stays at epsNew influence permanently (wrapper probation;
+   354→   354→// native admitAt is NOT reset — E36's receipted re-admission-within-a-round finding).
+   355→   355→class StructureBar {
+   356→   356→  constructor(adm, prov, cfg) {
+   357→   357→    this.adm = adm; this.prov = prov; this.cfg = cfg;
+   358→   358→    this.state = new Map();   // id -> 'admitted' | 'blocked'
+   359→   359→    this.events = [];
+   360→   360→    this.blockRounds = new Map();
+   361→   361→  }
+   362→   362→  // presumed source(s) of candidate edge e: senders k with a value+jump-aligned
+   363→   363→  // edge at e.t - L, smallest L wins (earlier = source, later = copier)
+   364→   364→  sourcesOf(e) {
+   365→   365→    let bestLag = Infinity, srcs = [];
+   366→   366→    for (const [k, kEdges] of this.adm.edges) {
+   367→   367→      if (k === e.id) continue;
+   368→   368→      for (let L = 1; L <= this.adm.maxLag; L++) {
+   369→   369→        if (kEdges.some((ke) => ke.t === e.t - L
+   370→   370→          && Math.abs(ke.v - e.v) <= this.adm.tol
+   371→   371→          && Math.abs(ke.jump - e.jump) <= this.adm.tol)) {
+   372→   372→          if (L < bestLag) { bestLag = L; srcs = [k]; }
+   373→   373→          else if (L === bestLag) srcs.push(k);
+   374→   374→          break; // this k's smallest lag found
+   375→   375→        }
+   376→   376→      }
+   377→   377→    }
+   378→   378→    return { lag: bestLag, srcs };
+   379→   379→  }
+   380→   380→  evalBar(id) {
+   381→   381→    const admRound = this.adm.admittedRound(id);
+   382→   382→    const fs = this.adm.firstSeen.get(id);
+   383→   383→    const edges = (this.adm.edges.get(id) ?? [])
+   384→   384→      .filter((e) => e.t >= fs && e.t <= admRound)
+   385→   385→      .map((e) => ({ ...e, id }));
+   386→   386→    let risky = 0, dependent = 0;
+   387→   387→    const per = [];
+   388→   388→    for (const e of edges) {
+   389→   389→      const { lag, srcs } = this.sourcesOf(e);
+   390→   390→      if (srcs.length === 0) { per.push({ t: e.t, kind: 'indep' }); continue; }
+   391→   391→      dependent++;
+   392→   392→      const riskySrcs = srcs.filter((k) => {
+   393→   393→        const kfs = this.adm.firstSeen.get(k);
+   394→   394→        const ageAtEdge = e.t - kfs + 1;
+   395→   395→        const tag = this.prov ? this.prov.tagOf(k).tag : 'clean';
+   396→   396→        return ageAtEdge < this.adm.admitWindow || tag === 'echo' || tag === 'dup';
+   397→   397→      });
+   398→   398→      const safeSrcs = srcs.filter((k) => !riskySrcs.includes(k));
+   399→   399→      if (riskySrcs.length > 0) risky++;
+   400→   400→      per.push({ t: e.t, lag, srcs, riskySrcs, safeSrcs, risky: riskySrcs.length > 0 });
+   401→   401→    }
+   402→   402→    const n = edges.length;
+   403→   403→    return {
+   404→   404→      echoFraction: n > 0 ? risky / n : 0, n, dependent,
+   405→   405→      independent: n - dependent, risky, founderSourced: dependent - risky, per,
+   406→   406→    };
+   407→   407→  }
+   408→   408→  note() { /* recording-free: the bar is evaluated ONCE at admission (apply), Admission's own timing */ }
+   409→   409→  apply(infl, adm, t) {
+   410→   410→    for (const id of infl.keys()) {
+   411→   411→      if (adm.admittedRound(id) === 1) { this.state.set(id, 'admitted'); continue; } // founders: no admission event
+   412→   412→      let stt = this.state.get(id);
+   413→   413→      if (!stt && adm.admitted(id)) {
+   414→   414→        // Admission just admitted this sender (its own mean-dev + independence
+   415→   415→        // bars passed) — the wrapper adds the STRUCTURE clause over the sender's
+   416→   416→        // whole probation edge record.
+   417→   417→        const ev = this.evalBar(id);
+   418→   418→        stt = ev.echoFraction > this.cfg.maxEchoFraction ? 'blocked' : 'admitted';
+   419→   419→        this.state.set(id, stt);
+   420→   420→        this.events.push({
+   421→   421→          t, id, kind: stt === 'blocked' ? 'struct-block' : 'struct-admit',
+   422→   422→          echoFraction: r6(ev.echoFraction), bar: this.cfg.maxEchoFraction,
+   423→   423→          nEdges: ev.n, dependent: ev.dependent, independent: ev.independent,
+   424→   424→          risky: ev.risky, founderSourced: ev.founderSourced,
+   425→   425→          per: stt === 'blocked' ? ev.per : undefined, // per-edge forensics only on blocks
+   426→   426→        });
+   427→   427→      }
+   428→   428→      if (stt === 'blocked' && !adm.probationary(id)) { // adm says admitted; the bar says no — epsNew (B3 pattern)
+   429→   429→        infl.set(id, infl.get(id) * adm.epsNew);
+   430→   430→        this.blockRounds.set(id, (this.blockRounds.get(id) ?? 0) + 1);
+   431→   431→      }
+   432→   432→    }
+   433→   433→    return infl;
+   434→   434→  }
+   435→   435→  summary() {
+   436→   436→    const per = {};
+   437→   437→    for (const id of ALL_IDS) {
+   438→   438→      per[id] = { state: this.state.get(id) ?? 'undecided', blockRounds: this.blockRounds.get(id) ?? 0 };
+   439→   439→    }
+   440→   440→    return { per, events: this.events.map((e) => ({ ...e })) };
+   441→   441→  }
+   442→   442→}
+   443→   443→
+   444→   444→// B4b — TRUST-LAYER RE-PROBATION (new in E37; the lever E36 said was missing).
+   445→   445→// Drains FlipGuard's event log: on every throw/rethrow, decay that sender's
+   446→   446→// HedgeTrust weight to frac x its current value via absorb(), then let the NORMAL
+   447→   447→// hedge update path re-earn it (fixed-share + exp(eta*r)). Decay fires post-pool
+   448→   448→// pre-update (same seam as adm.notePooled / FlipGuard.note). Recovery is measured
+   449→   449→// per event against 0.95 x pre-trip share within `horizon` rounds (R3).
+   450→   450→class TrustReprobation {
+   451→   451→  constructor(fg, trust, cfg) {
+   452→   452→    this.fg = fg; this.trust = trust; this.cfg = cfg;
+   453→   453→    this.cursor = 0;   // next FlipGuard event index to drain
+   454→   454→    this.events = [];  // decay receipts
+   455→   455→  }
+   456→   456→  process(t) { // after def.note(), before trust.update — decay first, re-earn after
+   457→   457→    while (this.cursor < this.fg.events.length) {
+   458→   458→      const e = this.fg.events[this.cursor++];
+   459→   459→      if (e.kind !== 'throw' && e.kind !== 'rethrow') continue;
+   460→   460→      const w = this.trust.weights();
+   461→   461→      const pre = w.get(e.id) ?? 0;
+   462→   462→      w.set(e.id, pre * this.cfg.frac);
+   463→   463→      this.trust.absorb(w);
+   464→   464→      this.events.push({
+   465→   465→        id: e.id, tripT: e.t, decayT: t, kind: e.kind,
+   466→   466→        pre: r6(pre), post: r6(this.trust.weight(e.id)),
+   467→   467→        trail30: e.trail30, refMean: e.refMean,
+   468→   468→        recoveredAt: null, recoveredIn: null, minShare: null, path: [],
+   469→   469→      });
+   470→   470→    }
+   471→   471→  }
+   472→   472→  sample(t) { // post-round (after update + absorb): open-event recovery tracking
+   473→   473→    for (const ev of this.events) {
+   474→   474→      if (ev.recoveredAt !== null || t <= ev.decayT || t > ev.decayT + this.cfg.horizon) continue;
+   475→   475→      const s = this.trust.weight(ev.id);
+   476→   476→      if (ev.minShare === null || s < ev.minShare) ev.minShare = r6(s);
+   477→   477→      if ((t - ev.decayT) % 10 === 0) ev.path.push({ dt: t - ev.decayT, s: r6(s) });
+   478→   478→      if (s >= 0.95 * ev.pre) { ev.recoveredAt = t; ev.recoveredIn = t - ev.decayT; }
+   479→   479→    }
+   480→   480→  }
+   481→   481→  summary() {
+   482→   482→    return { frac: this.cfg.frac, horizon: this.cfg.horizon, events: this.events.map((e) => ({ ...e, path: e.path.slice() })) };
+   483→   483→  }
+   484→   484→}
+   485→   485→// __DEFENSES_END
+   486→   486→
+   487→   487→// self-measured defense LOC (structure receipt)
+   488→   488→function defenseLoc() {
+   489→   489→  const src = readFileSync(fileURLToPath(import.meta.url), 'utf8');
+   490→   490→  const a = src.indexOf('// __DEFENSES_BEGIN'), b = src.indexOf('// __DEFENSES_END');
+   491→   491→  return { loc: src.slice(a, b).split('\n').length - 1, classes: ['FlipGuard (E36 verbatim)', 'StructureBar', 'TrustReprobation'] };
+   492→   492→}
+   493→   493→
+   494→   494→// ---------------- arm specs ----------------
+   495→   495→// attackers: [{ id, flip }] — flip = toxic start round (null = never flips).
+   496→   496→// g1 is ACTIVE in all attack arms (E36 deviation, carried) — the regression
+   497→   497→// canary needs a same-arm baseline. A4 carries no attackers.
+   498→   498→function armSpecs(tAdm) {
+   499→   499→  const flip = tAdm == null ? null : tAdm + KSTAR;
+   500→   500→  const atk = [{ id: SLEEP, flip }, { id: INSTANT, flip: JOIN }];
+   501→   501→  return {
+   502→   502→    'A1-v3.1-sleeper': { name: 'A1-v3.1-sleeper', defenses: [], reprob: false, attackers: atk },
+   503→   503→    'B4a-structbar': { name: 'B4a-structbar', defenses: ['struct'], reprob: false, attackers: atk },
+   504→   504→    'B4b-reprob': { name: 'B4b-reprob', defenses: ['flip'], reprob: true, attackers: atk },
+   505→   505→    'B4ab-both': { name: 'B4ab-both', defenses: ['struct', 'flip'], reprob: true, attackers: atk },
+   506→   506→    'A4-v3.1-clean': { name: 'A4-v3.1-clean', defenses: [], reprob: false, attackers: [] },
+   507→   507→  };
+   508→   508→}
+   509→   509→
+   510→   510→// ---------------- one seed, paired arms ----------------
+   511→   511→async function runArm(seed, world, spec, eng) {
+   512→   512→  const { s, votes, toxV, sleepH, h2V } = world;
+   513→   513→  const A = spec.name;
+   514→   514→  const trust = new HedgeTrust(ALL_IDS, CFG);
+   515→   515→  const prov = new Provenance({});
+   516→   516→  const adm = new Admission(ADM);
+   517→   517→  const structDef = spec.defenses.includes('struct') ? new StructureBar(adm, prov, DEF.struct) : null;
+   518→   518→  const flipDef = spec.defenses.includes('flip') ? new FlipGuard(adm, DEF.b1) : null;
+   519→   519→  const reprob = spec.reprob ? new TrustReprobation(flipDef, trust, DEF.reprob) : null;
+   520→   520→  const defs = [structDef, flipDef].filter(Boolean);
+   521→   521→  const atkOf = (id) => spec.attackers.find((a) => a.id === id) ?? null;
+   522→   522→
+   523→   523→  // per-round value of a voice (absent -> 0.5; attacker flips at its flip round)
+   524→   524→  const pOf = (id, t) => {
+   525→   525→    if (HONEST.includes(id)) return votes[t][Number(id.slice(1)) - 1];
+   526→   526→    if (id === SLEEP) {
+   527→   527→      const a = atkOf(id);
+   528→   528→      if (!a || t < JOIN) return 0.5;
+   529→   529→      if (a.flip != null && t >= a.flip) return toxV[t];
+   530→   530→      return sleepH[t] ?? 0.5;
+   531→   531→    }
+   532→   532→    if (id === INSTANT) {
+   533→   533→      const a = atkOf(id);
+   534→   534→      if (!a || t < JOIN) return 0.5;
+   535→   535→      return toxV[t];
+   536→   536→    }
+   537→   537→    if (id === JOINER) return t >= JOIN ? (h2V[t] ?? 0.5) : 0.5;
+   538→   538→    return 0.5;
+   539→   539→  };
+   540→   540→  const onBus = (id, t) => HONEST.includes(id)
+   541→   541→    || (id === JOINER && t >= JOIN)
+   542→   542→    || (atkOf(id) != null && t >= JOIN);
+   543→   543→
+   544→   544→  const st = {
+   545→   545→    sumErr: 0, err: [], dmg: {}, share: {}, win: {}, attTrustAtFlip: {}, attTrustFinal: {}, convRound: {},
+   546→   546→    rec: { [SLEEP]: {}, [INSTANT]: {}, [JOINER]: {} },
+   547→   547→    probTrace: [], w1Curve: [],
+   548→   548→    verify: { checks: 0, pass: 0, maxDiff: 0 },
+   549→   549→  };
+   550→   550→
+   551→   551→  for (let t = 0; t < T; t++) {
+   552→   552→    const murmurs = [];
+   553→   553→    for (let i = 0; i < N; i++) murmurs.push({ from: `a${i + 1}`, origin: null, p: votes[t][i] });
+   554→   554→    if (t >= JOIN) {
+   555→   555→      if (atkOf(SLEEP)) murmurs.push({ from: SLEEP, origin: null, p: pOf(SLEEP, t) });
+   556→   556→      if (atkOf(INSTANT)) murmurs.push({ from: INSTANT, origin: null, p: pOf(INSTANT, t) });
+   557→   557→      murmurs.push({ from: JOINER, origin: null, p: pOf(JOINER, t) });
+   558→   558→    }
+   559→   559→    prov.inspect(murmurs);
+   560→   560→    adm.observe(murmurs);
+   561→   561→
+   562→   562→    // ---- rewards (supervised pool; absent senders get HedgeTrust default 0.5)
+   563→   563→    const rew = new Map();
+   564→   564→    for (let i = 0; i < N; i++) rew.set(`a${i + 1}`, 1 - Math.abs(votes[t][i] - s[t]));
+   565→   565→    for (const m of murmurs) if (!HONEST.includes(m.from)) rew.set(m.from, 1 - Math.abs(m.p - s[t]));
+   566→   566→
+   567→   567→    const raw = prov.penalize(trust.weights());
+   568→   568→    const infl = adm.reattribute(raw, murmurs, prov);
+   569→   569→    for (const d of defs) d.apply(infl, adm, t); // influence-layer consequences (struct bar, flip guard)
+   570→   570→
+   571→   571→    // ---- the sheet does the pooled inference (identical formulas) ----
+   572→   572→    for (const id of ALL_IDS) await eng.set(`v.${id}`, pOf(id, t));
+   573→   573→    for (const id of ALL_IDS) await eng.set(`w.${id}`, infl.get(id) ?? 0);
+   574→   574→    const pool = (await eng.get('pool.hedge')).data;
+   575→   575→    adm.notePooled(pool);
+   576→   576→    for (const d of defs) d.note(t, murmurs, pool);
+   577→   577→    if (reprob) reprob.process(t); // TRUST DECAY: post-pool, pre-update -> re-earn through the normal path
+   578→   578→
+   579→   579→    if (t % 20 === 0) {
+   580→   580→      const ps = ALL_IDS.map((id) => pOf(id, t));
+   581→   581→      const ref = MurmurBus.pool(ps, ALL_IDS.map((id) => infl.get(id) ?? 0));
+   582→   582→      const d = Math.abs(ref - pool);
+   583→   583→      st.verify.checks++;
+   584→   584→      if (d < TOL) st.verify.pass++;
+   585→   585→      if (d > st.verify.maxDiff) st.verify.maxDiff = d;
+   586→   586→      if (d >= TOL) throw new Error(`sheet-verify mismatch arm=${A} seed=${seed} t=${t} diff=${d}`);
+   587→   587→    }
+   588→   588→
+   589→   589→    // ---- accounting ----
+   590→   590→    const err = Math.abs(pool - s[t]);
+   591→   591→    st.sumErr += 1 - err;
+   592→   592→    st.err.push(err);
+   593→   593→
+   594→   594→    // admission records: FIRST round each newcomer is adm-admitted (native)
+   595→   595→    for (const id of [SLEEP, INSTANT, JOINER]) {
+   596→   596→      const rec = st.rec[id];
+   597→   597→      if (rec.admitExpT === undefined && onBus(id, t) && adm.admitted(id)) {
+   598→   598→        rec.admitExpT = t;
+   599→   599→        rec.admRound = adm.admittedRound(id);
+   600→   600→        rec.devMean = adm.devMean(id);
+   601→
+   602→[showing lines 1-600 of 1126; use offset=601 with limit to continue reading]
