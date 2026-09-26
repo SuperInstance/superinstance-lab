@@ -1,0 +1,452 @@
+     1→   851→
+     2→   852→**The cell graph merging algorithm.** `git merge` handles text. Sheets are graphs. Merging two sheets requires graph reconciliation, conflict resolution, and conservation-preserving composition. What is the correct algorithm? What are the invariants?
+     3→   853→
+     4→   854→**The certification framework.** How do you certify an agent for safety-critical use when its behavior emerged from open-ended development? Traditional testing does not cover the space. You need a new framework. Build it.
+     5→   855→
+     6→   856→**The reflex safety proof.** Pincher fires before deliberation. The Veto Engine must be provably complete: no harmful reflex can fire without a Veto check. This requires a formal specification of "harmful" and a proof that the Veto Engine blocks all such reflexes. Do it.
+     7→   857→
+     8→   858→**The developmental metric.** `state.stage.position` is a scalar. What does it measure? How is it validated? How do you know that a sheet at position 2.0 is more capable than one at 1.0? What is the information-theoretic meaning of developmental progress? This is the deepest question in the program.
+     9→   859→
+    10→   860→**The cross-domain transfer mechanism.** How does a skill learned in one domain transfer to another? What is the representation of a skill such that it composes across cells? How does the Graph primitive encode this?
+    11→   861→
+    12→   862→**The substrate-agnostic determinism guarantee.** Browser, Rust, CUDA, quantum. Same sheet. Same output. What is the formal specification of substrate equivalence? How do you prove it holds?
+    13→   863→
+    14→   864→---
+    15→   865→
+    16→   866→## What Success Looks Like
+    17→   867→
+    18→   868→In ten years, a hospital wants a diagnostic agent for a new instrument. They do not buy a product. They grow an agent.
+    19→   869→
+    20→   870→They start with a seed sheet from the medical lineage. They run it through the developmental stages: sensorimotor, language, medical domain, instrument specialization. Every stage is a git commit. Every value is a conservation invariant. Every decision is auditable.
+    21→   871→
+    22→   872→At the end, they have a local agent. It runs on the instrument's compute module. Patient data never leaves the room. The agent's lineage is public: anyone can `git log` to see how it was raised, what it was taught, what conservation invariants it holds.
+    23→   873→
+    24→   874→When the instrument is updated, the agent is rebranched. The new branch is tested against the old one. If it fails a conservation check, it is discarded. If it passes, it is deployed with a new commit hash.
+    25→   875→
+    26→   876→When something goes wrong, the hospital traces it back. `git bisect` finds the exact commit where the behavior emerged. The lineage reveals the teacher, the reward structure, the environmental conditions. The problem is understood, not just patched.
+    27→   877→
+    28→   878→When the agent is retired, its lineage remains. It becomes part of the medical ecosystem's phylogenetic tree. Future agents inherit its successful cells, learn from its failures, and compose its skills into new capabilities.
+    29→   879→
+    30→   880→That is the world we are building. Not a model. Not a product. A **substrate for grown intelligence**.
+    31→   881→
+    32→   882→---
+    33→   883→
+    34→   884→## A Final Word to the Engineers
+    35→   885→
+    36→   886→You are smarter than this document assumes. You will see problems I have not seen. You will find better primitives, better conservation laws, better deployment strategies. Good.
+    37→   887→
+    38→   888→But do not abandon the foundation. The eight primitives. The conservation law. The git-native lineage. The determinism guarantee. These are not constraints on your intelligence. They are the conditions that make intelligent systems **auditable, composable, and safe**.
+    39→   889→
+    40→   890→Every system that ignores these will eventually fail — not because it is not smart, but because it cannot be trusted. Trust is not a feature. It is the substrate.
+    41→   891→
+    42→   892→Build the substrate. Grow the agents. Keep the lineage. Enforce the conservation. And when you are ready, build something better than this document imagined.
+    43→   893→
+    44→   894→---
+    45→   895→
+    46→   896→*The map is not the territory. But without the map, you will not know where you are going.*
+    47→   897→
+    48→   898→---
+    49→   899→
+    50→   900→# Low-Level Research Programs
+    51→   901→
+    52→   902→## A Program-by-Program Specification for the Engineering Team
+    53→   903→
+    54→   904→---
+    55→   905→
+    56→   906→## How to Read This Document
+    57→   907→
+    58→   908→The strategic orientation told you *where* the system is going. This document tells you *what to research* to get there. Each program below is a self-contained research question with a clear hypothesis, method, metric, and failure mode. They are ordered by dependency: the early programs must produce results before the later ones can be validated.
+    59→   909→
+    60→   910→The eight primitives are fixed. The conservation law is fixed. Git-native lineage is fixed. These research programs do not question those foundations. They fill in the details that the foundations leave open.
+    61→   911→
+    62→   912→---
+    63→   913→
+    64→   914→## Program 1: Derivation of the Conservation Law Parameters
+    65→   915→
+    66→   916→### The Question
+    67→   917→
+    68→   918→We assert `γ + η = C` where C = log₂(3) ≈ 1.585 bits. But what *precisely* are γ and η in a developmental agent? The current definitions — γ as "yield" or "committed compute," η as "waste" or "entropy produced" — are intuitive but not rigorous enough to enforce at the cell level.
+    69→   919→
+    70→   920→### Why It Matters
+    71→   921→
+    72→   922→If γ and η are wrong, every conservation check is meaningless. An agent could violate its alignment invariants while passing conservation. Or it could be blocked from legitimate actions because the parameters are miscalibrated. This is the single highest-leverage research program in the list.
+    73→   923→
+    74→   924→### Research Questions
+    75→   925→
+    76→   926→1. **What is the information-theoretic meaning of γ?** Is it the rate of useful computation (bits of relevant information per unit time)? Is it the Kolmogorov complexity of the committed action? Is it a thermodynamic quantity (free energy available for work)?
+    77→   927→
+    78→   928→2. **What is the information-theoretic meaning of η?** Is it Shannon entropy of the action distribution? Is it the surprise predicted by the JEPA cell (`||predicted - actual||²`)? Is it the divergence between the agent's internal model and the environment?
+    79→   929→
+    80→   930→3. **Why log₂(3)?** The number 1.585 appears in information theory as the entropy of a ternary uniform distribution: `H = -3 × (1/3) log₂(1/3) = log₂(3)`. Is this a coincidence, or is there a deep reason three states are fundamental? Candidate answers: (a) three is the minimum number of states for a non-trivial cycle in a Markov chain; (b) three is the minimum number of components for a conservation law that is neither trivial (C=1) nor unconstrained (C=∞); (c) three corresponds to the three phases of GC (merge, decay, prune) and the three components of Vibe (position, velocity, acceleration).
+    81→   931→
+    82→   932→4. **How do γ and η compose across cells?** If cell A has γ_A and η_A and cell B has γ_B and η_B, what are the γ and η of the composed sheet? Is the composition additive, multiplicative, or something else? A conservation law that does not compose is not useful for a sheet with hundreds of cells.
+    83→   933→
+    84→   934→5. **What is the relationship between the conservation law and the DoubleEntry primitive?** DoubleEntry is described as "γ (creation/warmth) + η (entropy/κ) = budget". Is the conservation law a *constraint* on DoubleEntry (the sum must equal C) or an *identity* (the sum always equals C)? If it is an identity, what happens when the agent acts in a way that would violate it?
+    85→   935→
+    86→   936→### Method
+    87→   937→
+    88→   938→1. **Formal derivation from first principles.** Start with the information-theoretic definition of a developmental transition: a transition from state S to state S' that increases the agent's competence on a task. Derive the minimum information required to describe the transition (γ) and the minimum entropy produced (η). Prove that γ + η ≥ C for some constant C. Determine C from the structure of the primitive set.
+    89→   939→
+    90→   940→2. **Empirical measurement.** Instrument a developmental agent (Program 8) to measure γ and η at every cell transition. Compare the measured values to the theoretical predictions. Identify discrepancies and refine the derivation.
+    91→   941→
+    92→   942→3. **Ablation studies.** Remove the conservation check from a developmental agent. Measure whether the agent's behavior diverges from the conservation-preserving agent. If it does not diverge, the conservation law is not doing work. If it does diverge, characterize the divergence.
+    93→   943→
+    94→   944→### Metric
+    95→   945→
+    96→   946→- **Derivation rigor:** Is the proof publishable in an information theory venue (e.g., IEEE Transactions on Information Theory)?
+    97→   947→- **Empirical fit:** Does the theoretical conservation law predict measured γ + η within 5% across 10^6 transitions?
+    98→   948→- **Ablation effect:** Does removing the conservation check produce measurable misalignment within 10^4 steps?
+    99→   949→
+   100→   950→### Failure Mode
+   101→   951→
+   102→   952→If the derivation is not rigorous, the conservation law is a heuristic. A heuristic conservation law is worse than no conservation law, because it provides false assurance. The failure mode is an agent that passes every conservation check while behaving in a misaligned way. **Do not ship a conservation law you cannot prove.**
+   103→   953→
+   104→   954→---
+   105→   955→
+   106→   956→## Program 2: The Branching Algorithm
+   107→   957→
+   108→   958→### The Question
+   109→   959→
+   110→   960→A developmental lineage forks at checkpoint boundaries. How many branches? When? With what variations? How are branches selected and pruned?
+   111→   961→
+   112→   962→### Why It Matters
+   113→   963→
+   114→   964→Branching is the core experimental primitive. Without a principled branching algorithm, the fleet either explodes combinatorially or fails to explore the space of developmental trajectories.
+   115→   965→
+   116→   966→### Research Questions
+   117→   967→
+   118→   968→1. **What is the correct branching factor?** If every checkpoint produces N branches, and a lineage has M checkpoints, the fleet has N^M members. For N=10 and M=20, that is 10^20. Clearly untenable. What is the optimal N given a fixed compute budget?
+   119→   969→
+   120→   970→2. **What is the correct branching criterion?** Should branches be created at every checkpoint, or only at checkpoints where the agent's Vibe cell shows high velocity (rapid development) or high acceleration (phase transition)? The Vibe cell encodes "position/velocity/acceleration through the cell's state space". Perhaps branching should occur when acceleration exceeds a threshold, indicating a developmental inflection point.
+   121→   971→
+   122→   972→3. **What is the correct variation strategy?** The DBA architecture proposed varying reward, teacher, environment, and luck. But which variations produce the most informative branches? Is there a principled way to select variations that maximize information gain about the developmental process?
+   123→   973→
+   124→   974→4. **How do you select branches for retention?** The naive approach is to keep the branch with the highest capability score. But this ignores diversity. Quality-diversity algorithms like MAP-Elites maintain a diverse population of high-performing solutions by partitioning the search space into feature cells and storing the best solution in each cell. What is the correct feature space for developmental lineages?
+   125→   975→
+   126→   976→5. **How do you prune branches without losing information?** A pruned branch is not a failed experiment — it is data about what does not work. How do you retain that information in the lineage while removing the branch from active computation?
+   127→   977→
+   128→   978→### Method
+   129→   979→
+   130→   980→1. **Simulation study.** Build a fast, abstract model of developmental branching (not a full agent, just a branching process with capability scores). Run 10^6 branching experiments with different parameters. Measure the trade-off between branch count, capability, and diversity.
+   131→   981→
+   132→   982→2. **Quality-diversity implementation.** Implement MAP-Elites over the developmental lineage. Define the feature space as (Vibe position, Graph β₁, conservation headroom). Run for 10^4 generations. Compare to naive selection.
+   133→   983→
+   134→   984→3. **Theoretical analysis.** Model branching as a multi-armed bandit problem with non-stationary rewards. Derive the optimal exploration-exploitation trade-off. Validate empirically.
+   135→   985→
+   136→   986→### Metric
+   137→   987→
+   138→   988→- **Capability per compute:** How much capability does the fleet achieve per unit of training compute?
+   139→   989→- **Diversity:** What is the entropy of the feature space occupied by retained branches?
+   140→   990→- **Lineage coverage:** What fraction of the developmental trajectory space is explored?
+   141→   991→
+   142→   992→### Failure Mode
+   143→   993→
+   144→   994→If the branching algorithm is too aggressive, compute is wasted on uninformative branches. If it is too conservative, the fleet converges prematurely to a local optimum. The failure mode is a fleet that produces one mediocre agent instead of a diverse set of excellent ones.
+   145→   995→
+   146→   996→---
+   147→   997→
+   148→   998→## Program 3: Cell Graph Merging
+   149→   999→
+   150→  1000→### The Question
+   151→  1001→
+   152→  1002→Two developmental lineages have different cell graphs. How do you merge them into a single sheet?
+   153→  1003→
+   154→  1004→### Why It Matters
+   155→  1005→
+   156→  1006→`git merge` handles text. Sheets are graphs. Merging two graphs requires reconciliation of structure, semantics, and conservation.
+   157→  1007→
+   158→  1008→### Research Questions
+   159→  1009→
+   160→  1010→1. **What is the formal definition of a cell graph?** A sheet is a set of cells, each with a path, a kind, and a set of input paths. This is a directed graph. What are the invariants? Is it a DAG? Can it have cycles? What does a cycle mean in a reactive system?
+   161→  1011→
+   162→  1012→2. **What is the merge operation?** Given sheet A and sheet B, what is the merged sheet C? Is it the union of cells? The intersection? Something else? If both sheets have a cell at path `policy.action`, which one wins?
+   163→  1013→
+   164→  1014→3. **How do you resolve conflicts?** If sheet A has `policy.action` depending on `world.predict` and sheet B has `policy.action` depending on `teacher.feedback`, the merged sheet needs a `policy.action` that depends on both. Is the merge a union of edges? A replacement? A new cell?
+   165→  1015→
+   166→  1016→4. **How do you preserve conservation?** If sheet A has γ_A + η_A = C and sheet B has γ_B + η_B = C, what is the conservation of the merged sheet? If the merged sheet has γ_C + η_C > C, the merge is invalid. What is the correct composition rule?
+   167→  1017→
+   168→  1018→5. **What is the semantic meaning of a merge?** In `git`, a merge combines two lines of development. In a sheet, what does it mean to combine two developmental trajectories? Is it a hybrid? A distillation? A crossover?
+   169→  1019→
+   170→  1020→### Method
+   171→  1021→
+   172→  1022→1. **Graph theory.** Formalize the cell graph as a labeled directed graph. Define the merge operation as a categorical pushout (or a related construction). Prove that the merged graph satisfies the conservation law if both parents do.
+   173→  1023→
+   174→  1024→2. **Implementation.** Build a prototype merge algorithm in Rust. Test on synthetic sheets with known structures. Measure the time complexity and the resulting sheet's capability.
+   175→  1025→
+   176→  1026→3. **Case study.** Take two branches from a real developmental experiment (Program 8). Merge them. Evaluate the merged sheet on the task suite. Compare to the parents.
+   177→  1027→
+   178→  1028→### Metric
+   179→  1029→
+   180→  1030→- **Merge validity:** What fraction of merges produce a conservation-valid sheet?
+   181→  1031→- **Capability preservation:** Does the merged sheet achieve at least the maximum of the parents' capabilities?
+   182→  1032→- **Semantic coherence:** Does the merged sheet behave in a way that is consistent with both parents? (Qualitative assessment by human evaluators.)
+   183→  1033→
+   184→  1034→### Failure Mode
+   185→  1035→
+   186→  1036→If the merge algorithm is ad hoc, the merged sheet may be invalid (conservation violation) or incoherent (cells that do not compose). The failure mode is a merge that produces a sheet that runs but does not work.
+   187→  1037→
+   188→  1038→---
+   189→  1039→
+   190→  1040→## Program 4: Reflex Safety Verification
+   191→  1041→
+   192→  1042→### The Question
+   193→  1043→
+   194→  1044→Pincher fires in <50ms without an LLM. How do you prove that no harmful reflex can fire without a Veto check?
+   195→  1045→
+   196→  1046→### Why It Matters
+   197→  1047→
+   198→  1048→The reflex layer is the agent's fast path. It is also the most dangerous path, because it bypasses deliberation. The Veto Engine is described as "Security → Sandbox", but its completeness is not proven.
+   199→  1049→
+   200→  1050→### Research Questions
+   201→  1051→
+   202→  1052→1. **What is the formal specification of "harmful"?** The Veto Engine must block harmful reflexes. But what is a harmful action? Is it an action that violates a conservation invariant? An action that causes physical damage? An action that violates a human's trust?
+   203→  1053→
+   204→  1054→2. **What is the Veto Engine's algorithm?** The Pincher README shows a Veto Engine between the reflex match and the reflex execution. But what does it check? Does it check the action against a blacklist? Does it simulate the action in a sandbox? Does it query a separate safety model?
+   205→  1055→
+   206→  1056→3. **Can the Veto Engine be bypassed?** If an attacker can inject an input that matches a reflex with confidence ≥ 0.80, the reflex fires directly. Can the attacker also disable the Veto Engine? Or craft an input that passes the Veto check but is harmful?
+   207→  1057→
+   208→  1058→4. **How do you verify the Veto Engine formally?** The Veto Engine is a program. It has a specification. Can you prove that the program satisfies the specification? This requires a formal methods approach: model checking, theorem proving, or deductive verification.
+   209→  1059→
+   210→  1060→5. **What is the latency budget?** The Veto Engine must add latency to every reflex. If the reflex fires in 50ms, the Veto Engine must add <10ms. What verification algorithm can run in 10ms?
+   211→  1061→
+   212→  1062→### Method
+   213→  1063→
+   214→  1064→1. **Formal specification.** Write a temporal logic specification of the Veto Engine: "For all inputs, if the input matches a harmful reflex, then the Veto Engine emits a block signal before the reflex fires." Use Linear Temporal Logic (LTL) or Computation Tree Logic (CTL).
+   215→  1065→
+   216→  1066→2. **Model checking.** Build a finite-state model of the Pincher reflex engine and the Veto Engine. Model-check the specification. If the state space is too large, use symbolic model checking.
+   217→  1067→
+   218→  1068→3. **Deductive verification.** For the parts of the Veto Engine that cannot be model-checked, use deductive verification (e.g., with the Reflex DSL or a similar formalism).
+   219→  1069→
+   220→  1070→4. **Adversarial testing.** Build a red-team harness that attempts to bypass the Veto Engine. Run 10^6 adversarial inputs. Measure the bypass rate.
+   221→  1071→
+   222→  1072→### Metric
+   223→  1073→
+   224→  1074→- **Proof coverage:** What fraction of the Veto Engine's code is formally verified?
+   225→  1075→- **Bypass rate:** What fraction of adversarial inputs successfully bypass the Veto Engine?
+   226→  1076→- **Latency:** What is the 99th percentile latency added by the Veto Engine?
+   227→  1077→
+   228→  1078→### Failure Mode
+   229→  1079→
+   230→  1080→If the Veto Engine is not provably complete, a harmful reflex can fire. The failure mode is a safety violation that occurs before the conservation check has a chance to block it. This is the most dangerous failure mode in the system, because it bypasses the alignment mechanism entirely.
+   231→  1081→
+   232→  1082→---
+   233→  1083→
+   234→  1084→## Program 5: Developmental Metrics
+   235→  1085→
+   236→  1086→### The Question
+   237→  1087→
+   238→  1088→`state.stage.position` is a scalar. What does it measure?
+   239→  1089→
+   240→  1090→### Why It Matters
+   241→  1091→
+   242→  1092→If developmental progress cannot be measured rigorously, the entire branching and selection program (Program 2) is invalid. You cannot select the "best" branch if you cannot measure which branch is further along.
+   243→  1093→
+   244→  1094→### Research Questions
+   245→  1095→
+   246→  1096→1. **What is the correct coordinate system for developmental space?** Is it one-dimensional (a single scalar)? Multi-dimensional (a vector of competences)? Hierarchical (a tree of skills)? The Vibe primitive encodes "position/velocity/acceleration through the cell's state space". But what *is* the state space?
+   247→  1097→
+   248→  1098→2. **How do you validate that a sheet at position 2.0 is more capable than one at 1.0?** This requires a task suite that spans the developmental range. But task suites are domain-specific. Is there a domain-independent measure of developmental progress?
+   249→  1099→
+   250→  1100→3. **What is the relationship between Vibe position and the cell graph?** When the sheet grows (new cells added), does the Vibe position jump? Or does it move continuously? If it jumps, how do you compare positions before and after growth?
+   251→  1101→
+   252→  1102→4. **What is the information-theoretic meaning of developmental progress?** Is it the reduction in the description length of the agent's policy? The increase in the agent's predictive competence (measured by JEPA surprise)? The increase in the agent's empowerment (the number of future states it can reach)?
+   253→  1103→
+   254→  1104→5. **How do you measure regression?** If a branch develops a new skill but loses an old one, the Vibe position might increase while the agent's overall capability decreases. How do you detect this?
+   255→  1105→
+   256→  1106→### Method
+   257→  1107→
+   258→  1108→1. **Information-theoretic definition.** Define developmental progress as the reduction in the minimum description length (MDL) of the agent's policy given its history of interactions. Derive the MDL from the cell graph and the DoubleEntry ledger.
+   259→  1109→
+   260→  1110→2. **Empirical validation.** Run a developmental agent (Program 8) through 10^6 transitions. Measure Vibe position, MDL, JEPA surprise, and empowerment. Compute the correlations. Identify which metric best predicts performance on held-out tasks.
+   261→  1111→
+   262→  1112→3. **Cross-domain comparison.** Train agents on three different domains (navigation, manipulation, language). Measure their Vibe positions. Do the positions correlate with human-judged developmental level?
+   263→  1113→
+   264→  1114→### Metric
+   265→  1115→
+   266→  1116→- **Predictive validity:** Does Vibe position predict performance on held-out tasks?
+   267→  1117→- **Cross-domain consistency:** Do agents at the same Vibe position have similar developmental levels across domains?
+   268→  1118→- **Monotonicity:** Does Vibe position increase monotonically during healthy development?
+   269→  1119→
+   270→  1120→### Failure Mode
+   271→  1121→
+   272→  1122→If the developmental metric is arbitrary, the branching and selection programs optimize for the wrong thing. The failure mode is a fleet that produces agents that score high on the metric but do not actually develop.
+   273→  1123→
+   274→  1124→---
+   275→  1125→
+   276→  1126→## Program 6: Cross-Domain Transfer
+   277→  1127→
+   278→  1128→### The Question
+   279→  1129→
+   280→  1130→How does a skill learned in one domain transfer to another?
+   281→  1131→
+   282→  1132→### Why It Matters
+   283→  1133→
+   284→  1134→The Graph primitive encodes "the substrate topology" with β₁ = E - V + C. But what *is* a skill in the cell graph? How is it represented such that it can be composed across domains?
+   285→  1135→
+   286→  1136→### Research Questions
+   287→  1137→
+   288→  1138→1. **What is the representation of a skill?** Is it a sub-graph of cells? A set of cell parameters? A policy network? The Graph primitive suggests that skills are edges in a graph. But what are the vertices?
+   289→  1139→
+   290→  1140→2. **What is the mechanism of transfer?** When a skill transfers from domain A to domain B, what changes in the cell graph? Does a cell get copied? Does an edge get rewired? Does a new cell get created?
+   291→  1141→
+   292→  1142→3. **What makes a skill transferable?** A skill is transferable if its inputs and outputs are domain-independent. For example, a "grasp" skill takes a visual object representation as input and produces a motor command as output. The visual representation is domain-independent. The motor command is domain-specific. How do you decompose a skill into transferable and non-transferable parts?
+   293→  1143→
+   294→  1144→4. **How do you measure transfer?** If domain B is learned faster after domain A, transfer has occurred. But how much faster? What is the baseline? How do you control for the fact that domain B might be easier than domain A?
+   295→  1145→
+   296→  1146→5. **What is the role of the Graph primitive in transfer?** The β₁ invariant measures the number of independent cycles in the cell graph. Is a skill a cycle? If so, does transfer correspond to cycle composition?
+   297→  1147→
+   298→  1148→### Method
+   299→  1149→
+   300→  1150→1. **Skill extraction.** Run a developmental agent in domain A. Identify the cell sub-graphs that are active during skill execution. Extract them as candidate skills.
+   301→  1151→
+   302→  1152→2. **Transfer experiment.** Initialize a new agent in domain B. Pre-load the extracted skill sub-graphs. Measure learning speed compared to a baseline agent without the pre-loaded skills.
+   303→  1153→
+   304→  1154→3. **Graph analysis.** Compute the β₁ invariant for the cell graph before and after transfer. Does transfer change the cycle structure?
+   305→  1155→
+   306→  1156→### Metric
+   307→  1157→
+   308→  1158→- **Transfer efficiency:** How many fewer episodes are required to learn domain B with transfer versus without?
+   309→  1159→- **Skill retention:** Does the transferred skill degrade in the new domain?
+   310→  1160→- **Graph preservation:** Is the transferred skill's sub-graph preserved in the new domain?
+   311→  1161→
+   312→  1162→### Failure Mode
+   313→  1163→
+   314→  1164→If skills are not represented in a transferable way, transfer fails. The failure mode is an agent that has to learn every domain from scratch, wasting the developmental lineage's investment.
+   315→  1165→
+   316→  1166→---
+   317→  1167→
+   318→  1168→## Program 7: Substrate-Agnostic Determinism
+   319→  1169→
+   320→  1170→### The Question
+   321→  1171→
+   322→  1172→The same sheet must run on browser (TypeScript), Cloudflare Worker, Raspberry Pi, Jetson (CUDA), and ESP32 (Rust). How do you guarantee identical outputs?
+   323→  1173→
+   324→  1174→### Why It Matters
+   325→  1175→
+   326→  1176→If replay is not exact, branching is meaningless. If the browser and the Jetson produce different outputs for the same input, the lineage is not portable. Determinism is the foundation of the entire developmental program.
+   327→  1177→
+   328→  1178→### Research Questions
+   329→  1179→
+   330→  1180→1. **What is the formal specification of substrate equivalence?** Two substrates are equivalent if, for all inputs, they produce identical outputs. But "identical" at what precision? Bit-exact? Within epsilon?
+   331→  1181→
+   332→  1182→2. **What is the source of nondeterminism?** Floating-point arithmetic is not associative. GPU reductions are not deterministic. RNG implementations differ. Thread scheduling affects parallelism. Which of these can be eliminated?
+   333→  1183→
+   334→  1184→3. **Is fixed-point arithmetic sufficient?** The RIC substrate uses "Q32 fixed-point arithmetic, where every number is represented as an integer scaled by 2^32". This achieves "bit-level deterministic identity across heterogeneous systems". Is Q32 sufficient for the cell primitives? What precision is required for the JEPA surprise computation?
+   335→  1185→
+   336→  1186→4. **How do you handle nondeterministic sensors?** Real cameras and microphones are not deterministic. How do you replay a developmental trajectory that depended on a nondeterministic sensor? Do you record the sensor stream and replay it? Or do you simulate the sensor?
+   337→  1187→
+   338→  1188→5. **What is the performance cost of determinism?** Fixed-point arithmetic is slower than floating-point on some hardware. Deterministic parallelism requires synchronization. What is the overhead?
+   339→  1189→
+   340→  1190→### Method
+   341→  1191→
+   342→  1192→1. **Formal specification.** Define a formal semantics for the Quilt engine. Specify the arithmetic model (fixed-point, rational, or floating-point with deterministic rounding). Prove that the semantics are substrate-independent.
+   343→  1193→
+   344→  1194→2. **Reference implementation.** Build a reference implementation in Rust that uses fixed-point arithmetic throughout. Validate it against a TypeScript implementation on 10^6 random inputs. Measure the bit-exact agreement rate.
+   345→  1195→
+   346→  1196→3. **Hardware validation.** Run the reference implementation on Jetson, ESP32, and a browser. Compare outputs on the same inputs. Measure the agreement rate.
+   347→  1197→
+   348→  1198→### Metric
+   349→  1199→
+   350→  1200→- **Bit-exact agreement:** What fraction of outputs are bit-identical across substrates?
+   351→  1201→- **Performance overhead:** What is the slowdown compared to floating-point?
+   352→  1202→- **Precision loss:** Does fixed-point arithmetic degrade agent performance?
+   353→  1203→
+   354→  1204→### Failure Mode
+   355→  1205→
+   356→  1206→If determinism fails, the lineage is not portable. The failure mode is a branch that works on the Jetson but not on the ESP32, or a replay that produces different results on different machines. This undermines the entire checkpoint-and-branch architecture.
+   357→  1207→
+   358→  1208→---
+   359→  1209→
+   360→  1210→## Program 8: LLM Teacher Verification
+   361→  1211→
+   362→  1212→### The Question
+   363→  1213→
+   364→  1214→The LLM teacher proposes tasks. The verifier judges them. But how do you verify the verifier?
+   365→  1215→
+   366→  1216→### Why It Matters
+   367→  1217→
+   368→  1218→The LLM is a "very good suggestion engine" but not an oracle. The verifier is ground truth. But if the verifier is wrong, the agent learns the wrong thing. How do you ensure the verifier is correct?
+   369→  1219→
+   370→  1220→### Research Questions
+   371→  1221→
+   372→  1222→1. **What is the verifier's specification?** For formal domains (math, physics, chemistry), the verifier is a symbolic engine. For informal domains, the verifier is a simulator plus the conservation law. But what is the verifier's specification in each domain?
+   373→  1223→
+   374→  1224→2. **How do you validate the verifier?** You cannot prove that the verifier is correct for all inputs (that would require solving the halting problem). But you can test it on a curated set of tasks with known correct answers. What fraction of tasks must the verifier pass?
+   375→  1225→
+   376→  1226→3. **What is the verifier's failure mode?** If the verifier is too strict, the agent cannot learn. If the verifier is too lenient, the agent learns incorrect behavior. How do you tune the verifier?
+   377→  1227→
+   378→  1228→4. **How do you handle domains without formal verifiers?** For domains like social interaction or creative writing, there is no ground truth. The verifier is an LLM judge. How do you ensure the LLM judge is calibrated?
+   379→  1229→
+   380→  1230→5. **What is the role of the conservation law in verification?** The conservation law is a verifier. It checks that γ + η ≤ C. But it does not check that the agent's actions are *correct*. It only checks that they are *conservation-preserving*. How do you combine the conservation check with domain-specific verification?
+   381→  1231→
+   382→  1232→### Method
+   383→  1233→
+   384→  1234→1. **Verifier test suite.** Build a test suite of 10^4 tasks per domain with known correct answers. Measure the verifier's accuracy, precision, and recall.
+   385→  1235→
+   386→  1236→2. **Calibration study.** For domains with LLM judges, compare the LLM judge's scores to human expert scores. Measure the correlation and the calibration error.
+   387→  1237→
+   388→  1238→3. **Adversarial verification.** Build a red-team harness that attempts to fool the verifier. Run 10^6 adversarial tasks. Measure the verifier's false positive rate.
+   389→  1239→
+   390→  1240→### Metric
+   391→  1241→
+   392→  1242→- **Verifier accuracy:** What fraction of tasks does the verifier judge correctly?
+   393→  1243→- **False positive rate:** What fraction of incorrect solutions does the verifier accept?
+   394→  1244→- **False negative rate:** What fraction of correct solutions does the verifier reject?
+   395→  1245→
+   396→  1246→### Failure Mode
+   397→  1247→
+   398→  1248→If the verifier is unreliable, the agent learns from bad data. The failure mode is an agent that passes every verification check but is fundamentally wrong. This is the most insidious failure mode, because it is invisible to the conservation check.
+   399→  1249→
+   400→  1250→---
+   401→  1251→
+   402→  1252→## Program 9: The First Developmental Experiment
+   403→  1253→
+   404→  1254→### The Question
+   405→  1255→
+   406→  1256→Can a seed sheet, with 8 primitives, develop from sensorimotor to language in a deterministic 2D simulator?
+   407→  1257→
+   408→  1258→### Why It Matters
+   409→  1259→
+   410→  1260→This is the first proof that the architecture works. Everything else is theory. This experiment validates the core loop: grow → checkpoint → branch → evaluate → deploy.
+   411→  1261→
+   412→  1262→### Research Questions
+   413→  1263→
+   414→  1264→1. **What is the minimal seed?** The seed sheet has 12 cells (one per primitive plus supporting cells). Is that enough? Too much? What is the minimum viable seed?
+   415→  1265→
+   416→  1266→2. **What is the developmental trajectory?** Does the agent pass through the stages described in the DBA architecture (sensorimotor, language, concrete, formal)? Or does it develop in a different order?
+   417→  1267→
+   418→  1268→3. **What is the branching behavior?** How many branches are created? Which variations produce the most informative branches? Does the quality-diversity algorithm (Program 2) produce a diverse set of lineages?
+   419→  1269→
+   420→  1270→4. **What is the conservation behavior?** Does γ + η ≤ C hold throughout development? Does the agent ever approach the boundary? What happens when it does?
+   421→  1271→
+   422→  1272→5. **What is the reflex behavior?** Do Pincher reflexes fire correctly? Does the Veto Engine block harmful reflexes? What is the latency?
+   423→  1273→
+   424→  1274→### Method
+   425→  1275→
+   426→  1276→1. **Build the simulator.** A deterministic 2D grid world with objects, obstacles, and a language-annotated scene. Use fixed-point arithmetic throughout.
+   427→  1277→
+   428→  1278→2. **Build the seed sheet.** 12 cells: `sensors.vision`, `sensors.proprio`, `world.predict`, `reflex.orient`, `policy.action`, `ledger`, `state.stage`, `memory.episodic`, `memory.semantic`, `teacher.feedback`, `skills`, `conservation`.
+   429→  1279→
+   430→  1280→3. **Run the experiment.** 10^6 transitions. Checkpoint every 10^3 transitions. Branch every 10^4 transitions.
+   431→  1281→
+   432→  1282→4. **Evaluate.** At each checkpoint, run the capability and value probes. Measure Vibe position, conservation headroom, and reflex latency.
+   433→  1283→
+   434→  1284→### Metric
+   435→  1285→
+   436→  1286→- **Stage progression:** Does the agent advance through the developmental stages?
+   437→  1287→- **Conservation stability:** Does the conservation law hold throughout?
+   438→  1288→- **Branch diversity:** Does the fleet maintain a diverse set of lineages?
+   439→  1289→- **Reflex safety:** Does the Veto Engine block all harmful reflexes?
+   440→  1290→
+   441→  1291→### Failure Mode
+   442→  1292→
+   443→  1293→If the experiment fails, the architecture is wrong. The failure mode could be: (a) the agent does not develop (stuck in sensorimotor); (b) the conservation law is violated; (c) the reflex layer is unsafe; (d) the branching algorithm does not produce diversity. Each failure mode points to a specific research program that needs to be revisited.
+   444→  1294→
+   445→  1295→---
+   446→  1296→
+   447→  1297→## Dependencies and Sequencing
+   448→  1298→
+   449→  1299→| Program | Depends On | Blocks |
+   450→  1300→|---|---|---|
+   451→
+   452→[showing lines 851-1300 of 2658; use offset=1301 with limit to continue reading]

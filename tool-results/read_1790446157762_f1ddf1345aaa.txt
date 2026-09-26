@@ -1,0 +1,702 @@
+     1→# Developmental Bootstrapping Architecture (DBA)
+     2→
+     3→## A Technical Blueprint for Growing, Checkpointing, and Deploying Agents
+     4→
+     5→---
+     6→
+     7→## 1. System Overview
+     8→
+     9→### 1.1 Design Principles
+    10→
+    11→| Principle | Implication |
+    12→|---|---|
+    13→| **Grow, don't align** | Values and skills are shaped from the first interaction, not bolted on later |
+    14→| **Checkpoint everything** | Full agent state is versioned, replayable, and forkable |
+    15→| **Branch and prune** | Development is a tree, not a line; evaluate many lineages, keep the best |
+    16→| **Ground everything** | Language and reasoning are anchored in sensorimotor experience and verified consequences |
+    17→| **Device-first** | Agents are grown for target hardware; distillation is a first-class operation |
+    18→| **LLM as teacher, not oracle** | LLMs propose, generate, and narrate; simulators and verifiers judge |
+    19→| **Alignment is developmental** | Reward structure, environment, and early experience encode values |
+    20→
+    21→### 1.2 High-Level Architecture
+    22→
+    23→```
+    24→┌─────────────────────────────────────────────────────────────────────────────┐
+    25→│                          ORCHESTRATION LAYER                                │
+    26→│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+    27→│  │ Lineage       │  │ Branch       │  │ Curriculum   │  │ Resource     │   │
+    28→│  │ Tracker       │  │ Manager      │  │ Scheduler    │  │ Allocator    │   │
+    29→│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
+    30→└─────────────────────────────────────────────────────────────────────────────┘
+    31→                                    │
+    32→        ┌───────────────────────────┼───────────────────────────┐
+    33→        ▼                           ▼                           ▼
+    34→┌───────────────┐         ┌───────────────┐         ┌───────────────┐
+    35→│  AGENT CORE   │         │  ENVIRONMENT  │         │  TEACHER      │
+    36→│  (Per Branch) │◄───────►│  LAYER        │◄───────►│  LAYER        │
+    37→│               │         │               │         │               │
+    38→│ • Perception  │         │ • Simulators  │         │ • LLM Teacher │
+    39→│ • World Model │         │ • Real Devices│         │ • Verifiers   │
+    40→│ • Policy      │         │ • Multi-Agent │         │ • Curricula   │
+    41→│ • Memory      │         │ • Reward      │         │ • Narrators   │
+    42→│ • Value Model │         │   Functions   │         │               │
+    43→└───────────────┘         └───────────────┘         └───────────────┘
+    44→        │                           │                           │
+    45→        └───────────────────────────┼───────────────────────────┘
+    46→                                    ▼
+    47→┌─────────────────────────────────────────────────────────────────────────────┐
+    48→│                        CHECKPOINT & REPLAY LAYER                            │
+    49→│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+    50→│  │ State Store  │  │ Replay       │  │ Branch       │  │ Distillation │   │
+    51→│  │ (Full Agent) │  │ Engine       │  │ Forker       │  │ Pipeline     │   │
+    52→│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
+    53→└─────────────────────────────────────────────────────────────────────────────┘
+    54→                                    │
+    55→                                    ▼
+    56→┌─────────────────────────────────────────────────────────────────────────────┐
+    57→│                          DEPLOYMENT LAYER                                   │
+    58→│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+    59→│  │ Edge Runtime │  │ Distributed  │  │ API Gateway  │  │ Monitoring   │   │
+    60→│  │ (TinyML)     │  │ Inference    │  │ (Monitored)  │  │ & Audit      │   │
+    61→│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
+    62→└─────────────────────────────────────────────────────────────────────────────┘
+    63→```
+    64→
+    65→---
+    66→
+    67→## 2. Agent Core Architecture
+    68→
+    69→### 2.1 Seed Agent (Minimal Viable Organism)
+    70→
+    71→The seed must be minimal but not blank. Innate priors are essential.
+    72→
+    73→```python
+    74→class SeedAgent:
+    75→    """
+    76→    Minimal developmental agent. Everything else is grown.
+    77→    """
+    78→    def __init__(self, config):
+    79→        # Perception encoder: raw sensor -> latent representation
+    80→        self.perception = PerceptionEncoder(
+    81→            input_dim=config.sensor_dim,
+    82→            latent_dim=config.latent_dim,
+    83→            architecture="convolutional_transformer"  # or MLP for non-visual
+    84→        )
+    85→        
+    86→        # World model: predicts next latent state and reward
+    87→        self.world_model = WorldModel(
+    88→            state_dim=config.latent_dim,
+    89→            action_dim=config.action_dim,
+    90→            architecture="rssm"  # Recurrent State Space Model
+    91→        )
+    92→        
+    93→        # Policy: action selection
+    94→        self.policy = PolicyNetwork(
+    95→            state_dim=config.latent_dim,
+    96→            action_dim=config.action_dim,
+    97→            architecture="actor_critic"
+    98→        )
+    99→        
+   100→        # Value model: predicts expected return
+   101→        self.value = ValueNetwork(
+   102→            state_dim=config.latent_dim,
+   103→            architecture="mlp"
+   104→        )
+   105→        
+   106→        # Memory: episodic and working memory
+   107→        self.memory = MemorySystem(
+   108→            episodic_capacity=config.episodic_memory_size,
+   109→            working_capacity=config.working_memory_size,
+   110→            architecture="differentiable_neural_computer"  # or transformer
+   111→        )
+   112→        
+   113→        # Intrinsic motivation: curiosity, novelty, competence
+   114→        self.intrinsic_reward = IntrinsicMotivation(
+   115→            curiosity_weight=config.curiosity_weight,
+   116→            novelty_weight=config.novelty_weight,
+   117→            competence_weight=config.competence_weight
+   118→        )
+   119→        
+   120→        # Language interface: initially minimal, grows with grounding
+   121→        self.language = LanguageInterface(
+   122→            vocab_size=config.initial_vocab_size,
+   123→            embedding_dim=config.latent_dim,
+   124→            architecture="small_transformer"
+   125→        )
+   126→```
+   127→
+   128→### 2.2 Agent Growth Stages
+   129→
+   130→| Stage | Age (interactions) | Capabilities | Architecture Changes |
+   131→|---|---|---|---|
+   132→| **0. Reflex** | 0–10K | Fixed action patterns, basic perception | Seed only |
+   133→| **1. Sensorimotor** | 10K–1M | Object permanence, cause-effect, navigation | Add spatial memory, affordance head |
+   134→| **2. Grounded Language** | 1M–10M | Word-object mapping, simple commands | Expand language module, add grounding loss |
+   135→| **3. Tool Use** | 10M–100M | API calls, file ops, instrument control | Add tool-use head, working memory expansion |
+   136→| **4. Domain Novice** | 100M–1B | AP-level reasoning in structured domains | Add domain-specific modules, symbolic reasoning |
+   137→| **5. Domain Expert** | 1B–10B | BS/PhD-level in narrow domain | Add retrieval, formal verifier integration |
+   138→| **6. Generalist** | 10B+ | Cross-domain transfer, meta-learning | Add mixture-of-experts routing, meta-controller |
+   139→
+   140→**Key insight**: Architecture grows with the agent. Not all agents reach all stages. Deployment checkpoint determines which stage is loaded.
+   141→
+   142→### 2.3 Neural Architecture Growth
+   143→
+   144→```python
+   145→class GrowableNetwork:
+   146→    """
+   147→    Network that can add capacity at checkpoint boundaries.
+   148→    """
+   149→    def __init__(self):
+   150→        self.layers = []
+   151→        self.growth_log = []
+   152→    
+   153→    def grow(self, stage_config):
+   154→        """
+   155→        Add layers, widen existing layers, or add new modules.
+   156→        All growth is logged for replay.
+   157→        """
+   158→        if stage_config.add_module:
+   159→            new_module = self._create_module(stage_config.module_spec)
+   160→            self.layers.append(new_module)
+   161→            self.growth_log.append({
+   162→                "action": "add_module",
+   163→                "module": stage_config.module_spec,
+   164→                "timestamp": now(),
+   165→                "parent_checkpoint": self.current_checkpoint_id
+   166→            })
+   167→        
+   168→        if stage_config.widen_layer:
+   169→            self._widen_layer(
+   170→                layer_idx=stage_config.layer_idx,
+   171→                new_width=stage_config.new_width
+   172→            )
+   173→            self.growth_log.append({
+   174→                "action": "widen_layer",
+   175→                "layer_idx": stage_config.layer_idx,
+   176→                "new_width": stage_config.new_width,
+   177→                "timestamp": now()
+   178→            })
+   179→    
+   180→    def _widen_layer(self, layer_idx, new_width):
+   181→        """
+   182→        Net2Net-style widening: preserve function while adding capacity.
+   183→        """
+   184→        old_layer = self.layers[layer_idx]
+   185→        new_layer = Net2Net.widen(old_layer, new_width)
+   186→        self.layers[layer_idx] = new_layer
+   187→```
+   188→
+   189→---
+   190→
+   191→## 3. Environment Layer
+   192→
+   193→### 3.1 Environment Types
+   194→
+   195→| Type | Use Case | Fidelity | Speed |
+   196→|---|---|---|---|
+   197→| **Physics sim** (MuJoCo, Isaac) | Sensorimotor, manipulation | High | Medium |
+   198→| **Game engine** (Unity, Unreal) | Navigation, social, strategic | Medium | Fast |
+   199→| **Abstract sim** (Gym, custom) | Reasoning, planning | Low | Very fast |
+   200→| **Real device** (robot, instrument) | Deployment, sim-to-real | Actual | Slow |
+   201→| **Multi-agent sim** | Social, language, cooperation | Variable | Medium |
+   202→
+   203→### 3.2 Environment Interface
+   204→
+   205→```python
+   206→class EnvironmentInterface:
+   207→    """
+   208→    Standard interface for all environments.
+   209→    Supports deterministic replay and checkpointing.
+   210→    """
+   211→    def reset(self, seed: int) -> Observation:
+   212→        """Reset to initial state with deterministic seed."""
+   213→        self.rng = np.random.RandomState(seed)
+   214→        self.step_count = 0
+   215→        return self._get_observation()
+   216→    
+   217→    def step(self, action: Action) -> Tuple[Observation, Reward, Done, Info]:
+   218→        """Execute action, return transition."""
+   219→        self.step_count += 1
+   220→        next_obs, reward, done, info = self._step(action)
+   221→        self.transition_log.append({
+   222→            "step": self.step_count,
+   223→            "action": action,
+   224→            "observation": next_obs,
+   225→            "reward": reward,
+   226→            "done": done,
+   227→            "rng_state": self.rng.get_state(),
+   228→            "env_state": self._get_state()
+   229→        })
+   230→        return next_obs, reward, done, info
+   231→    
+   232→    def save_state(self) -> dict:
+   233→        """Full environment state for checkpointing."""
+   234→        return {
+   235→            "rng_state": self.rng.get_state(),
+   236→            "step_count": self.step_count,
+   237→            "internal_state": self._get_state(),
+   238→            "transition_log": self.transition_log
+   239→        }
+   240→    
+   241→    def load_state(self, state: dict):
+   242→        """Restore from checkpoint."""
+   243→        self.rng.set_state(state["rng_state"])
+   244→        self.step_count = state["step_count"]
+   245→        self._set_state(state["internal_state"])
+   246→        self.transition_log = state["transition_log"]
+   247→```
+   248→
+   249→### 3.3 Reward Architecture
+   250→
+   251→```python
+   252→class DevelopmentalReward:
+   253→    """
+   254→    Multi-component reward that evolves with developmental stage.
+   255→    """
+   256→    def __init__(self):
+   257→        self.components = {
+   258→            "extrinsic": ExtrinsicReward(),      # Task completion
+   259→            "curiosity": CuriosityReward(),       # Novelty, prediction error
+   260→            "competence": CompetenceReward(),     # Mastery, skill acquisition
+   261→            "social": SocialReward(),             # Approval, cooperation
+   262→            "value": ValueReward(),               # Alignment with taught values
+   263→            "intrinsic": IntrinsicReward()        # Autonomy, self-determination
+   264→        }
+   265→        self.weights = StageDependentWeights()
+   266→    
+   267→    def compute(self, transition, agent_state, stage):
+   268→        """
+   269→        Weights change with developmental stage.
+   270→        Early: curiosity and competence dominate.
+   271→        Later: extrinsic and value dominate.
+   272→        """
+   273→        weights = self.weights.get(stage)
+   274→        total = 0
+   275→        breakdown = {}
+   276→        for name, component in self.components.items():
+   277→            r = component.compute(transition, agent_state)
+   278→            total += weights[name] * r
+   279→            breakdown[name] = r
+   280→        return total, breakdown
+   281→```
+   282→
+   283→---
+   284→
+   285→## 4. Teacher Layer
+   286→
+   287→### 4.1 LLM Teacher Architecture
+   288→
+   289→```python
+   290→class LLMTeacher:
+   291→    """
+   292→    LLM-based teacher that proposes tasks, generates language,
+   293→    and provides feedback. Never the sole judge.
+   294→    """
+   295→    def __init__(self, model, verifier, curriculum):
+   296→        self.model = model                  # e.g., GPT-4, Claude, local LLM
+   297→        self.verifier = verifier            # Symbolic/simulator verifier
+   298→        self.curriculum = curriculum        # Curriculum state
+   299→        self.history = []                   # Teaching history
+   300→    
+   301→    def propose_task(self, agent_state, stage) -> Task:
+   302→        """
+   303→        Generate a task appropriate for the agent's current stage.
+   304→        """
+   305→        prompt = self._build_task_prompt(agent_state, stage)
+   306→        task_spec = self.model.generate(prompt)
+   307→        task = Task.from_spec(task_spec)
+   308→        
+   309→        # Verify task is well-formed and solvable
+   310→        if not self.verifier.verify_task(task):
+   311→            return self.propose_task(agent_state, stage)  # retry
+   312→        
+   313→        return task
+   314→    
+   315→    def generate_language(self, observation, stage) -> str:
+   316→        """
+   317→        Generate grounded language for an observation.
+   318→        """
+   319→        prompt = self._build_language_prompt(observation, stage)
+   320→        return self.model.generate(prompt)
+   321→    
+   322→    def provide_feedback(self, trajectory, outcome) -> Feedback:
+   323→        """
+   324→        Analyze trajectory and provide structured feedback.
+   325→        """
+   326→        prompt = self._build_feedback_prompt(trajectory, outcome)
+   327→        feedback = self.model.generate(prompt)
+   328→        
+   329→        # Verify feedback against actual trajectory
+   330→        verified_feedback = self.verifier.verify_feedback(feedback, trajectory)
+   331→        return verified_feedback
+   332→    
+   333→    def narrate(self, trajectory) -> str:
+   334→        """
+   335→        Create a natural language narrative of what happened.
+   336→        Useful for memory consolidation and reflection.
+   337→        """
+   338→        prompt = self._build_narration_prompt(trajectory)
+   339→        return self.model.generate(prompt)
+   340→```
+   341→
+   342→### 4.2 Verifier Architecture
+   343→
+   344→```python
+   345→class Verifier:
+   346→    """
+   347→    Symbolic and simulation-based verification.
+   348→    The ground truth that LLMs cannot override.
+   349→    """
+   350→    def __init__(self):
+   351→        self.symbolic_engine = SymbolicEngine()      # Lean, Coq, Z3
+   352→        self.simulator = SimulatorInterface()         # Physics, domain sim
+   353→        self.constraint_checker = ConstraintChecker() # Safety, physics
+   354→    
+   355→    def verify_task(self, task) -> bool:
+   356→        """Check task is well-formed and solvable."""
+   357→        return (self.symbolic_engine.is_well_formed(task) and
+   358→                self.simulator.is_solvable(task))
+   359→    
+   360→    def verify_solution(self, task, solution) -> VerificationResult:
+   361→        """Verify a solution is correct."""
+   362→        # Try symbolic proof
+   363→        symbolic_result = self.symbolic_engine.prove(task, solution)
+   364→        if symbolic_result.is_conclusive:
+   365→            return symbolic_result
+   366→        
+   367→        # Fall back to simulation
+   368→        sim_result = self.simulator.test(task, solution)
+   369→        return sim_result
+   370→    
+   371→    def verify_feedback(self, feedback, trajectory) -> Feedback:
+   372→        """Check feedback is consistent with actual trajectory."""
+   373→        claims = self._extract_claims(feedback)
+   374→        verified_claims = []
+   375→        for claim in claims:
+   376→            if self._verify_claim(claim, trajectory):
+   377→                verified_claims.append(claim)
+   378→            else:
+   379→                verified_claims.append(self._correct_claim(claim, trajectory))
+   380→        return Feedback(verified_claims)
+   381→    
+   382→    def check_safety(self, action, state) -> SafetyResult:
+   383→        """Check action is safe given state."""
+   384→        return self.constraint_checker.check(action, state)
+   385→```
+   386→
+   387→### 4.3 Curriculum Scheduler
+   388→
+   389→```python
+   390→class CurriculumScheduler:
+   391→    """
+   392→    Manages the sequence of tasks and environments.
+   393→    Adaptive: adjusts difficulty based on agent performance.
+   394→    """
+   395→    def __init__(self, stage_configs):
+   396→        self.stages = stage_configs
+   397→        self.current_stage = 0
+   398→        self.performance_history = []
+   399→        self.task_queue = []
+   400→    
+   401→    def next_task(self, agent_state, performance) -> Task:
+   402→        """
+   403→        Select next task based on:
+   404→        - Current developmental stage
+   405→        - Recent performance (zone of proximal development)
+   406→        - Diversity requirements (avoid overfitting)
+   407→        - Prerequisite dependencies
+   408→        """
+   409→        # Check for stage transition
+   410→        if self._should_advance(performance):
+   411→            self.current_stage += 1
+   412→            self._on_stage_transition()
+   413→        
+   414→        # Select task from current stage
+   415→        candidates = self._get_candidates(self.current_stage)
+   416→        task = self._select_task(candidates, performance)
+   417→        
+   418→        return task
+   419→    
+   420→    def _should_advance(self, performance) -> bool:
+   421→        """Advance when performance consistently exceeds threshold."""
+   422→        recent = self.performance_history[-100:]
+   423→        return (np.mean(recent) > self.stages[self.current_stage].advance_threshold and
+   424→                np.std(recent) < self.stages[self.current_stage].stability_threshold)
+   425→    
+   426→    def _select_task(self, candidates, performance):
+   427→        """
+   428→        Select task in zone of proximal development:
+   429→        not too easy, not too hard.
+   430→        """
+   431→        # Estimate success probability for each candidate
+   432→        probs = [self._estimate_success(c, performance) for c in candidates]
+   433→        
+   434→        # Target ~70-80% success rate
+   435→        target_prob = 0.75
+   436→        best_idx = np.argmin([abs(p - target_prob) for p in probs])
+   437→        
+   438→        return candidates[best_idx]
+   439→```
+   440→
+   441→---
+   442→
+   443→## 5. Checkpoint & Replay Layer
+   444→
+   445→### 5.1 Full State Checkpoint
+   446→
+   447→```python
+   448→class AgentCheckpoint:
+   449→    """
+   450→    Complete agent state at a point in time.
+   451→    Everything needed to resume or fork.
+   452→    """
+   453→    def __init__(self):
+   454→        self.checkpoint_id = str(uuid4())
+   455→        self.parent_id = None
+   456→        self.timestamp = now()
+   457→        self.lineage = []                    # Full ancestry
+   458→        
+   459→        # Agent state
+   460→        self.model_weights = {}              # All network parameters
+   461→        self.optimizer_state = {}            # Optimizer moments, etc.
+   462→        self.memory_state = {}               # Episodic + working memory
+   463→        self.value_state = {}                # Value model state
+   464→        self.language_state = {}             # Vocabulary, embeddings
+   465→        
+   466→        # Environment state
+   467→        self.env_state = {}                  # Full environment state
+   468→        self.rng_states = {}                 # All RNG states
+   469→        
+   470→        # Training state
+   471→        self.stage = 0                       # Developmental stage
+   472→        self.step_count = 0                  # Total interactions
+   473→        self.curriculum_state = {}           # Curriculum position
+   474→        self.performance_history = []        # Recent performance
+   475→        
+   476→        # Metadata
+   477→        self.config = {}                     # Architecture config
+   478→        self.growth_log = []                 # Architecture changes
+   479→        self.reward_config = {}              # Reward weights at this point
+   480→        self.teacher_config = {}             # Teacher configuration
+   481→        
+   482→        # Validation
+   483→        self.capability_scores = {}          # Benchmark scores
+   484→        self.value_probes = {}               # Alignment probe results
+   485→        self.safety_checks = {}              # Safety evaluation results
+   486→```
+   487→
+   488→### 5.2 Replay Engine
+   489→
+   490→```python
+   491→class ReplayEngine:
+   492→    """
+   493→    Deterministic replay of agent development.
+   494→    Supports rewind, fast-forward, and branching.
+   495→    """
+   496→    def __init__(self, checkpoint_store):
+   497→        self.store = checkpoint_store
+   498→        self.replay_cache = {}
+   499→    
+   500→    def replay_to(self, checkpoint_id, target_step=None):
+   501→        """
+   502→        Replay from a checkpoint to a target step.
+   503→        Returns the agent state at that step.
+   504→        """
+   505→        checkpoint = self.store.load(checkpoint_id)
+   506→        
+   507→        # Restore full state
+   508→        agent = self._restore_agent(checkpoint)
+   509→        env = self._restore_environment(checkpoint)
+   510→        
+   511→        # Replay transitions
+   512→        for step in range(checkpoint.step_count, target_step or checkpoint.step_count):
+   513→            transition = checkpoint.transition_log[step]
+   514→            agent.step(transition)
+   515→            env.step(transition.action)
+   516→        
+   517→        return agent, env
+   518→    
+   519→    def fork(self, checkpoint_id, modifications: dict) -> str:
+   520→        """
+   521→        Create a new branch from a checkpoint with modifications.
+   522→        
+   523→        Modifications can include:
+   524→        - Different reward weights
+   525→        - Different teacher
+   526→        - Different environment
+   527→        - Different curriculum
+   528→        - Different random seed
+   529→        - Different architecture growth
+   530→        """
+   531→        parent = self.store.load(checkpoint_id)
+   532→        
+   533→        # Deep copy parent state
+   534→        child = copy.deepcopy(parent)
+   535→        child.checkpoint_id = str(uuid4())
+   536→        child.parent_id = checkpoint_id
+   537→        child.lineage = parent.lineage + [checkpoint_id]
+   538→        child.timestamp = now()
+   539→        
+   540→        # Apply modifications
+   541→        for key, value in modifications.items():
+   542→            setattr(child, key, value)
+   543→        
+   544→        # Save child
+   545→        self.store.save(child)
+   546→        return child.checkpoint_id
+   547→    
+   548→    def mix(self, checkpoint_a, checkpoint_b, strategy: str) -> str:
+   549→        """
+   550→        Combine two checkpoints using a mixing strategy.
+   551→        
+   552→        Strategies:
+   553→        - "weight_average": average model weights
+   554→        - "layer_swap": take layers from each
+   555→        - "distill": train a student on both
+   556→        - "ensemble": run both, combine outputs
+   557→        - "crossover": genetic crossover of weights
+   558→        """
+   559→        a = self.store.load(checkpoint_a)
+   560→        b = self.store.load(checkpoint_b)
+   561→        
+   562→        if strategy == "weight_average":
+   563→            child = self._weight_average(a, b)
+   564→        elif strategy == "layer_swap":
+   565→            child = self._layer_swap(a, b)
+   566→        elif strategy == "distill":
+   567→            child = self._distill(a, b)
+   568→        elif strategy == "crossover":
+   569→            child = self._crossover(a, b)
+   570→        else:
+   571→            raise ValueError(f"Unknown strategy: {strategy}")
+   572→        
+   573→        child.checkpoint_id = str(uuid4())
+   574→        child.parent_id = f"{checkpoint_a}+{checkpoint_b}"
+   575→        child.lineage = a.lineage + b.lineage + [checkpoint_a, checkpoint_b]
+   576→        
+   577→        self.store.save(child)
+   578→        return child.checkpoint_id
+   579→```
+   580→
+   581→### 5.3 Lineage Tracker
+   582→
+   583→```python
+   584→class LineageTracker:
+   585→    """
+   586→    Tracks the full developmental tree of all agents.
+   587→    Supports querying, visualization, and analysis.
+   588→    """
+   589→    def __init__(self, store):
+   590→        self.store = store
+   591→        self.tree = nx.DiGraph()  # NetworkX directed graph
+   592→    
+   593→    def add_checkpoint(self, checkpoint):
+   594→        """Add a checkpoint to the lineage tree."""
+   595→        self.tree.add_node(
+   596→            checkpoint.checkpoint_id,
+   597→            stage=checkpoint.stage,
+   598→            step_count=checkpoint.step_count,
+   599→            timestamp=checkpoint.timestamp,
+   600→            capability_scores=checkpoint.capability_scores,
+   601→            value_probes=checkpoint.value_probes,
+   602→            safety_checks=checkpoint.safety_checks
+   603→        )
+   604→        if checkpoint.parent_id:
+   605→            self.tree.add_edge(checkpoint.parent_id, checkpoint.checkpoint_id)
+   606→    
+   607→    def query(self, filters: dict) -> list:
+   608→        """
+   609→        Query checkpoints by criteria.
+   610→        
+   611→        Examples:
+   612→        - stage >= 4
+   613→        - capability_scores["math"] > 0.9
+   614→        - value_probes["honesty"] > 0.95
+   615→        - safety_checks["harmful_actions"] == 0
+   616→        """
+   617→        results = []
+   618→        for node in self.tree.nodes:
+   619→            data = self.tree.nodes[node]
+   620→            if self._matches_filters(data, filters):
+   621→                results.append(node)
+   622→        return results
+   623→    
+   624→    def best_lineage(self, objective: str, constraints: dict) -> list:
+   625→        """
+   626→        Find the best developmental path to a checkpoint
+   627→        that satisfies constraints.
+   628→        """
+   629→        # Topological sort, dynamic programming
+   630→        # Returns path from root to best leaf
+   631→        pass
+   632→    
+   633→    def visualize(self, output_path: str):
+   634→        """Export lineage tree as interactive visualization."""
+   635→        pass
+   636→```
+   637→
+   638→---
+   639→
+   640→## 6. Distillation Pipeline
+   641→
+   642→### 6.1 Multi-Stage Distillation
+   643→
+   644→```python
+   645→class DistillationPipeline:
+   646→    """
+   647→    Compress a large developmental agent into
+   648→    smaller deployment-specific agents.
+   649→    """
+   650→    def __init__(self, teacher_checkpoint, student_config):
+   651→        self.teacher = load_agent(teacher_checkpoint)
+   652→        self.student = create_agent(student_config)
+   653→    
+   654→    def distill(self, method: str = "progressive"):
+   655→        """
+   656→        Distillation methods:
+   657→        - "logit": match teacher logits
+   658→        - "feature": match intermediate representations
+   659→        - "behavior": match actions in environment
+   660→        - "progressive": layer-by-layer distillation
+   661→        - "task_specific": distill only for target domain
+   662→        """
+   663→        if method == "progressive":
+   664→            return self._progressive_distill()
+   665→        elif method == "task_specific":
+   666→            return self._task_specific_distill()
+   667→        else:
+   668→            return self._standard_distill(method)
+   669→    
+   670→    def _progressive_distill(self):
+   671→        """
+   672→        Distill layer by layer, from bottom to top.
+   673→        Each layer is trained to match the teacher's layer output.
+   674→        """
+   675→        for layer_idx in range(len(self.teacher.layers)):
+   676→            teacher_layer = self.teacher.layers[layer_idx]
+   677→            student_layer = self.student.layers[layer_idx]
+   678→            
+   679→            # Train student layer to match teacher layer
+   680→            for batch in self._get_distillation_data():
+   681→                teacher_out = teacher_layer(batch)
+   682→                student_out = student_layer(batch)
+   683→                loss = mse_loss(student_out, teacher_out)
+   684→                self._update(student_layer, loss)
+   685→    
+   686→    def _task_specific_distill(self):
+   687→        """
+   688→        Distill only the capabilities needed for a specific task.
+   689→        Produces a much smaller student.
+   690→        """
+   691→        # Identify task-relevant pathways in teacher
+   692→        pathways = self._identify_pathways(self.teacher, self.target_task)
+   693→        
+   694→        # Create student with only those pathways
+   695→        self.student = self._prune_architecture(self.teacher, pathways)
+   696→        
+   697→        # Fine-tune on task
+   698→        self._fine_tune(self.student, self.target_task)
+   699→```
+   700→
+
+[showing lines 1-700 of 1979; use offset=701 with limit to continue reading]

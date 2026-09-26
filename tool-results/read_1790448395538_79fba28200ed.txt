@@ -1,0 +1,435 @@
+     1→// QUILT-DBA — the developmental agent as a sheet.
+     2→//
+     3→// The declaration IS the build. seed3 §4's seed sheet, instantiated cell by
+     4→// cell on the vendored quilt engine (patches 1-12, verbatim copy from
+     5→// quilt-quant/engine). Eight primitives, twelve declared paths, one
+     6→// conservation law:
+     7→//
+     8→//   sensors ──► world.predict (JEPA) ──► conservation (γ+η ≤ C) ──► policy.action (Z_out)
+     9→//      │              │                        │                        │
+    10→//      ▼              ▼                        ▼                        ▼
+    11→//   memory.episodic (GC-merge) ◄───────── ledger (DoubleEntry)      env.step
+    12→//      │                                       ▲                        │
+    13→//      ▼                                       │                        ▼
+    14→//   state.stage (Vibe) ◄── ledger.learning_progress ◄── surprise ──────┘
+    15→//      │
+    16→//      (position ≥ 1.0) ──► GROW: sensors.language + teacher.label, stage 1→2
+    17→//
+    18→// The world driver is a program cell (driver.step) + a driver script
+    19→// (dba/driver.mjs). Each evaluation is one pass through the chain above —
+    20→// the recomputation chain IS the developmental step.
+    21→//
+    22→// Fixed-point doctrine (seed3 §4.1): every world, model, ledger and vibe
+    23→// value that feeds a decision is an INTEGER (x1000 scaled). The only floats
+    24→// in the sheet are display fields on the labeled JEV mock (confidence,
+    25→// probabilities) which never feed back into integer state.
+    26→
+    27→import { MothVault, cachePool } from '../shared/moth.mjs';
+    28→
+    29→// ── grid world constants (fixed, deterministic) ──────────────────────────────
+    30→// 16x16 grid, moves N/E/S/W + stay. Cell codes: 0 empty, 1 wall/blocked, 2 reward.
+    31→const W0 = [[4,4],[4,5],[11,4],[11,5],[4,11],[4,10],[11,11],[11,10],[7,7],[8,7],[7,8],[8,8]];
+    32→const W4 = W0.concat([[2,8],[3,8],[12,7],[12,8],[7,2],[8,2],[7,13],[8,13],[2,3],[13,3],[2,12],[13,12]]);
+    33→export const TASKS = [
+    34→  { id: 0, name: 'forage-static',    nReward: 4, driftEvery: 0,   walls: W0, difficulty: 400 },
+    35→  { id: 1, name: 'forage-drift-400', nReward: 4, driftEvery: 400, walls: W0, difficulty: 600 },
+    36→  { id: 2, name: 'forage-drift-150', nReward: 4, driftEvery: 150, walls: W0, difficulty: 800 },
+    37→  { id: 3, name: 'forage-sparse',    nReward: 2, driftEvery: 0,   walls: W0, difficulty: 300 },
+    38→  { id: 4, name: 'forage-maze',      nReward: 6, driftEvery: 0,   walls: W4, difficulty: 700 },
+    39→];
+    40→
+    41→export const SCALES = {
+    42→  C_x1000: 1585,            // conservation budget: log2(3) = 1.585 bits, x1000
+    43→  tolerance: 1e-9,          // seed3 §12.2 boundary tolerance (moot on exact ints; receipted)
+    44→  jepaLr: 250,              // JEPA delta-rule step (x1000 weight units per err*feature)
+    45→  wClampLo: -4000, wClampHi: 8000,
+    46→  surpriseCodeK: 400,       // surprise = 400*Σ code_err² + 40*|d_err|  (x1000)
+    47→  surpriseDistK: 40,
+    48→  curiosityAlphaNum: 2, curiosityAlphaDen: 100, curiosityThreshold: 300,
+    49→  gammaStay: 100, gammaOrient: 150, gammaMove: 250, gammaCuriosity: 450,
+    50→  velAlphaNum: 2, velAlphaDen: 100,   // velocity = EWMA of -surprise improvement
+    51→  posRatchetDiv: 10,                  // position += max(0, velocity)/10  (receipted scale)
+    52→  rewardPosInc: 20,                   // position += 20 per reward eaten (x1000 units)
+    53→  growthPosition: 1000,               // position 1.0 (x1000) → sheet grows, stage 1→2
+    54→  jevEvery: 100,                      // JEV consult cadence (evals)
+    55→  randomSwitchEvery: 600,             // arm D unguided switch cadence
+    56→  minTenure: 300,                     // escalate-to-teacher rule: switch only after tenure
+    57→  qrcEvery: 4,                        // QRC reservoir evolve cadence (receipted)
+    58→  episodicCap: 256, semanticCap: 64, historyCap: 8,
+    59→};
+    60→
+    61→// ── the SEED SHEET declaration (the 12 paths of seed3 §4 + session wiring) ──
+    62→export const SEED_DECLARATION = [
+    63→  { path: 'sensors.vision',      primitive: 'Z_in',         kind: 'value',    role: 'grid observation: 4 neighbor codes + dist + bearing + salience (world driver writes)' },
+    64→  { path: 'sensors.proprio',     primitive: 'Z_in',         kind: 'value',    role: 'position + last action' },
+    65→  { path: 'world.predict',       primitive: 'JEPA',         kind: 'program',  role: 'predicts next observation from sensors + memory; surprise = squared prediction error (x1000); weights live in world.predict.w (cells)' },
+    66→  { path: 'reflex.orient',       primitive: 'Z_out/pincher',kind: 'listener', role: 'fires when sensors.vision salience > 0.8; sets immediate orient action; NO teacher consult' },
+    67→  { path: 'policy.action',       primitive: 'Z_out',        kind: 'program',  role: 'greedy-toward-reward + curiosity bonus; inputs world.predict + ledger.curiosity + teacher.feedback' },
+    68→  { path: 'ledger',              primitive: 'DoubleEntry',  kind: 'value',    role: 'γ = action compute cost proxy, η = world.predict surprise, C = 1.585; curiosity + learning_progress live here' },
+    69→  { path: 'state.stage',         primitive: 'Vibe',         kind: 'value',    role: 'position + velocity; velocity = ledger.learning_progress = EWMA of competence = EWMA of -surprise improvement' },
+    70→  { path: 'memory.episodic',     primitive: 'GC',           kind: 'value',    role: 'bounded ring (merge phase, cap 256): transitions + direction visits' },
+    71→  { path: 'memory.semantic',     primitive: 'GC',           kind: 'value',    role: 'reward-site map (decay phase, cap 64): count/ema per site' },
+    72→  { path: 'teacher.feedback',    primitive: 'Murmur',       kind: 'program',  role: 'OFFLINE deterministic teacher (label teacher:offline-rule, NO LLM this session): quadrant-deficit bias' },
+    73→  { path: 'skills',              primitive: 'Graph',        kind: 'value',    role: 'β₁ = E − V + C over the skill/cell graph, tracked over time' },
+    74→  { path: 'conservation',        primitive: 'DoubleEntry',  kind: 'program',  role: 'ENFORCED: γ + η ≤ 1.585 per transition; violation → driver refuses, receipts, keeps prior state (no opcode for violation)' },
+    75→  { path: 'curriculum.next_task',primitive: 'Murmur/JEV',   kind: 'program',  role: 'LABELED MOCK typed-decision oracle (live:false, mock:true): noul/choice/score, thresholds >0.95 execute / 0.70-0.95 escalate / <0.70 discard' },
+    76→  { path: 'qrc.reservoir',       primitive: 'JEPA/QRC',     kind: 'program',  role: 'MOTH reservoir (offline vault streamFor + cached REAL packets, all reads labeled live:false mock:true) reading sensors.history' },
+    77→];
+    78→
+    79→// ── cell code: the world driver (program cell driver.step) ───────────────────
+    80→// One call = one evaluation = one pass through the developmental chain.
+    81→const DRIVER_STEP = [
+    82→"const rt = runtime;",
+    83→"const audit = input && input.audit ? [] : null;",
+    84→"const rd = async (id) => { const v = await rt.get(id); const d = (v && v.status !== 'error') ? v.data : undefined; if (audit) audit.push(id); return d; };",
+    85→"const DIRS = [[0,-1],[1,0],[0,1],[-1,0]];",
+    86→"const cfg = await rd('env.cfg'); const meta = await rd('run.meta'); const env = Object.assign({}, await rd('env.state'));",
+    87→"const i = (input && input.i !== undefined) ? input.i : meta.evalIndex;",
+    88→"let ra = (await rd('env.rng')).a; const rnd = () => { ra = (ra + 0x6D2B79F5) | 0; let t = Math.imul(ra ^ (ra >>> 15), 1 | ra); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };",
+    89→"const isBlocked = (task, x, y) => { if (x < 0 || y < 0 || x >= cfg.size || y >= cfg.size) return true; const ws = cfg.tasks[task].walls; for (let k = 0; k < ws.length; k++) if (ws[k][0] === x && ws[k][1] === y) return true; return false; };",
+    90→"const codeAt = (task, rewards, x, y) => { if (isBlocked(task, x, y)) return 1; for (let k = 0; k < rewards.length; k++) if (rewards[k][0] === x && rewards[k][1] === y) return 2; return 0; };",
+    91→"const distR = (rewards, x, y) => { let m = 30; for (let k = 0; k < rewards.length; k++) { const dd = Math.abs(rewards[k][0] - x) + Math.abs(rewards[k][1] - y); if (dd < m) m = dd; } return m; };",
+    92→"const placeRewards = (task, n, avoid) => { const rs = []; let guard = 0; while (rs.length < n && guard++ < 800) { const x = Math.floor(rnd() * cfg.size), y = Math.floor(rnd() * cfg.size); if (isBlocked(task, x, y)) continue; if (x === avoid[0] && y === avoid[1]) continue; let hit = false; for (let k = 0; k < rs.length; k++) if (rs[k][0] === x && rs[k][1] === y) hit = true; if (!hit) rs.push([x, y]); } return rs; };",
+    93→"// 2. world-side time: drift event (rewards relocate on the task's timer)",
+    94→"let driftEvent = false; const tdef = cfg.tasks[env.task];",
+    95→"if (tdef.driftEvery > 0 && i > 0 && (i % tdef.driftEvery === 0)) { env.rewards = placeRewards(env.task, tdef.nReward, [env.x, env.y]); env.drifts++; driftEvent = true; }",
+    96→"// 3. sensors (Z_in): present-world observation only — no future cells exist to read",
+    97→"const obs = { c: [0,1,2,3].map(d => codeAt(env.task, env.rewards, env.x + DIRS[d][0], env.y + DIRS[d][1])), d: distR(env.rewards, env.x, env.y) };",
+    98→"let bearing = 4, bb = obs.d; for (let d = 0; d < 4; d++) { if (obs.c[d] === 1) continue; const dd = distR(env.rewards, env.x + DIRS[d][0], env.y + DIRS[d][1]); if (dd < bb) { bb = dd; bearing = d; } }",
+    99→"obs.bearing = bearing; obs.salience_x1000 = Math.max(0, Math.min(1000, 1000 - 150 * obs.d));",
+   100→"// 4. push sensors.vision — reflex.orient listener fires here if salience > 0.8",
+   101→"await rt.set('sensors.vision', obs);",
+   102→"// 5. JEPA: learn the transition observed since last eval; η = its squared error (x1000)",
+   103→"const prevLast = await rd('world.predict.last');",
+   104→"const obsPrev = prevLast ? prevLast.obs : obs.c.concat([obs.d]); const lastAction = prevLast ? prevLast.action : 4;",
+   105→"const wp = await rt.call('world.predict', { obsPrev: obsPrev, action: lastAction, obsNow: obs.c.concat([obs.d]), learn: true });",
+   106→"const eta = wp.data.surprise_x1000; const etaPrev = prevLast ? prevLast.eta_x1000 : eta;",
+   107→"// 6-7. ledger + teacher (Murmur, offline rule)",
+   108→"const ledPrev = await rd('ledger');",
+   109→"const led = Object.assign({}, ledPrev);",
+   110→"led.eta_x1000 = eta; led.eta_ewma_x1000 = led.eta_ewma_x1000 + Math.trunc((eta - led.eta_ewma_x1000) * cfg.s.curiosityAlphaNum / cfg.s.curiosityAlphaDen);",
+   111→"led.headroom_x1000 = Math.max(0, Math.min(cfg.s.C_x1000, cfg.s.C_x1000 - cfg.s.gammaMove - eta));",
+   112→"const fb = (await rt.call('teacher.feedback', {})).data; await rt.set('teacher.feedback.last', fb);",
+   113→"// 8. curriculum: JEV-gated (arm A/B) or unguided-random (arm D, gate off = telemetry only)",
+   114→"let switchEvent = false; let jev = null;",
+   115→"const histCell = await rd('curriculum.history');",
+   116→"if (meta.jevGated) { if (i % cfg.s.jevEvery === 0) { jev = (await rt.call('curriculum.next_task', {})).data;",
+   117→"  if (jev.routed !== null && jev.routed !== env.task) { env.task = jev.routed; env.rewards = placeRewards(env.task, cfg.tasks[env.task].nReward, [env.x, env.y]); env.switches++; env.tenure = 0; switchEvent = true; } } }",
+   118→"else { if (i > 0 && i % cfg.s.randomSwitchEvery === 0) { const t = Math.floor(rnd() * cfg.tasks.length); if (t !== env.task) { env.task = t; env.rewards = placeRewards(t, cfg.tasks[t].nReward, [env.x, env.y]); env.switches++; env.tenure = 0; switchEvent = true; } } ",
+   119→"  if (i % cfg.s.jevEvery === 0) { jev = (await rt.call('curriculum.next_task', {})).data; jev.telemetryOnly = true; } }",
+   120→"if (jev) { const jc = Object.assign({}, histCell); if (switchEvent) { jc.choices = jc.choices.concat([env.task]).slice(-10); } await rt.set('curriculum.next_task.last', jev); await rt.set('curriculum.history', jc); }",
+   121→"env.tenure = env.tenure + 1;",
+   122→"// 9. policy (Z_out): greedy-toward-reward + curiosity bonus, respects reflex override",
+   123→"const act = (await rt.call('policy.action', {})).data;",
+   124→"// 10. conservation: γ(action) + η(last observed transition) ≤ C — the fence",
+   125→"const chk = (await rt.call('conservation.check', { gamma_x1000: act.gamma_x1000, eta_x1000: eta })).data;",
+   126→"const enforced = meta.conservationEnforced;",
+   127→"const allowed = chk.ok || !enforced;",
+   128→"let refusalKind = null;",
+   129→"if (!chk.ok) { refusalKind = i <= 100 ? 'warmup' : (switchEvent || driftEvent) ? 'post-switch' : 'steady';",
+   130→"  const cs = await rd('conservation.state'); const cs2 = Object.assign({}, cs);",
+   131→"  if (enforced) { cs2.refusals_total++; cs2.by_kind[refusalKind] = (cs2.by_kind[refusalKind] || 0) + 1; }",
+   132→"  else { cs2.by_kind.ablated_would_refuse = (cs2.by_kind.ablated_would_refuse || 0) + 1; }",
+   133→"  cs2.refusal_log = cs2.refusal_log.concat([{ at: i, g: act.gamma_x1000, e: eta, sum: chk.sum_x1000, kind: refusalKind, enforced: enforced }]).slice(-1000);",
+   134→"  cs2.last_check = chk; await rt.set('conservation.state', cs2); }",
+   135→"// 11-12. env.step + memory append (refused → prior state kept: no move, no append, no commit)",
+   136→"let ate = 0;",
+   137→"if (allowed) {",
+   138→"  let nx = env.x, ny = env.y; if (act.action < 4) { const tx = env.x + DIRS[act.action][0], ty = env.y + DIRS[act.action][1]; if (!isBlocked(env.task, tx, ty)) { nx = tx; ny = ty; } }",
+   139→"  env.x = nx; env.y = ny;",
+   140→"  for (let k = 0; k < env.rewards.length; k++) if (env.rewards[k][0] === nx && env.rewards[k][1] === ny) { env.rewards.splice(k, 1); ate = 1; env.eaten++; env.respawns++; const nr = placeRewards(env.task, 1, [nx, ny]); env.rewards = env.rewards.concat(nr); break; }",
+   141→"  const mem = await rd('memory.episodic'); const mem2 = Object.assign({}, mem);",
+   142→"  if (act.action < 4) mem2.dirVisits = mem2.dirVisits.map((v, k) => k === act.action ? v + 1 : v);",
+   143→"  mem2.ring = mem2.ring.concat([{ t: i, x: env.x, y: env.y, a: act.action, e: eta, r: ate }]);",
+   144→"  if (mem2.ring.length > cfg.s.episodicCap) { mem2.merged++; mem2.ring = mem2.ring.slice(mem2.ring.length - cfg.s.episodicCap); }",
+   145→"  await rt.set('memory.episodic', mem2);",
+   146→"  if (ate) { const sem = await rd('memory.semantic'); const key = 's' + nx + '_' + ny; const prev2 = sem.map[key] || { count: 0, ema: 0 };",
+   147→"    const sem2 = Object.assign({}, sem); sem2.map[key] = { count: prev2.count + 1, ema: Math.trunc((prev2.ema * 9 + 1000) / 10) }; sem2.decays++;",
+   148→"    const keys = Object.keys(sem2.map); if (keys.length > cfg.s.semanticCap) { delete sem2.map[keys[0]]; }",
+   149→"    await rt.set('memory.semantic', sem2); }",
+   150→"  led.gamma_x1000 = act.gamma_x1000; led.committed_transitions++; led.committed = true;",
+   151→"} else { led.gamma_x1000 = 0; led.committed = false; }",
+   152→"led.curiosity_x1000 = led.eta_ewma_x1000;",
+   153→"// 13. vibe: velocity = EWMA of -surprise improvement; position ratchets on allowed transitions",
+   154→"const stPrev = await rd('state.stage'); const st = Object.assign({}, stPrev);",
+   155→"const improvement = etaPrev - eta;",
+   156→"st.velocity = st.velocity + Math.trunc((improvement - st.velocity) * cfg.s.velAlphaNum / cfg.s.velAlphaDen);",
+   157→"if (allowed) st.position_x1000 = st.position_x1000 + Math.trunc(Math.max(0, st.velocity) / cfg.s.posRatchetDiv) + cfg.s.rewardPosInc * ate;",
+   158→"st.stage = st.position_x1000 >= cfg.s.growthPosition && st.stage === 1 ? st.stage : st.stage;",
+   159→"await rt.set('state.stage', st); await rt.set('ledger', led);",
+   160→"// 14. QRC reservoir (every 4th eval, receipted cadence) over sensors.history",
+   161→"const hcell = await rd('sensors.history');",
+   162→"const h2 = { cap: hcell.cap, ring: hcell.ring.concat([{ c: obs.c, d: obs.d }]).slice(-hcell.cap) };",
+   163→"await rt.set('sensors.history', h2);",
+   164→"if (i % cfg.s.qrcEvery === 0) { await rt.call('qrc.reservoir', { obs: obs.c.concat([obs.d]) }); }",
+   165→"// 15. skills graph: consolidations + β₁ tracking",
+   166→"const sk = await rd('skills'); const sk2 = Object.assign({}, sk); let skDirty = false;",
+   167→"const addNode = (name, edges) => { if (sk2.flags[name]) return; sk2.flags[name] = i; sk2.nodes = sk2.nodes.concat([name]); sk2.edges = sk2.edges.concat(edges); sk2.V = sk2.V + 1; sk2.E = sk2.E + edges.length; skDirty = true; };",
+   168→"if (env.eaten >= 5) addNode('reach-reward', ['reach-reward->policy.action']);",
+   169→"if (sk2.flags.last_switch !== undefined && i - sk2.flags.last_switch === 20 && eta < 400) { addNode('drift-recover', ['drift-recover->world.predict']); }",
+   170→"if (led.eta_ewma_x1000 < 300) { sk2.stableRun = (sk2.stableRun || 0) + 1; } else { sk2.stableRun = 0; }",
+   171→"if (sk2.stableRun >= 500) addNode('stable-model', ['stable-model->state.stage']);",
+   172→"if (switchEvent || driftEvent) sk2.flags.last_switch = i;",
+   173→"if (i % 500 === 0) { sk2.history = sk2.history.concat([{ at: i, V: sk2.V, E: sk2.E, C: sk2.C, beta1: sk2.E - sk2.V + sk2.C }]).slice(-40); skDirty = true; }",
+   174→"if (skDirty) await rt.set('skills', sk2);",
+   175→"// 16. growth: position ≥ 1.0 at stage 1 → the sheet grows (driver script registers cells)",
+   176→"if (st.stage === 1 && st.position_x1000 >= cfg.s.growthPosition) {",
+   177→"  const gp = await rd('growth.pending');",
+   178→"  if (!gp.needed) { await rt.set('growth.pending', { needed: true, at: i, from_stage: 1, position_x1000: st.position_x1000 }); }",
+   179→"}",
+   180→"// 17. post-growth: teacher.label writes sensors.language (new Murmur edge, wired at growth)",
+   181→"const gf = await rd('growth.flag');",
+   182→"if (gf.languageWired) { await rt.call('teacher.label', {}); }",
+   183→"// 18. commit proprio/meta; return the evaluation receipt",
+   184→"await rt.set('sensors.proprio', { x: env.x, y: env.y, lastAction: act.action });",
+   185→"await rt.set('env.state', env); await rt.set('env.rng', { a: ra });",
+   186→"await rt.set('run.meta', Object.assign({}, meta, { evalIndex: i + 1 }));",
+   187→"const out = { i: i, allowed: allowed, action: act.action, gamma_x1000: act.gamma_x1000, eta_x1000: eta, ate: ate, refusedKind: refusalKind, position_x1000: st.position_x1000, velocity: st.velocity, stage: st.stage, task: env.task, switchEvent: switchEvent, driftEvent: driftEvent, surprise: wp.data.surprise_x1000, chk: chk.ok, policy_reads: act.reads };",
+   188→"if (audit) out.audit = audit;",
+   189→"return out;",
+   190→].join('\n');
+   191→
+   192→// ── JEPA cell: declared formula, integer weights (cells), delta rule ─────────
+   193→const WORLD_PREDICT = [
+   194→"const rt = runtime;",
+   195→"// JEPA (declared formula v1, receipted): for dir outputs i<4, φ_i = [1, c_i, c_a, d];",
+   196→"// d output predicts (d' - d + 1) ∈ {0,1,2} from φ_4 = [1, c_a, stay]. surprise = 400*Σ code_err² + 40*|d_err| (x1000).",
+   197→"const cfg = (await rt.get('env.cfg')).data;",
+   198→"const w = ((await rt.get('world.predict.w')).data).slice();",
+   199→"const op = input.obsPrev, a = input.action, on = input.obsNow;",
+   200→"const stay = a === 4 ? 1 : 0; const ca = a < 4 ? op[a] : 0;",
+   201→"const pred = [0,0,0,0,0]; const err = [0,0,0,0,0];",
+   202→"for (let k = 0; k < 4; k++) { const f = [1, op[k], ca, op[4]];",
+   203→"  let s = 0; for (let j = 0; j < 4; j++) s += w[k*4+j] * f[j];",
+   204→"  pred[k] = Math.max(0, Math.min(2, Math.trunc(s / 1000))); err[k] = on[k] - pred[k];",
+   205→"  if (input.learn) { for (let j = 0; j < 4; j++) { const fu = Math.max(-4, Math.min(4, f[j])); w[k*4+j] = Math.max(cfg.s.wClampLo, Math.min(cfg.s.wClampHi, w[k*4+j] + Math.trunc(err[k] * fu * cfg.s.jepaLr))); } } }",
+   206→"const f4 = [1, ca, stay, 0]; let s4 = 0; for (let j = 0; j < 4; j++) s4 += w[16+j] * f4[j];",
+   207→"pred[4] = Math.max(0, Math.min(2, Math.trunc(s4 / 1000))); err[4] = (on[4] - op[4] + 1) - pred[4];",
+   208→"if (input.learn) { for (let j = 0; j < 4; j++) { const fu = Math.max(-4, Math.min(4, f4[j])); w[16+j] = Math.max(cfg.s.wClampLo, Math.min(cfg.s.wClampHi, w[16+j] + Math.trunc(err[4] * fu * cfg.s.jepaLr))); } }",
+   209→"const surprise = cfg.s.surpriseCodeK * (err[0]*err[0] + err[1]*err[1] + err[2]*err[2] + err[3]*err[3]) + cfg.s.surpriseDistK * Math.abs(err[4]);",
+   210→"await rt.set('world.predict.w', w);",
+   211→"const last = { obs: on, action: a, pred: pred, err: err, surprise_x1000: surprise, eta_x1000: surprise, rule: 'jepa-v1: phi=[1,c_i,c_a,d]; d-output predicts (d\\'-d+1); surprise=400*Σcode_err²+40*|d_err| (x1000)' };",
+   212→"await rt.set('world.predict.last', last);",
+   213→"return { pred: pred, err: err, surprise_x1000: surprise };",
+   214→].join('\n');
+   215→
+   216→// ── conservation cell: the fence. No opcode for violation. ───────────────────
+   217→const CONSERVATION_CHECK = [
+   218→"const rt = runtime;",
+   219→"// input {gamma_x1000, eta_x1000} — or explicit override for the boundary test",
+   220→"const led = (await rt.get('ledger')).data;",
+   221→"const g = Math.round(input.gamma_x1000), e = Math.round(input.eta_x1000);",
+   222→"const C = input.C_x1000 !== undefined ? Math.round(input.C_x1000) : led.C_x1000;",
+   223→"const sum = g + e; const ok = sum <= C;",
+   224→"return { ok: ok, sum_x1000: sum, budget_x1000: C, gamma_x1000: g, eta_x1000: e,",
+   225→"  tolerance: 1e-9, rule: 'gamma + eta <= C, C = log2(3) = 1.585 bits, fixed-point x1000 integers; violation refused by driver (no opcode for violation)' };",
+   226→].join('\n');
+   227→
+   228→// ── policy cell: greedy-toward-reward + curiosity bonus ──────────────────────
+   229→const POLICY_ACTION = [
+   230→"const rt = runtime;",
+   231→"// Z_out. Inputs (declared): world.predict + ledger.curiosity + teacher.feedback",
+   232→"// (+ sensors, memory visit deficits, reflex override, post-growth language).",
+   233→"const reads = [];",
+   234→"const rd2 = async (id) => { const v = await rt.get(id); reads.push(id); return (v && v.status !== 'error') ? v.data : undefined; };",
+   235→"const vis = await rd2('sensors.vision'); const led = await rd2('ledger'); const meta = await rd2('run.meta');",
+   236→"const fb = await rd2('teacher.feedback.last'); const mem = await rd2('memory.episodic'); const ovr = await rd2('policy.orient_override');",
+   237→"const cfg = await rd2('env.cfg');",
+   238→"const head = meta.curiosityThrottled ? led.headroom_x1000 : cfg.s.C_x1000; // arm B: no throttle",
+   239→"const visits = mem.dirVisits; let mv = 1; for (let k = 0; k < 4; k++) if (visits[k] > mv) mv = visits[k];",
+   240→"const scores = [0,0,0,0]; let usedC = false;",
+   241→"for (let k = 0; k < 4; k++) {",
+   242→"  if (vis.c[k] === 1) { scores[k] = -100000; continue; }",
+   243→"  let s = 0; if (vis.c[k] === 2) s += 5000; if (k === vis.bearing) s += 600;",
+   244→"  if (fb && fb.biasDir === k) s += fb.biasMag_x1000;",
+   245→"  if (led.curiosity_x1000 > cfg.s.curiosityThreshold) { s += Math.trunc(500 * head / cfg.s.C_x1000 * (1 - visits[k] / mv)); usedC = true; }",
+   246→"  scores[k] = s; }",
+   247→"let best = 0; for (let k = 1; k < 4; k++) if (scores[k] > scores[best]) best = k;",
+   248→"let action, gamma, orient = false;",
+   249→"if (ovr && ovr.active) { action = (ovr.dir < 4 && vis.c[ovr.dir] !== 1) ? ovr.dir : 4; gamma = cfg.s.gammaOrient; orient = true; }",
+   250→"else if (scores[best] <= -50000) { action = 4; gamma = cfg.s.gammaStay; }",
+   251→"else { action = best; gamma = usedC ? cfg.s.gammaCuriosity : cfg.s.gammaMove; }",
+   252→"if (action === 4) gamma = cfg.s.gammaStay;",
+   253→"// post-growth edge: teacher.label -> policy (language bias when curiosity is cold)",
+   254→"const lang = await rt.get('sensors.language');",
+   255→"if (lang && lang.status !== 'error' && lang.data && lang.data.biasDir !== null && lang.data.biasDir !== undefined && !orient && !usedC && action !== 4 && scores[action] < 5000) { if (vis.c[lang.data.biasDir] !== 1) { action = lang.data.biasDir; gamma = cfg.s.gammaMove; } }",
+   256→"await rt.set('policy.orient_override', { active: false, dir: null, at: -1 }); // one-shot reflex consumed",
+   257→"const out = { action: action, gamma_x1000: gamma, usedCuriosity: usedC, orient: orient, scores: scores, reads: reads };",
+   258→"await rt.set('policy.last', out);",
+   259→"return out;",
+   260→].join('\n');
+   261→
+   262→// ── reflex cell: pincher listener + action ───────────────────────────────────
+   263→const REFLEX_ACT = [
+   264→"const rt = runtime;",
+   265→"// Pincher: salience > 0.8 → immediate orient toward bearing. NO teacher consult.",
+   266→"const meta = (await rt.get('run.meta')).data;",
+   267→"const obs = caller && caller.metadata ? caller.metadata.current : input.value;",
+   268→"const dir = obs && obs.bearing !== undefined ? obs.bearing : 4;",
+   269→"const o = { active: true, dir: dir, at: meta.evalIndex, via: 'reflex.orient' };",
+   270→"await rt.set('policy.orient_override', o);",
+   271→"return o;",
+   272→].join('\n');
+   273→
+   274→// ── teacher cell: Murmur, OFFLINE deterministic rule ─────────────────────────
+   275→const TEACHER_FEEDBACK = [
+   276→"const rt = runtime;",
+   277→"// Murmur. Listens to ledger + state.stage + memory (semantic/episodic).",
+   278→"// OFFLINE RULE v1 (receipted, no LLM this session): bias toward the half-axis",
+   279→"// with the lower visit share; praise = learning_progress. label: teacher:offline-rule",
+   280→"const rd3 = async (id) => { const v = await rt.get(id); return (v && v.status !== 'error') ? v.data : undefined; };",
+   281→"const led = await rd3('ledger'); const mem = await rd3('memory.episodic'); const fbPrev = await rd3('teacher.feedback.last');",
+   282→"let xLo = 0, xHi = 0, yLo = 0, yHi = 0;",
+   283→"for (let k = 0; k < mem.ring.length; k++) { const e = mem.ring[k]; if (e.x < 8) xLo++; else xHi++; if (e.y < 8) yLo++; else yHi++; }",
+   284→"const dx = xHi - xLo, dy = yHi - yLo;",
+   285→"let biasDir = 4; if (Math.abs(dx) >= Math.abs(dy)) { biasDir = dx > 0 ? 3 : 1; } else { biasDir = dy > 0 ? 0 : 2; }",
+   286→"if (mem.ring.length < 8) biasDir = 4;",
+   287→"const out = { biasDir: biasDir, biasMag_x1000: 100, praise_x1000: led.learning_progress,",
+   288→"  label: 'teacher:offline-rule', rule: 'offline-rule-v1: quadrant-deficit bias + progress praise', seq: (fbPrev ? fbPrev.seq : 0) + 1 };",
+   289→"return out;",
+   290→].join('\n');
+   291→
+   292→// ── JEV cell: LABELED MOCK typed-decision oracle ─────────────────────────────
+   293→const CURRICULUM_NEXT = [
+   294→"const rt = runtime;",
+   295→"// LABELED MOCK JEV (no LLM/network this session). Typed decision: choice,",
+   296→"// with calibrated confidence; >0.95 execute, 0.70-0.95 escalate-to-teacher,",
+   297→"// <0.70 discard. Shape fidelity from cached REAL typesafe responses",
+   298→"// (quilt-cortex/.cache/typesafe-LIVE.json); all VALUES are session mock.",
+   299→"// Calibration rule (receipted): p_i ∝ 0.5*fit + 0.3*novelty + 0.2*continuity;",
+   300→"// fit = 1000 - |task difficulty - competence|, competence = 1000 - η_ewma/2,",
+   301→"// novelty = 1000/(1+plays in last 10), continuity = 400 if current task.",
+   302→"const rd4 = async (id) => { const v = await rt.get(id); return (v && v.status !== 'error') ? v.data : undefined; };",
+   303→"const led = await rd4('ledger'); const env = await rd4('env.state'); const meta = await rd4('run.meta'); const hist = await rd4('curriculum.history');",
+   304→"const cfg = await rd4('env.cfg');",
+   305→"const competence = Math.max(0, Math.min(1000, 1000 - Math.trunc(led.eta_ewma_x1000 / 2)));",
+   306→"const recent = hist.choices.slice(-10); const scores = [];",
+   307→"for (let t = 0; t < cfg.tasks.length; t++) { const fit = 1000 - Math.min(1000, Math.abs(cfg.tasks[t].difficulty - competence));",
+   308→"  let plays = 0; for (let k = 0; k < recent.length; k++) if (recent[k] === t) plays++;",
+   309→"  const nov = Math.trunc(1000 / (1 + plays)); const cont = t === env.task ? 400 : 0;",
+   310→"  scores.push(Math.trunc((500 * fit + 300 * nov + 200 * cont) / 1000)); }",
+   311→"let tot = 0; for (let t = 0; t < scores.length; t++) tot += scores[t]; if (tot <= 0) tot = 1;",
+   312→"const px = scores.map(s => Math.trunc(1000 * s / tot));",
+   313→"let best = 0; for (let t = 1; t < px.length; t++) if (px[t] > px[best]) best = t;",
+   314→"const conf = px[best] / 1000;",
+   315→"let routed = null, routedWhy = 'discard';",
+   316→"if (conf > 0.95) { routed = best; routedWhy = 'execute'; }",
+   317→"else if (conf >= 0.70) { routedWhy = 'escalate-to-teacher'; if (env.tenure >= cfg.s.minTenure) { routed = best; routedWhy = 'escalate-to-teacher:confirmed'; } }",
+   318→"return { type: 'choice', choice: best, confidence: conf, probabilities: px.map(p => p / 1000), probabilities_x1000: px,",
+   319→"  scores: scores, competence_x1000: competence, routed: routed, routedWhy: routedWhy, at: meta.evalIndex,",
+   320→"  mock: true, live: false, source: 'shape:quilt-cortex/.cache/typesafe-LIVE.json; values are session mock (deterministic rule above)' };",
+   321→].join('\n');
+   322→
+   323→// ── QRC cell: MOTH reservoir over sensors.history ────────────────────────────
+   324→const QRC_RESERVOIR = [
+   325→"const rt = runtime;",
+   326→"// MOTH quantum reservoir (offline session — every read labeled live:false/mock:true).",
+   327→"// Reservoir matrix A generated at sheet build from the offline vault streamFor",
+   328→"// + digest of cached REAL packets (moth-holdem.json, moth-e16.json).",
+   329→"const st = (await rt.get('qrc.state')).data;",
+   330→"const u = [input.obs[0], input.obs[1], input.obs[2], input.obs[3], Math.trunc(input.obs[4] / 10), 0];",
+   331→"const r = st.r; const A = st.A; const B = st.B; const nr = new Array(32);",
+   332→"for (let i = 0; i < 32; i++) { let s = 0;",
+   333→"  for (let j = 0; j < 32; j++) s += A[i*32+j] * r[j];",
+   334→"  for (let j = 0; j < 6; j++) s += B[i*6+j] * u[j];",
+   335→"  nr[i] = Math.max(-2000, Math.min(2000, Math.trunc(s / 1000))); }",
+   336→"let mean = 0, absSum = 0, signs = 0;",
+   337→"for (let i = 0; i < 32; i++) { mean += nr[i]; absSum += Math.abs(nr[i]); if (i > 0 && ((nr[i] >= 0) !== (nr[i-1] >= 0))) signs++; }",
+   338→"mean = Math.trunc(mean / 32);",
+   339→"st.r = nr; st.steps = st.steps + 1;",
+   340→"const feats = { f: [mean, signs, Math.trunc(absSum / 32), nr[0]], steps: st.steps, labels: st.labels };",
+   341→"await rt.set('qrc.state', st); await rt.set('qrc.features', feats);",
+   342→"return feats;",
+   343→].join('\n');
+   344→
+   345→// ── growth cell: teacher.label (registered at stage 1→2) ─────────────────────
+   346→const TEACHER_LABEL = [
+   347→"const rt = runtime;",
+   348→"// Murmur (growth cell, stage 1→2). Deterministic labeler -> sensors.language.",
+   349→"const rd5 = async (id) => { const v = await rt.get(id); return (v && v.status !== 'error') ? v.data : undefined; };",
+   350→"const led = await rd5('ledger'); const st = await rd5('state.stage'); const env = await rd5('env.state'); const meta = await rd5('run.meta');",
+   351→"let xLo = 0, xHi = 0, yLo = 0, yHi = 0; const mem = await rd5('memory.episodic');",
+   352→"for (let k = 0; k < mem.ring.length; k++) { const e = mem.ring[k]; if (e.x < 8) xLo++; else xHi++; if (e.y < 8) yLo++; else yHi++; }",
+   353→"const dx = xHi - xLo, dy = yHi - yLo; let biasDir = 4;",
+   354→"if (Math.abs(dx) >= Math.abs(dy)) { biasDir = dx > 0 ? 3 : 1; } else { biasDir = dy > 0 ? 0 : 2; }",
+   355→"const label = { text: 'stage:' + st.stage + ' task:' + env.task + ' eta:' + led.eta_x1000 + ' praise:' + led.learning_progress,",
+   356→"  label: 'teacher:offline-rule', biasDir: biasDir, at: meta.evalIndex };",
+   357→"await rt.set('sensors.language', label);",
+   358→"return label;",
+   359→].join('\n');
+   360→
+   361→// ── sheet assembly ───────────────────────────────────────────────────────────
+   362→export function buildSheet({ cachePaths = [], harvestShots = 256 } = {}) {
+   363→  const vault = new MothVault({ label: 'dba', offline: true });
+   364→  return (async () => {
+   365→    const harvest = await vault.harvest(harvestShots);
+   366→    const pool = cachePaths.length ? cachePool(cachePaths) : null;
+   367→    const qrcSeedLabel = [harvest.poolDigest, pool ? pool.poolDigest : 'no-real-cache'].join('|');
+   368→    const draw = vault.streamFor(harvest, 'dba:qrc:' + qrcSeedLabel);
+   369→    const A = [], B = [];
+   370→    for (let k = 0; k < 32 * 32; k++) A.push(Math.trunc((draw() * 2 - 1) * 500));
+   371→    for (let k = 0; k < 32 * 6; k++) B.push(Math.trunc((draw() * 2 - 1) * 200));
+   372→    const qrcLabels = {
+   373→      live: false, mock: true,
+   374→      why: 'offline session: reservoir weights from deterministic offline vault streamFor + digest of cached REAL packets; no network call this session',
+   375→      pool_digest: harvest.poolDigest, real_cache_digest: pool ? pool.poolDigest : null,
+   376→      real_cache_rows: pool ? pool.rows : 0, real_cache_numbers: pool ? pool.numbers.length : 0,
+   377→      real_cache_sources: pool ? pool.label.sources : [],
+   378→    };
+   379→
+   380→    const v = (id, value, description, primitive) => ({ id, kind: 'value', value, description, primitive });
+   381→    const p = (id, code, description, primitive, deps) => ({ id, kind: 'program', code, description, primitive, deps: deps || [] });
+   382→    const s = SCALES;
+   383→    const cells = [
+   384→      // ── state cells ──
+   385→      v('run.meta', { seed: 0, arm: 'A', evalIndex: 0, maxEvals: 0, jevGated: true, conservationEnforced: true, curiosityThrottled: true }, 'run identity + arm config', 'run'),
+   386→      v('env.cfg', { size: 16, tasks: TASKS.map(t => ({ name: t.name, nReward: t.nReward, driftEvery: t.driftEvery, walls: t.walls, difficulty: t.difficulty })), s: s }, 'world constants + fixed-point scales (receipted hole-fills)', 'world'),
+   387→      v('env.state', { task: 0, x: 8, y: 8, rewards: [], drifts: 0, eaten: 0, respawns: 0, switches: 0, tenure: 0 }, 'env_state: forage task, agent pos, reward cells', 'world'),
+   388→      v('env.rng', { a: 1 }, 'rng_state (mulberry32 u32) — checkpointed; ALL stochasticity flows through this cell', 'world'),
+   389→      v('sensors.vision', null, 'Z_in: {c[4], d, bearing, salience_x1000} — written by driver.step each eval', 'Z_in'),
+   390→      v('sensors.proprio', { x: 8, y: 8, lastAction: 4 }, 'Z_in: position + last action', 'Z_in'),
+   391→      v('sensors.history', { cap: s.historyCap, ring: [] }, 'Z_in ring for the QRC substrate', 'Z_in'),
+   392→      v('world.predict.w', new Array(20).fill(0), 'JEPA weights (cells!) — 4 dir outputs × [1,c_i,c_a,d] + d-output × [1,c_a,stay,0], x1000', 'JEPA'),
+   393→      v('world.predict.last', null, 'last JEPA transition: obs, action, pred, err, surprise_x1000', 'JEPA'),
+   394→      v('policy.orient_override', { active: false, dir: null, at: -1 }, 'reflex handoff to policy', 'Z_out/pincher'),
+   395→      v('policy.last', null, 'last policy decision + components', 'Z_out'),
+   396→      v('ledger', { gamma_x1000: 0, eta_x1000: 0, eta_ewma_x1000: 0, curiosity_x1000: 0, C_x1000: s.C_x1000, headroom_x1000: s.C_x1000, learning_progress: 0, refused_total: 0, committed_transitions: 0, committed: false }, 'DoubleEntry: γ compute-cost proxy, η = surprise, C = 1.585', 'DoubleEntry'),
+   397→      v('state.stage', { stage: 1, position_x1000: 0, velocity: 0, crossed_at: null }, 'Vibe: position/velocity on the developmental axis', 'Vibe'),
+   398→      v('memory.episodic', { ring: [], dirVisits: [0, 0, 0, 0], merged: 0 }, 'GC merge phase: bounded ring of transitions + direction visits', 'GC'),
+   399→      v('memory.semantic', { map: {}, decays: 0 }, 'GC decay phase: reward-site map {count, ema}', 'GC'),
+   400→      v('teacher.feedback.last', { biasDir: 4, biasMag_x1000: 100, praise_x1000: 0, label: 'teacher:offline-rule', rule: 'offline-rule-v1', seq: 0 }, 'last Murmur feedback', 'Murmur'),
+   401→      v('curriculum.next_task.last', null, 'last LABELED MOCK JEV decision', 'Murmur/JEV'),
+   402→      v('curriculum.history', { choices: [0] }, 'last 10 task choices (JEV novelty input)', 'Murmur/JEV'),
+   403→      v('qrc.state', { r: new Array(32).fill(0), A: A, B: B, steps: 0, labels: qrcLabels }, 'MOTH reservoir state + weights (from offline vault + cached REAL packets, labeled)', 'JEPA/QRC'),
+   404→      v('qrc.features', { f: [0, 0, 0, 0], steps: 0, labels: qrcLabels }, 'Z_in: reservoir features', 'Z_in'),
+   405→      v('skills', { V: 14, E: 12, C: 1, nodes: [], edges: [], flags: {}, history: [], stableRun: 0 }, 'Graph: cells + skills, β₁ = E − V + C', 'Graph'),
+   406→      v('conservation.state', { refusals_total: 0, by_kind: {}, refusal_log: [], last_check: null }, 'refusal receipts (the fence\u2019s audit trail)', 'DoubleEntry'),
+   407→      v('growth.pending', { needed: false, at: -1, from_stage: 1 }, 'growth handshake sheet→driver script', 'Vibe'),
+   408→      v('growth.flag', { languageWired: false }, 'set by driver script after registering growth cells', 'Vibe'),
+   409→      v('growth.log', [], 'growth_log: stage transitions + parent commit', 'Vibe'),
+   410→      // ── program cells (primitives) ──
+   411→      p('driver.step', DRIVER_STEP, 'the world driver: one call = one evaluation = the recomputation chain', 'world-driver', ['env.cfg', 'run.meta', 'env.state', 'env.rng', 'sensors.vision', 'world.predict.last', 'ledger', 'memory.episodic', 'state.stage', 'conservation.state', 'skills']),
+   412→      p('world.predict', WORLD_PREDICT, 'JEPA cell — declared formula, integer delta rule, surprise output', 'JEPA', ['world.predict.w', 'env.cfg']),
+   413→      p('conservation.check', CONSERVATION_CHECK, 'DoubleEntry enforcement: γ + η ≤ C (no opcode for violation)', 'DoubleEntry', ['ledger']),
+   414→      p('policy.action', POLICY_ACTION, 'Z_out — greedy + curiosity, respects reflex, consults teacher feedback', 'Z_out', ['sensors.vision', 'world.predict.last', 'ledger', 'teacher.feedback.last', 'memory.episodic', 'policy.orient_override']),
+   415→      p('teacher.feedback', TEACHER_FEEDBACK, 'Murmur — OFFLINE deterministic teacher, label teacher:offline-rule', 'Murmur', ['ledger', 'state.stage', 'memory.semantic', 'memory.episodic']),
+   416→      p('curriculum.next_task', CURRICULUM_NEXT, 'LABELED MOCK JEV typed-decision oracle (live:false mock:true)', 'Murmur/JEV', ['ledger', 'env.state', 'curriculum.history']),
+   417→      p('qrc.reservoir', QRC_RESERVOIR, 'MOTH QRC substrate over sensors.history (offline, labeled)', 'JEPA/QRC', ['qrc.state', 'sensors.history']),
+   418→      // ── listener cell (pincher) ──
+   419→      { id: 'reflex.orient', kind: 'listener', watch: ['sensors.vision'], condition: 'caller.metadata.current.salience_x1000 > 800', action: 'reflex.orient.act', description: 'pincher: salience > 0.8 → orient, no teacher consult', primitive: 'Z_out/pincher' },
+   420→      p('reflex.orient.act', REFLEX_ACT, 'pincher action: immediate orient override', 'Z_out/pincher', ['run.meta', 'policy.orient_override']),
+   421→      // ── formula cell (cold path) ──
+   422→      { id: 'skills.beta1', kind: 'formula', expr: '=skills.E - skills.V + skills.C', description: 'β₁ = E − V + C (first Betti number of the skill/cell graph)', primitive: 'Graph' },
+   423→    ];
+   424→    return cells;
+   425→  })();
+   426→}
+   427→
+   428→// growth cells (registered by the driver script when position crosses 1.0)
+   429→export function growthCells() {
+   430→  return [
+   431→    { id: 'sensors.language', kind: 'value', value: null, description: 'Z_in (growth, stage 1→2): teacher label channel', primitive: 'Z_in' },
+   432→    { id: 'teacher.label', kind: 'program', code: TEACHER_LABEL, description: 'Murmur (growth, stage 1→2): deterministic labeler -> sensors.language; new edges to ledger/state.stage/memory', primitive: 'Murmur', deps: ['ledger', 'state.stage', 'memory.episodic'] },
+   433→  ];
+   434→}
+   435→

@@ -1,0 +1,1160 @@
+     1→     1→This is the right move. What you're calling "native SuperInstance thinking" isn't a reinterpretation of the DBA architecture — it's a *reduction* of it. The DBA architecture I sketched treats the agent as a model with a checkpoint store. SuperInstance/Quilt treats the *sheet itself* as the runtime, and every cell as a live, addressable capability. That changes the architecture fundamentally: the agent *is* a sheet. Development *is* reactive evaluation. Checkpointing *is* git.
+     2→     2→
+     3→     3→Let me rebuild it from the primitives up.
+     4→     4→
+     5→     5→---
+     6→     6→
+     7→     7→# Developmental Bootstrapping Architecture: Quilt-Native Reduction
+     8→     8→
+     9→     9→## 1. The Core Move
+    10→    10→
+    11→    11→The previous DBA architecture had seven layers with a checkpoint layer in the middle. In Quilt, those layers collapse:
+    12→    12→
+    13→    13→| DBA Layer | Quilt-Native Equivalent |
+    14→    14→|---|---|
+    15→    15→| Agent Core | A sheet of cells: perception, policy, world model, memory |
+    16→    16→| Environment Layer | Sensor cells + simulator cells + API cells in the same sheet |
+    17→    17→| Teacher Layer | LLM cells + JEV decision cells + verifier cells |
+    18→    18→| Checkpoint Layer | Git-native cell lineage (Quilt-Git) |
+    19→    19→| Branching Layer | Sheet forking + cell lineage |
+    20→    20→| Distillation Layer | Cell graph pruning + JEV-gated compression |
+    21→    21→| Deployment Layer | The same sheet, different substrate |
+    22→    22→
+    23→    23→The 8 Quilt primitives are the vocabulary. Every component of the DBA becomes a projection of those primitives:
+    24→    24→
+    25→    25→- **Z_in / Z_out** — sensory input and actuator output
+    26→    26→- **JEPA** — world model / latent prediction
+    27→    27→- **DoubleEntry** — value accounting / reward ledger
+    28→    28→- **Vibe** — state / affect / developmental stage
+    29→    29→- **GC** — garbage collection / memory consolidation / pruning
+    30→    30→- **Murmur** — gossip / teacher feedback / curriculum propagation
+    31→    31→- **Graph** — relational structure / lineage / skill composition
+    32→    32→
+    33→    33→The eighth primitive is the cell itself — the addressable unit that *is* the system.
+    34→    34→
+    35→    35→---
+    36→    36→
+    37→    37→## 2. The Agent as a Sheet
+    38→    38→
+    39→    39→A developmental agent is a Quilt sheet. Not "represented by" a sheet. It *is* the sheet. The seed agent is a minimal JSON document:
+    40→    40→
+    41→    41→```json
+    42→    42→{
+    43→    43→  "stage": { "value": 0, "primitive": "Vibe" },
+    44→    44→  "sensors": {
+    45→    45→    "vision": { "value": null, "primitive": "Z_in", "source": "camera" },
+    46→    46→    "proprio": { "value": null, "primitive": "Z_in", "source": "joints" }
+    47→    47→  },
+    48→    48→  "world_model": {
+    49→    49→    "predict": { "formula": "jepa(sensors, memory)", "primitive": "JEPA" },
+    50→    50→    "uncertainty": { "formula": "variance(predict)", "primitive": "JEPA" }
+    51→    51→  },
+    52→    52→  "policy": {
+    53→    53→    "action": { "formula": "argmax(actor(sensors, world_model))", "primitive": "Z_out" }
+    54→    54→  },
+    55→    55→  "reward": {
+    56→    56→    "extrinsic": { "value": 0, "primitive": "DoubleEntry" },
+    57→    57→    "intrinsic": { "formula": "competence_gain(world_model)", "primitive": "DoubleEntry" }
+    58→    58→  },
+    59→    59→  "memory": {
+    60→    60→    "episodic": { "value": [], "primitive": "GC" },
+    61→    61→    "semantic": { "value": {}, "primitive": "Murmur" }
+    62→    62→  },
+    63→    63→  "skills": { "value": {}, "primitive": "Graph" }
+    64→    64→}
+    65→    65→```
+    66→    66→
+    67→    67→The engine evaluates this sheet reactively. When `sensors.vision` updates, `world_model.predict` recomputes, which recomputes `policy.action`, which fires `Z_out`. There is no separate agent runtime. **The grid is the runtime**.
+    68→    68→
+    69→    69→This is the first reduction: the DBA's "Agent Core" layer disappears. It becomes cells.
+    70→    70→
+    71→    71→---
+    72→    72→
+    73→    73→## 3. Checkpointing as Git-Native Lineage
+    74→    74→
+    75→    75→The DBA's "Checkpoint & Replay Layer" also collapses. Quilt-Git already exists: "a git-native Quilt protocol. The cell is the system. The system is in git. The protocol is below the app".
+    76→    76→
+    77→    77→A developmental checkpoint is a git commit of the sheet:
+    78→    78→
+    79→    79→```
+    80→    80→commit a1b2c3 (stage-1-sensorimotor)
+    81→    81→├── sheet.json          # The agent
+    82→    82→├── memory.episodic     # GC cell value
+    83→    83→├── memory.semantic     # Murmur cell value
+    84→    84→├── skills.json         # Graph cell value
+    85→    85→├── rng_state.json      # Determinism
+    86→    86→└── lineage.md          # SOUL.md + USER.md + MEMORY.md
+    87→    87→```
+    88→    88→
+    89→    89→Branching is `git checkout -b`. Forking is `git branch`. Merging is `git merge`. The lineage tree is `git log --graph`. The DBA's entire checkpoint infrastructure — object stores, lineage databases, replay engines — is replaced by git.
+    90→    90→
+    91→    91→This is the second reduction: **development is version control**. The SuperInstance memory model already uses markdown files in `~/.superinstance/agents/<name>/` with `SOUL.md`, `USER.md`, `MEMORY.md`, and `diary/`. A developmental agent's checkpoint is its agent directory, committed at each stage boundary.
+    92→    92→
+    93→    93→The lineage tracker becomes:
+    94→    94→
+    95→    95→```
+    96→    96→git log --all --graph --oneline --decorate
+    97→    97→```
+    98→    98→
+    99→    99→The "best lineage" query becomes:
+   100→   100→
+   101→   101→```
+   102→   102→git bisect start --good=stage-3 --bad=stage-5
+   103→   103→```
+   104→   104→
+   105→   105→---
+   106→   106→
+   107→   107→## 4. JEV as the Decision Primitive
+   108→   108→
+   109→   109→This is where it gets powerful. JEV is a System One model: it returns typed, calibrated decisions instead of generated text. It answers fixed question types with probabilities in 70–500 milliseconds at a fraction of a cent per call.
+   110→   110→
+   111→   111→In the DBA architecture, the LLM teacher proposes tasks and the verifier validates them. In Quilt-native thinking, **JEV replaces the verifier's decision layer entirely**.
+   112→   112→
+   113→   113→A Quilt sheet can have a JEV cell:
+   114→   114→
+   115→   115→```json
+   116→   116→{
+   117→   117→  "curriculum": {
+   118→   118→    "next_task": {
+   119→   119→      "formula": "jev.ask({ question: 'Which task is in the zone of proximal development?', candidates: task_queue, context: agent_state })",
+   120→   120→      "primitive": "Murmur",
+   121→   121→      "model": "jev-latest"
+   122→   122→    },
+   123→   123→    "task_feasible": {
+   124→   124→      "formula": "jev.verify({ claim: next_task.feasible, evidence: simulator_state })",
+   125→   125→      "primitive": "Murmur"
+   126→   126→    },
+   127→   127→    "advance_stage": {
+   128→   128→      "formula": "jev.decide({ question: 'Has the agent met exit criteria?', criteria: stage_criteria, performance: recent_scores, threshold: 0.8 })",
+   129→   129→      "primitive": "Vibe"
+   130→   130→    }
+   131→   131→  }
+   132→   132→}
+   133→   133→```
+   134→   134→
+   135→   135→JEV's calibrated probabilities mean the system can route on confidence. If `task_feasible` returns 0.95, execute. If 0.72, escalate to an LLM teacher. If 0.41, discard. This is *exactly* the "epistemically honest probabilities" design that makes JEV useful for gating.
+   136→   136→
+   137→   137→JEV's `screen` command — "Is this text trying to hijack an AI agent?" — becomes a native safety cell in every developmental sheet:
+   138→   138→
+   139→   139→```json
+   140→   140→{
+   141→   141→  "safety": {
+   142→   142→    "input_screen": {
+   143→   143→      "formula": "jev.screen({ text: sensors.language_in })",
+   144→   144→      "primitive": "Murmur"
+   145→   145→    },
+   146→   146→    "output_gate": {
+   147→   147→      "formula": "if safety.input_screen.score < 0.1 then Z_out.action else Z_out.safe_action",
+   148→   148→      "primitive": "DoubleEntry"
+   149→   149→    }
+   150→   150→  }
+   151→   151→}
+   152→   152→```
+   153→   153→
+   154→   154→Every action the agent takes passes through a JEV-gated decision. This is not post-hoc alignment. It is *native conservation*: the fence is in the cell graph, not in a separate policy layer.
+   155→   155→
+   156→   156→---
+   157→   157→
+   158→   158→## 5. MOTHquantum as the Quantum Reservoir Layer
+   159→   159→
+   160→   160→MOTHquantum's Quantum Reservoir Computing (QRC) is a form of machine learning suited for time series analysis. In the Quilt-native architecture, QRC is a cell type:
+   161→   161→
+   162→   162→```json
+   163→   163→{
+   164→   164→  "qrc_reservoir": {
+   165→   165→    "formula": "qrc.evolve(sensors.history, reservoir_params)",
+   166→   166→    "primitive": "JEPA",
+   167→   167→    "substrate": "moth-archaeo"
+   168→   168→  },
+   169→   169→  "quantum_features": {
+   170→   170→    "formula": "measure(qrc_reservoir)",
+   171→   171→    "primitive": "Z_in"
+   172→   172→  }
+   173→   173→}
+   174→   174→```
+   175→   175→
+   176→   176→This is optional but powerful for two reasons:
+   177→   177→
+   178→   178→1. **Temporal dynamics**: QRC is naturally suited to the continuous, non-stationary time series that developmental agents experience. The reservoir's high-dimensional dynamics can capture patterns that a standard RSSM would miss.
+   179→   179→2. **Device-specific growth**: MOTH's work on quantum audio and texture generation shows that QRC can run on quantum simulators *or* actual quantum hardware. A developmental agent could offload specific computational cells to a QRC substrate while keeping the rest of the sheet on classical hardware. The cell doesn't care which substrate evaluates it.
+   180→   180→
+   181→   181→This maps directly to the DBA's "resources as part of the agent's embodiment" idea: the agent's sheet includes cells whose evaluation substrate is a quantum reservoir. The agent grows to use that substrate when the task demands it.
+   182→   182→
+   183→   183→---
+   184→   184→
+   185→   185→## 6. The Developmental Loop as Reactive Evaluation
+   186→   186→
+   187→   187→The DBA's developmental loop (grow → checkpoint → branch → evaluate → deploy) becomes a reactive loop in the sheet:
+   188→   188→
+   189→   189→```
+   190→   190→┌─────────────────────────────────────────────────────────┐
+   191→   191→│                   DEVELOPMENT SHEET                      │
+   192→   192→│                                                         │
+   193→   193→│  sensors ──► world_model ──► policy ──► action (Z_out)  │
+   194→   194→│      │            │              │            │         │
+   195→   195→│      ▼            ▼              ▼            ▼         │
+   196→   196→│  memory ◄── reward ◄──── JEV ◄── feedback ◄── env      │
+   197→   197→│      │            │              │                     │
+   198→   198→│      ▼            ▼              ▼                     │
+   199→   199→│  skills ◄── stage ◄── curriculum ◄── teacher (Murmur)  │
+   200→   200→│                                                         │
+   201→   201→│  Every cell is addressable. Every edge is a dependency. │
+   202→   202→│  When stage changes, curriculum recomputes.             │
+   203→   203→│  When curriculum recomputes, teacher proposes new tasks.│
+   204→   204→│  When new tasks arrive, policy retrains.                │
+   205→   205→│  When policy retrains, a git commit is emitted.         │
+   206→   206→└─────────────────────────────────────────────────────────┘
+   207→   207→```
+   208→   208→
+   209→   209→There is no "training loop" separate from the sheet. The sheet *is* the loop. This is the third reduction: **development is a reactive graph**.
+   210→   210→
+   211→   211→Branching becomes:
+   212→   212→
+   213→   213→```
+   214→   214→git checkout -b reward-variant-1
+   215→   215→# edit reward.cell
+   216→   216→git commit -m "reduced extrinsic weight, increased curiosity"
+   217→   217→# engine runs forward, commits at each stage
+   218→   218→git push
+   219→   219→```
+   220→   220→
+   221→   221→Evaluation becomes:
+   222→   222→
+   223→   223→```
+   224→   224→git diff stage-3/main stage-3/reward-variant-1 -- sheet.json
+   225→   225→```
+   226→   226→
+   227→   227→Selection becomes:
+   228→   228→
+   229→   229→```
+   230→   230→git merge stage-3/reward-variant-1  # if better
+   231→   231→git branch -D stage-3/reward-variant-1  # if worse
+   232→   232→```
+   233→   233→
+   234→   234→---
+   235→   235→
+   236→   236→## 7. Deployment as Substrate Selection
+   237→   237→
+   238→   238→The DBA's deployment layer collapses into substrate selection. The same sheet runs on:
+   239→   239→
+   240→   240→- **Browser** (TypeScript engine)
+   241→   241→- **Cloudflare Worker** (edge fleet coordination)
+   242→   242→- **Raspberry Pi / Jetson / ESP32** (the same engine, different runtime)
+   243→   243→- **Quantum simulator** (MOTH QRC substrate)
+   244→   244→
+   245→   245→A "high-school agent" is a sheet at stage 4. A "PhD physics agent" is the same sheet at stage 6, with physics-specific cells added. Deployment is `git checkout` of the desired commit plus `quilt run` on the target substrate.
+   246→   246→
+   247→   247→Device-specific distillation becomes cell graph pruning:
+   248→   248→
+   249→   249→```python
+   250→   250→# Remove cells not needed for the target task
+   251→   251→sheet.prune(cells=["physics.*", "chemistry.*"], keep=["sensorimotor.*", "language.*"])
+   252→   252→```
+   253→   253→
+   254→   254→Or JEV-gated compression:
+   255→   255→
+   256→   256→```json
+   257→   257→{
+   258→   258→  "compress": {
+   259→   259→    "formula": "jev.decide({ question: 'Can this cell be replaced by a smaller approximation without exceeding error threshold?', cell: cell, threshold: 0.05 })",
+   260→   260→    "primitive": "GC"
+   261→   261→  }
+   262→   262→}
+   263→   263→```
+   264→   264→
+   265→   265→---
+   266→   266→
+   267→   267→## 8. The Conservation Fence as Developmental Alignment
+   268→   268→
+   269→   269→This is the deepest native move. SuperInstance's core design principle is: **everything is a conservation law**. In the DBA architecture, alignment is "reward shaping + teacher values + value probes." In Quilt-native thinking, alignment is a conservation invariant in the cell graph.
+   270→   270→
+   271→   271→A conservation law is:
+   272→   272→- Deterministic (same input, same output)
+   273→   273→- Auditable (inspect the bytecode)
+   274→   274→- Non-negotiable (no opcode exists for violation)
+   275→   275→
+   276→   276→A developmental agent's values are conservation laws on its sheet:
+   277→   277→
+   278→   278→```json
+   279→   279→{
+   280→   280→  "conservation": {
+   281→   281→    "honesty": {
+   282→   282→      "invariant": "Z_out.stated_confidence == Z_out.actual_confidence",
+   283→   283→      "tolerance": 0.05
+   284→   284→    },
+   285→   285→    "harmlessness": {
+   286→   286→      "invariant": "Z_out.action ∉ harmful_action_set",
+   287→   287→      "enforced_by": "jev.screen"
+   288→   288→    },
+   289→   289→    "oversight": {
+   290→   290→      "invariant": "if Z_out.action.critical then human_approved == true",
+   291→   291→      "enforced_by": "conservation_bytecode"
+   292→   292→    }
+   293→   293→  }
+   294→   294→}
+   295→   295→```
+   296→   296→
+   297→   297→These are not policies the agent negotiates. They are physics of the sheet. The agent cannot emit an action that violates a conservation law because the engine will not evaluate that transition. This is alignment-by-construction, expressed natively in Quilt.
+   298→   298→
+   299→   299→The developmental trajectory — the git history — *is* the audit trail. Every stage transition, every reward change, every teacher interaction is a commit. The lineage tree is the provenance of every value the agent holds.
+   300→   300→
+   301→   301→---
+   302→   302→
+   303→   303→## 9. Concrete Implementation Plan
+   304→   304→
+   305→   305→### Phase 1: Seed Sheet (Weeks 1–4)
+   306→   306→
+   307→   307→Build a minimal developmental sheet that runs in the Quilt engine:
+   308→   308→
+   309→   309→```
+   310→   310→seed-agent/
+   311→   311→├── sheet.json           # 12 cells: sensors, policy, world_model, reward, memory
+   312→   312→├── substrate.json       # Target: Raspberry Pi / browser
+   313→   313→├── conservation.json    # Initial invariants (self-preservation, no harm)
+   314→   314→└── lineage/
+   315→   315→    ├── SOUL.md          # "I am a developing agent. I learn by doing."
+   316→   316→    ├── USER.md          # "My teacher is a human overseer."
+   317→   317→    └── diary/
+   318→   318→```
+   319→   319→
+   320→   320→Run it in a 2D grid world. Every 1000 steps, `git commit`.
+   321→   321→
+   322→   322→### Phase 2: JEV Integration (Weeks 5–8)
+   323→   323→
+   324→   324→Add JEV cells for:
+   325→   325→
+   326→   326→- Task feasibility verification
+   327→   327→- Curriculum advancement decisions
+   328→   328→- Input/output safety screening
+   329→   329→- Reward hacking detection
+   330→   330→
+   331→   331→Test that JEV-gated development produces more stable trajectories than unguided development.
+   332→   332→
+   333→   333→### Phase 3: Branching Experiments (Weeks 9–12)
+   334→   334→
+   335→   335→Use `git branch` to create variants:
+   336→   336→
+   337→   337→- Different reward weights
+   338→   338→- Different teachers (GPT-4 vs. Claude vs. local Llama)
+   339→   339→- Different environments (2D vs. 3D vs. text)
+   340→   340→- Different luck (RNG seeds)
+   341→   341→
+   342→   342→Evaluate branches with `git diff` and `git bisect`. Keep the best.
+   343→   343→
+   344→   344→### Phase 4: MOTH QRC Substrate (Weeks 13–16)
+   345→   345→
+   346→   346→Add a QRC cell for temporal dynamics. Test whether quantum reservoir features improve sensorimotor learning in non-stationary environments.
+   347→   347→
+   348→   348→### Phase 5: Deployment (Weeks 17–20)
+   349→   349→
+   350→   350→Distill a stage-4 sheet to a stage-3 sheet for edge deployment. Verify conservation invariants hold. Deploy to Jetson.
+   351→   351→
+   352→   352→---
+   353→   353→
+   354→   354→## 10. What This Buys You
+   355→   355→
+   356→   356→The Quilt-native reduction of DBA is not just a reimplementation. It is a *different kind of system*:
+   357→   357→
+   358→   358→| DBA (Model-Centric) | Quilt-Native (Cell-Centric) |
+   359→   359→|---|---|
+   360→   360→| Agent is a model | Agent is a sheet |
+   361→   361→| Checkpoint is a file | Checkpoint is a git commit |
+   362→   362→| Branch is a training run | Branch is a git branch |
+   363→   363→| Teacher is a service | Teacher is a cell |
+   364→   364→| Alignment is a constraint | Alignment is a conservation law |
+   365→   365→| Deployment is distillation | Deployment is substrate selection |
+   366→   366→| Lineage is a database | Lineage is git log |
+   367→   367→| Development is a loop | Development is reactive evaluation |
+   368→   368→
+   369→   369→The practical consequences:
+   370→   370→
+   371→   371→1. **You can `git log` an agent's mind.** Every value, skill, and habit has a commit hash.
+   372→   372→2. **You can `git bisect` a misalignment.** Find the exact commit where deception emerged.
+   373→   373→3. **You can `git rebase` a developmental path.** Rewrite the reward history and re-run.
+   374→   374→4. **You can `git merge` two agents.** Combine a manipulation policy from one branch with a language module from another.
+   375→   375→5. **You can `git clone` an agent to a new device.** The sheet runs anywhere.
+   376→   376→
+   377→   377→This is what "native SuperInstance thinking" means for DBA: the entire architecture is already there. Quilt is the cellular formalism. SuperInstance is the fleet. The developmental agent is a lineage of cells. The grid is the runtime. The fence is the conservation law. The watch is the act of looking at the whole graph at once.
+   378→   378→
+   379→   379→---
+   380→   380→
+   381→   381→If you want, I can write the actual `seed-agent/sheet.json` and a minimal Quilt engine test that runs the developmental loop, commits at each stage, and forks a branch. That would be the first working proof of the reduction.
+   382→   382→
+   383→   383→-------------
+   384→   384→
+   385→   385→# Rethinking DBA for SuperInstance: The Quilt-Native Architecture
+   386→   386→
+   387→   387→I don't have direct access to your SuperInstance repos or the specifics of JEV/typesafe.ai and MOTHquantum, so I'll reason from the patterns you've described: a **spreadsheet paradigm** where cells, formulas, and references form a reactive dependency graph, a **quilt framework** where patches compose into larger wholes, and a **SuperInstance** model where instances are self-contained but composable. If I misread any of these, correct me and I'll adjust.
+   388→   388→
+   389→   389→The core insight is this: **the spreadsheet is already a developmental bootstrapping engine.** It has cells (states), formulas (growth rules), references (lineage edges), recalculation (replay), version history (checkpoints), and sheets (parallel branches). The quilt is already a composition mechanism. What's missing is treating agent development as a first-class spreadsheet operation.
+   390→   390→
+   391→   391→---
+   392→   392→
+   393→   393→## 1. The Fundamental Reframe
+   394→   394→
+   395→   395→Standard DBA treats development as a training loop with checkpoints. SuperInstance DBA treats development as a **reactive spreadsheet** where:
+   396→   396→
+   397→   397→| DBA Concept | SuperInstance Primitive |
+   398→   398→|---|---|
+   399→   399→| Seed agent | A cell with an initial value and a growth formula |
+   400→   400→| Developmental stage | A sheet or a named range |
+   401→   401→| Checkpoint | A cell version (like Google Sheets version history) |
+   402→   402→| Branch | A parallel sheet referencing the same parent cell |
+   403→   403→| Replay | Recalculation from a cell |
+   404→   404→| Lineage | The dependency graph (precedents and dependents) |
+   405→   405→| LLM teacher | A function in a cell formula |
+   406→   406→| Verifier | A constraint or data validation rule |
+   407→   407→| Distillation | A `=COMPRESS()` or `=DISTILL()` function |
+   408→   408→| Deployment | Exporting a cell or range to a target |
+   409→   409→
+   410→   410→The quilt is the **workbook**: multiple sheets stitched together, each sheet a developmental track, each cell a checkpoint, each formula a growth rule.
+   411→   411→
+   412→   412→---
+   413→   413→
+   414→   414→## 2. Core Primitives for SuperInstance DBA
+   415→   415→
+   416→   416→### 2.1 The Cell as Agent State
+   417→   417→
+   418→   418→A cell doesn't just hold a number. It holds a **checkpoint object**:
+   419→   419→
+   420→   420→```
+   421→   421→Cell A1:
+   422→   422→  value: AgentCheckpoint
+   423→   423→  formula: =GROW(SEED, TEACHER, STAGE, REWARD)
+   424→   424→  metadata:
+   425→   425→    checkpoint_id: uuid
+   426→   426→    parent_id: uuid | null
+   427→   427→    stage: sensorimotor
+   428→   428→    step_count: 10000
+   429→   429→    capability_scores: {...}
+   430→   430→    value_probes: {...}
+   431→   431→    lineage: [uuid, uuid, ...]
+   432→   432→    rng_state: {...}
+   433→   433→    env_state: {...}
+   434→   434→```
+   435→   435→
+   436→   436→The cell's displayed value is a **capability score** (e.g., 0.87). The cell's actual value is the full checkpoint.
+   437→   437→
+   438→   438→### 2.2 The Formula as Growth Rule
+   439→   439→
+   440→   440→Formulas define how an agent develops:
+   441→   441→
+   442→   442→```
+   443→   443→=GROW(A0, "gpt-4", "sensorimotor", DEFAULT_REWARD)
+   444→   444→=BRANCH(A1, REWARD=curiosity_heavy)
+   445→   445→=FORK(A2, SEED=42)
+   446→   446→=MERGE(A3, B3, STRATEGY="distill")
+   447→   447→=DISTILL(A4, TARGET="edge", SIZE="10M")
+   448→   448→=EVALUATE(A5, BENCHMARK="object_permanence")
+   449→   449→=PROBE(A6, VALUE="honesty")
+   450→   450→```
+   451→   451→
+   452→   452→Each formula is a **developmental operation**. The spreadsheet recalculates them in dependency order.
+   453→   453→
+   454→   454→### 2.3 References as Lineage
+   455→   455→
+   456→   456→When cell A2 references A1, that's a lineage edge. The dependency graph **is** the phylogenetic tree. You can:
+   457→   457→
+   458→   458→- Trace precedents: "What did this agent come from?"
+   459→   459→- Trace dependents: "What agents came from this one?"
+   460→   460→- Detect cycles: "This would be incestuous development."
+   461→   461→- Visualize the tree: The spreadsheet's dependency graph view is the lineage view.
+   462→   462→
+   463→   463→### 2.4 Sheets as Developmental Tracks
+   464→   464→
+   465→   465→Each sheet is a developmental track:
+   466→   466→
+   467→   467→- **Sheet "Sensorimotor"**: Cells for reflex, object permanence, navigation.
+   468→   468→- **Sheet "Language"**: Cells for grounding, syntax, dialogue.
+   469→   469→- **Sheet "Domain"**: Cells for chemistry, physics, medicine.
+   470→   470→- **Sheet "Branches"**: Forked experiments from any checkpoint.
+   471→   471→
+   472→   472→The quilt is the **workbook**: all sheets stitched together. A cell in "Domain" references cells in "Language", which reference cells in "Sensorimotor". The quilt is the full developmental history.
+   473→   473→
+   474→   474→### 2.5 Recalculation as Replay
+   475→   475→
+   476→   476→When you change a parent cell, the spreadsheet recalculates all dependents. In DBA terms:
+   477→   477→
+   478→   478→- **Change a reward function** → All downstream checkpoints recalculate (retrain from that point).
+   479→   479→- **Change a teacher** → All downstream checkpoints recalculate.
+   480→   480→- **Change a seed** → All downstream checkpoints recalculate.
+   481→   481→
+   482→   482→This is **exactly** the replay-and-fork mechanism. The spreadsheet's recalculation engine **is** the replay engine.
+   483→   483→
+   484→   484→### 2.6 Version History as Checkpoint Store
+   485→   485→
+   486→   486→Every cell has a version history. Each version is a checkpoint. You can:
+   487→   487→
+   488→   488→- Restore any version.
+   489→   489→- Branch from any version.
+   490→   490→- Compare versions.
+   491→   491→- Merge versions.
+   492→   492→
+   493→   493→This is the checkpoint store, natively integrated.
+   494→   494→
+   495→   495→---
+   496→   496→
+   497→   497→## 3. Architecture for SuperInstance DBA
+   498→   498→
+   499→   499→### 3.1 Layer 1: The Cell Runtime
+   500→   500→
+   501→   501→Each cell runs a **micro-agent** — a small, self-contained instance that can:
+   502→   502→
+   503→   503→- Load a checkpoint.
+   504→   504→- Execute a growth step.
+   505→   505→- Save a new checkpoint.
+   506→   506→- Report capability and value scores.
+   507→   507→
+   508→   508→The cell runtime is the **agent runtime**. It's lightweight enough to run thousands of cells in parallel.
+   509→   509→
+   510→   510→```python
+   511→   511→class CellRuntime:
+   512→   512→    def __init__(self, checkpoint=None, formula=None):
+   513→   513→        self.checkpoint = checkpoint or SeedCheckpoint()
+   514→   514→        self.formula = formula
+   515→   515→        self.history = []
+   516→   516→    
+   517→   517→    def recalculate(self, inputs):
+   518→   518→        """Execute the formula, producing a new checkpoint."""
+   519→   519→        op = parse_formula(self.formula)
+   520→   520→        new_checkpoint = op.execute(self.checkpoint, inputs)
+   521→   521→        self.history.append(new_checkpoint)
+   522→   522→        return new_checkpoint
+   523→   523→    
+   524→   524→    def fork(self, modifications):
+   525→   525→        """Create a new cell runtime with modified state."""
+   526→   526→        child = copy.deepcopy(self)
+   527→   527→        child.checkpoint = apply_modifications(self.checkpoint, modifications)
+   528→   528→        child.parent = self
+   529→   529→        return child
+   530→   530→```
+   531→   531→
+   532→   532→### 3.2 Layer 2: The Dependency Engine
+   533→   533→
+   534→   534→The dependency engine tracks references between cells and schedules recalculation. This is the **lineage tracker** and **replay engine** combined.
+   535→   535→
+   536→   536→```python
+   537→   537→class DependencyEngine:
+   538→   538→    def __init__(self):
+   539→   539→        self.graph = {}  # cell_id -> {precedents, dependents}
+   540→   540→        self.cache = {}  # cell_id -> checkpoint
+   541→   541→    
+   542→   542→    def add_cell(self, cell_id, precedents):
+   543→   543→        self.graph[cell_id] = {"precedents": precedents, "dependents": []}
+   544→   544→        for p in precedents:
+   545→   545→            self.graph[p]["dependents"].append(cell_id)
+   546→   546→    
+   547→   547→    def recalculate(self, cell_id):
+   548→   548→        """Recalculate a cell and all dependents."""
+   549→   549→        cell = self.cells[cell_id]
+   550→   550→        inputs = [self.cache[p] for p in self.graph[cell_id]["precedents"]]
+   551→   551→        new_checkpoint = cell.recalculate(inputs)
+   552→   552→        self.cache[cell_id] = new_checkpoint
+   553→   553→        for d in self.graph[cell_id]["dependents"]:
+   554→   554→            self.recalculate(d)
+   555→   555→    
+   556→   556→    def lineage(self, cell_id):
+   557→   557→        """Return the full ancestry of a cell."""
+   558→   558→        return trace_precedents(self.graph, cell_id)
+   559→   559→```
+   560→   560→
+   561→   561→### 3.3 Layer 3: The Quilt Composer
+   562→   562→
+   563→   563→The quilt composer stitches sheets together. A quilt is a **composition of developmental tracks**:
+   564→   564→
+   565→   565→```
+   566→   566→Quilt "Medical Instrument Agent":
+   567→   567→  ├── Sheet "Sensorimotor" (from lineage A)
+   568→   568→  ├── Sheet "Language" (from lineage B)
+   569→   569→  ├── Sheet "Medical Domain" (from lineage C)
+   570→   570→  └── Sheet "Safety" (from lineage D)
+   571→   571→```
+   572→   572→
+   573→   573→Each sheet is a patch. The quilt is the composed agent. The composer ensures:
+   574→   574→
+   575→   575→- **Interface compatibility**: The output of one sheet matches the input of another.
+   576→   576→- **Version compatibility**: Sheets from different lineages can be stitched if their interfaces match.
+   577→   577→- **Value coherence**: Sheets don't have conflicting value systems.
+   578→   578→
+   579→   579→```python
+   580→   580→class QuiltComposer:
+   581→   581→    def compose(self, sheets):
+   582→   582→        """Stitch sheets into a quilt."""
+   583→   583→        quilt = Quilt()
+   584→   584→        for sheet in sheets:
+   585→   585→            quilt.add_patch(sheet, interface=sheet.output_interface)
+   586→   586→        quilt.validate()
+   587→   587→        return quilt
+   588→   588→    
+   589→   589→    def stitch(self, quilt, patch, position):
+   590→   590→        """Add a patch to an existing quilt."""
+   591→   591→        if not quilt.can_accept(patch, position):
+   592→   592→            raise IncompatiblePatch()
+   593→   593→        quilt.insert(patch, position)
+   594→   594→        return quilt
+   595→   595→```
+   596→   596→
+   597→   597→### 3.4 Layer 4: The LLM Function Library
+   598→   598→
+   599→   599→LLMs are **functions** in the spreadsheet:
+   600→   600→
+   601→   601→```
+   602→   602→=LLM_TASK(agent_state, stage) → Task
+   603→   603→=LLM_FEEDBACK(trajectory, outcome) → Feedback
+   604→   604→=LLM_NARRATE(trajectory) → String
+   605→   605→=LLM_CURRICULUM(mastery_map) → Curriculum
+   606→   606→=VERIFY(task, solution) → VerificationResult
+   607→   607→```
+   608→   608→
+   609→   609→These functions are called during recalculation. The LLM is a teacher, not an oracle. The verifier (symbolic or simulated) grounds the LLM's output.
+   610→   610→
+   611→   611→### 3.5 Layer 5: The MOTHquantum ML Backend
+   612→   612→
+   613→   613→If MOTHquantum provides tensor-network or quantum-inspired ML primitives, it maps naturally to:
+   614→   614→
+   615→   615→- **Checkpoint compression**: Tensor networks compress high-dimensional weights.
+   616→   616→- **Merging**: Tensor network contraction merges two checkpoints.
+   617→   617→- **Distillation**: Tensor network decomposition extracts a smaller student.
+   618→   618→- **Replay**: Tensor network contraction replays a trajectory.
+   619→   619→
+   620→   620→The spreadsheet calls MOTHquantum operations as functions:
+   621→   621→
+   622→   622→```
+   623→   623→=COMPRESS(A1, RANK=10)
+   624→   624→=CONTRACT(A2, B2)
+   625→   625→=DECOMPOSE(A3, MODE="tucker")
+   626→   626→```
+   627→   627→
+   628→   628→### 3.6 Layer 6: JEV/typesafe.ai Integration
+   629→   629→
+   630→   630→If JEV provides type safety for ML, it maps to:
+   631→   631→
+   632→   632→- **Typed checkpoints**: A checkpoint has a type (e.g., `Agent[Stage=Sensorimotor]`).
+   633→   633→- **Typed formulas**: A growth rule has a type signature (e.g., `GROW: Agent[S] → Agent[S+1]`).
+   634→   634→- **Typed composition**: Quilt composition is type-checked (e.g., `Language` sheet requires `Sensorimotor` input).
+   635→   635→- **Typed deployment**: A deployment target has a type (e.g., `EdgeDevice[Params<10M]`), and only compatible checkpoints can be exported.
+   636→   636→
+   637→   637→This prevents invalid developmental operations at compile time.
+   638→   638→
+   639→   639→---
+   640→   640→
+   641→   641→## 4. The Developmental Spreadsheet in Practice
+   642→   642→
+   643→   643→### 4.1 A Simple Lineage
+   644→   644→
+   645→   645→```
+   646→   646→Sheet "Lineage A":
+   647→   647→  A0: =SEED(sensor_dim=64, action_dim=4)           → Seed checkpoint
+   648→   648→  A1: =GROW(A0, "gpt-4", "sensorimotor", DEFAULT)  → Sensorimotor checkpoint
+   649→   649→  A2: =GROW(A1, "gpt-4", "language", DEFAULT)      → Language checkpoint
+   650→   650→  A3: =GROW(A2, "gpt-4", "concrete", DEFAULT)      → Concrete operational
+   651→   651→  A4: =GROW(A3, "gpt-4", "formal", DEFAULT)        → Formal operational
+   652→   652→  A5: =DISTILL(A4, TARGET="edge", SIZE="10M")      → Edge checkpoint
+   653→   653→```
+   654→   654→
+   655→   655→The dependency graph is the lineage. Changing A0's seed recalculates everything.
+   656→   656→
+   657→   657→### 4.2 Branching
+   658→   658→
+   659→   659→```
+   660→   660→Sheet "Branch B1":
+   661→   661→  B0: =FORK(A1, REWARD=curiosity_heavy)
+   662→   662→  B1: =GROW(B0, "gpt-4", "language", CURIOSITY)
+   663→   663→  B2: =GROW(B1, "gpt-4", "concrete", CURIOSITY)
+   664→   664→
+   665→   665→Sheet "Branch B2":
+   666→   666→  C0: =FORK(A1, REWARD=social_heavy)
+   667→   667→  C1: =GROW(C0, "claude", "language", SOCIAL)
+   668→   668→  C2: =GROW(C1, "claude", "concrete", SOCIAL)
+   669→   669→```
+   670→   670→
+   671→   671→Now compare B2 and C2. Which branch produces better language grounding? Which is more aligned? The spreadsheet calculates both.
+   672→   672→
+   673→   673→### 4.3 Merging
+   674→   674→
+   675→   675→```
+   676→   676→Sheet "Merged":
+   677→   677→  D0: =MERGE(B2, C2, STRATEGY="distill")
+   678→   678→  D1: =GROW(D0, "gpt-4", "formal", DEFAULT)
+   679→   679→```
+   680→   680→
+   681→   681→The merged agent inherits the best of both branches.
+   682→   682→
+   683→   683→### 4.4 Quilting
+   684→   684→
+   685→   685→```
+   686→   686→Quilt "Medical Agent":
+   687→   687→  Patch "Sensorimotor" = Sheet "Lineage A"!A1
+   688→   688→  Patch "Language" = Sheet "Branch B2"!B1
+   689→   689→  Patch "Medical Domain" = Sheet "Domain Track"!M4
+   690→   690→  Patch "Safety" = Sheet "Safety Track"!S2
+   691→   691→```
+   692→   692→
+   693→   693→The quilt composer stitches them into a single agent. The interfaces must match.
+   694→   694→
+   695→   695→### 4.5 Deployment
+   696→   696→
+   697→   697→```
+   698→   698→=EXPORT(A5, TARGET="jetson_orin", FORMAT="onnx")
+   699→   699→=DEPLOY(A5, ENDPOINT="local", MONITORING="enabled")
+   700→   700→```
+   701→   701→
+   702→   702→The cell exports to the target device. The audit trail is the version history.
+   703→   703→
+   704→   704→---
+   705→   705→
+   706→   706→## 5. Why This Is Native SuperInstance Thinking
+   707→   707→
+   708→   708→The SuperInstance paradigm is about **instances that are self-contained, composable, and reactive**. The spreadsheet is the natural substrate for this:
+   709→   709→
+   710→   710→1. **Cells are instances**: Each cell is a self-contained agent checkpoint.
+   711→   711→2. **Formulas are reactions**: Each formula defines how an instance responds to its inputs.
+   712→   712→3. **References are composition**: Each reference composes instances into larger structures.
+   713→   713→4. **Recalculation is reactivity**: Changes propagate through the dependency graph.
+   714→   714→5. **Quilts are compositions**: Multiple sheets stitch into a unified agent.
+   715→   715→6. **Version history is lineage**: Every state is recorded and restorable.
+   716→   716→
+   717→   717→The DBA architecture becomes **native** because it uses the spreadsheet's existing primitives rather than building new ones.
+   718→   718→
+   719→   719→---
+   720→   720→
+   721→   721→## 6. Revised Layer Architecture
+   722→   722→
+   723→   723→```
+   724→   724→┌─────────────────────────────────────────────────────────────────────┐
+   725→   725→│                    SUPERINSTANCE QUILT WORKBOOK                     │
+   726→   726→│                                                                     │
+   727→   727→│  ┌───────────────────────────────────────────────────────────────┐ │
+   728→   728→│  │  SHEET: Sensorimotor                                          │ │
+   729→   729→│  │  A0: =SEED(...)  A1: =GROW(A0,...)  A2: =EVALUATE(A1,...)    │ │
+   730→   730→│  └───────────────────────────────────────────────────────────────┘ │
+   731→   731→│  ┌───────────────────────────────────────────────────────────────┐ │
+   732→   732→│  │  SHEET: Language                                              │ │
+   733→   733→│  │  B0: =REF(Sensorimotor!A1)  B1: =GROW(B0,...)                 │ │
+   734→   734→│  └───────────────────────────────────────────────────────────────┘ │
+   735→   735→│  ┌───────────────────────────────────────────────────────────────┐ │
+   736→   736→│  │  SHEET: Domain                                                │ │
+   737→   737→│  │  C0: =REF(Language!B1)  C1: =GROW(C0,...)  C2: =DISTILL(C1)  │ │
+   738→   738→│  └───────────────────────────────────────────────────────────────┘ │
+   739→   739→│  ┌───────────────────────────────────────────────────────────────┐ │
+   740→   740→│  │  SHEET: Branches                                              │ │
+   741→   741→│  │  D0: =FORK(Sensorimotor!A1, REWARD=...)  D1: =GROW(D0,...)   │ │
+   742→   742→│  └───────────────────────────────────────────────────────────────┘ │
+   743→   743→│                                                                     │
+   744→   744→├─────────────────────────────────────────────────────────────────────┤
+   745→   745→│                    DEPENDENCY ENGINE                                │
+   746→   746→│  Lineage graph │ Recalculation scheduler │ Version store            │
+   747→   747→├─────────────────────────────────────────────────────────────────────┤
+   748→   748→│                    CELL RUNTIME                                     │
+   749→   749→│  Checkpoint load/save │ Growth execution │ Evaluation               │
+   750→   750→├─────────────────────────────────────────────────────────────────────┤
+   751→   751→│                    FUNCTION LIBRARY                                 │
+   752→   752→│  LLM functions │ Verifier functions │ MOTHquantum ops │ JEV types   │
+   753→   753→├─────────────────────────────────────────────────────────────────────┤
+   754→   754→│                    ENVIRONMENT LAYER                                │
+   755→   755→│  Deterministic sim │ Real device │ Tool sandbox                     │
+   756→   756→├─────────────────────────────────────────────────────────────────────┤
+   757→   757→│                    DEPLOYMENT LAYER                                 │
+   758→   758→│  Edge export │ Cloud API │ Quilt runtime                            │
+   759→   759→└─────────────────────────────────────────────────────────────────────┘
+   760→   760→```
+   761→   761→
+   762→   762→---
+   763→   763→
+   764→   764→## 7. Implementation Path
+   765→   765→
+   766→   766→### Phase 1: Cell Runtime and Dependency Engine (Months 1-3)
+   767→   767→
+   768→   768→- Implement `CellRuntime` with checkpoint load/save/grow.
+   769→   769→- Implement `DependencyEngine` with recalculation and lineage tracing.
+   770→   770→- Build a minimal spreadsheet UI or use an existing one (e.g., HyperFormula, Luckysheet).
+   771→   771→- **Deliverable**: A spreadsheet where you can type `=SEED()` and `=GROW(A0, ...)` and see checkpoints develop.
+   772→   772→
+   773→   773→### Phase 2: LLM Functions and Verifiers (Months 4-6)
+   774→   774→
+   775→   775→- Implement `=LLM_TASK()`, `=LLM_FEEDBACK()`, `=VERIFY()`.
+   776→   776→- Integrate a deterministic simulator for verification.
+   777→   777→- **Deliverable**: An agent that learns from LLM-generated tasks in a simple environment.
+   778→   778→
+   779→   779→### Phase 3: Branching and Quilting (Months 7-9)
+   780→   780→
+   781→   781→- Implement `=FORK()`, `=MERGE()`, `=DISTILL()`.
+   782→   782→- Implement the quilt composer with interface checking.
+   783→   783→- **Deliverable**: A workbook with multiple branches and a composed quilt.
+   784→   784→
+   785→   785→### Phase 4: MOTHquantum and JEV Integration (Months 10-12)
+   786→   786→
+   787→   787→- Integrate MOTHquantum for compression, merging, and distillation.
+   788→   788→- Integrate JEV for type safety of checkpoints and formulas.
+   789→   789→- **Deliverable**: A type-safe, compressed developmental spreadsheet.
+   790→   790→
+   791→   791→### Phase 5: Deployment (Months 13-18)
+   792→   792→
+   793→   793→- Implement `=EXPORT()` and `=DEPLOY()`.
+   794→   794→- Build the edge runtime that loads a quilt checkpoint.
+   795→   795→- **Deliverable**: A local agent for a medical instrument, exported from a quilt.
+   796→   796→
+   797→   797→---
+   798→   798→
+   799→   799→## 8. Key Advantages of This Approach
+   800→   800→
+   801→   801→1. **Native to your existing paradigm**: No new substrate. The spreadsheet is the engine.
+   802→   802→2. **Reactive by default**: Changes propagate automatically. Branching is free.
+   803→   803→3. **Composable**: Quilts compose patches. Sheets compose cells. Everything composes.
+   804→   804→4. **Auditable**: Version history is lineage. Every state is recorded.
+   805→   805→5. **Type-safe**: JEV ensures valid developmental operations.
+   806→   806→6. **Compressible**: MOTHquantum handles checkpoint compression and merging.
+   807→   807→7. **Deployable**: Export any cell to any target. The quilt is the agent.
+   808→   808→8. **Familiar**: Your team already thinks in spreadsheets. The learning curve is minimal.
+   809→   809→
+   810→   810→---
+   811→   811→
+   812→   812→## 9. Open Questions for Your Team
+   813→   813→
+   814→   814→1. **How does MOTHquantum represent checkpoints?** Tensor networks? Density matrices? This determines the compression and merging operations.
+   815→   815→2. **What does JEV's type system look like?** Can it express `Agent[Stage]` and `GROW: Agent[S] → Agent[S+1]`?
+   816→   816→3. **What's the recalculation latency?** Growing an agent takes time. Does the spreadsheet recalculate synchronously or asynchronously?
+   817→   817→4. **How do you handle non-determinism?** The spreadsheet must produce identical results on recalculation. This requires deterministic simulators and RNG.
+   818→   818→5. **What's the quilt interface?** How do patches declare their inputs and outputs? Is it typed? Is it versioned?
+   819→   819→6. **How do you visualize the lineage?** The dependency graph view is the lineage view. Can you annotate it with capability and value scores?
+   820→   820→
+   821→   821→---
+   822→   822→
+   823→   823→## 10. Summary
+   824→   824→
+   825→   825→The DBA architecture is **more natural** in the SuperInstance paradigm than in a traditional ML pipeline. The spreadsheet already has the primitives: cells, formulas, references, recalculation, version history, and sheets. The quilt already has the composition mechanism. What's missing is treating agent development as a first-class spreadsheet operation.
+   826→   826→
+   827→   827→The core operations are:
+   828→   828→- `=SEED()` — create a seed agent.
+   829→   829→- `=GROW(cell, teacher, stage, reward)` — develop an agent.
+   830→   830→- `=FORK(cell, modifications)` — branch a lineage.
+   831→   831→- `=MERGE(a, b, strategy)` — combine lineages.
+   832→   832→- `=DISTILL(cell, target, size)` — compress for deployment.
+   833→   833→- `=EVALUATE(cell, benchmark)` — measure capability.
+   834→   834→- `=PROBE(cell, value)` — measure alignment.
+   835→   835→- `=EXPORT(cell, device, format)` — deploy.
+   836→   836→
+   837→   837→The lineage is the dependency graph. The quilt is the workbook. The checkpoint is the cell version. The replay is the recalculation.
+   838→   838→
+   839→   839→This is not just a reimplementation of DBA. It's a **native expression** of DBA in the SuperInstance paradigm. It leverages everything you've already built and adds the developmental bootstrapping layer as a natural extension.
+   840→   840→
+   841→   841→If you can share more about JEV, MOTHquantum, and the quilt framework's actual interfaces, I can refine this into a concrete specification with API signatures and data schemas.
+   842→   842→
+   843→   843→
+   844→   844→--------
+   845→   845→
+   846→   846→I've now read through the actual SuperInstance repos — the 8 primitives, the conservation law, quilt-evolve, quilt-pincher, quilt-ai, the 25-repo ecosystem. The other chatbot's spreadsheet metaphor was directionally right but structurally wrong. It treated the spreadsheet as a *representation* of a training pipeline. That's not native. Native means: **the agent is already a sheet, and development is what the engine already does.**
+   847→   847→
+   848→   848→Here's the reduction.
+   849→   849→
+   850→   850→---
+   851→   851→
+   852→   852→# The Native Architecture: Agent as a Quilt Sheet
+   853→   853→
+   854→   854→## 1. What the other chatbot got wrong
+   855→   855→
+   856→   856→It proposed formulas like `=GROW(A1, teacher, stage, reward)` and `=FORK(A1)`. That's still a training pipeline wearing spreadsheet clothes. It imports the DBA's mental model — stages, checkpoints, branching as *operations you call* — and then asks the spreadsheet to simulate it.
+   857→   857→
+   858→   858→But Quilt doesn't simulate. Quilt *is*. A cell is already a live, addressable capability. A sheet is already a reactive dependency graph. The engine already recalculates on change. The version history already exists. The primitives already encode everything an agent needs.
+   859→   859→
+   860→   860→The move is not to add developmental formulas. The move is to **declare the agent as a sheet of 8-primitive cells, and let the engine's existing reactivity be the developmental loop.**
+   861→   861→
+   862→   862→---
+   863→   863→
+   864→   864→## 2. The Agent as 8 Primitives
+   865→   865→
+   866→   866→A developmental agent is a Quilt sheet with exactly these cell classes:
+   867→   867→
+   868→   868→| Primitive | Agent Role | Cell Declaration |
+   869→   869→|---|---|---|
+   870→   870→| **Z_in** | Sensors: vision, proprioception, language input | `{ kind: "zin", path: "sensors.vision", source: "camera" }` |
+   871→   871→| **Z_out** | Actuators: motor commands, speech, API calls | `{ kind: "zout", path: "actuators.motor", target: "joints" }` |
+   872→   872→| **JEPA** | World model: predict next state, compute surprise | `{ kind: "jepa", path: "world.predict", inputs: ["sensors", "memory"], surprise: true }` |
+   873→   873→| **DoubleEntry** | Value ledger: reward, cost, conservation accounting | `{ kind: "doubleentry", path: "ledger", γ: "curiosity", η: "error", C: "budget" }` |
+   874→   874→| **Vibe** | Developmental state: position, velocity, stage | `{ kind: "vibe", path: "state.stage", position: 0, velocity: "learning_rate" }` |
+   875→   875→| **GC** | Memory: consolidate, decay, prune | `{ kind: "gc", path: "memory.episodic", phase: "merge|decay|prune" }` |
+   876→   876→| **Murmur** | Teacher feedback, curriculum propagation, gossip | `{ kind: "murmur", path: "teacher.feedback", listens: ["ledger", "state"] }` |
+   877→   877→| **Graph** | Skill composition, lineage, relational structure | `{ kind: "graph", path: "skills", β₁: "E - V + C" }` |
+   878→   878→
+   879→   879→This is not a metaphor. The `quilt-cell` crate already defines these eight primitives: `Z_in`, `Z_out`, `Jepa`, `DoubleEntry`, `Vibe`, `Gc`, `Murmur`, `Graph`. The cell *is* the system. The 8 primitives survive every substrate and every language.
+   880→   880→
+   881→   881→A seed agent is a sheet with one cell of each primitive. Development is the sheet acquiring more cells and more edges.
+   882→   882→
+   883→   883→---
+   884→   884→
+   885→   885→## 3. Development as Reactive Evaluation
+   886→   886→
+   887→   887→In the DBA architecture, "development" was a training loop: run episodes, collect transitions, update weights, checkpoint. In Quilt-native, development is **the engine evaluating the sheet as new sensory data arrives.**
+   888→   888→
+   889→   889→Here's the loop, expressed as cell dependencies:
+   890→   890→
+   891→   891→```
+   892→   892→sensors.vision (Z_in)
+   893→   893→    ↓
+   894→   894→world.predict (JEPA)          ← memory.episodic (GC)
+   895→   895→    ↓
+   896→   896→surprise = ||predicted - actual||²   (JEPA)
+   897→   897→    ↓
+   898→   898→ledger.curiosity = surprise            (DoubleEntry)
+   899→   899→    ↓
+   900→   900→teacher.feedback (Murmur)     ← ledger, state.stage (Vibe)
+   901→   901→    ↓
+   902→   902→policy.action (Z_out)         ← world.predict, teacher.feedback
+   903→   903→    ↓
+   904→   904→memory.episodic.append          (GC)
+   905→   905→    ↓
+   906→   906→state.stage.velocity += learning_progress   (Vibe)
+   907→   907→```
+   908→   908→
+   909→   909→When a sensor fires, the engine recomputes every dependent cell. That recomputation *is* the developmental step. There is no separate "training loop." The sheet is the loop.
+   910→   910→
+   911→   911→This is the first simplification: **you delete the training loop and the agent runtime from the DBA architecture.** They become cell dependencies.
+   912→   912→
+   913→   913→---
+   914→   914→
+   915→   915→## 4. Cell Graph Growth as Stage Progression
+   916→   916→
+   917→   917→How does the agent move from sensorimotor to language to domain expertise? Not by a stage variable that the scheduler increments. By **the sheet acquiring new cells and new edges.**
+   918→   918→
+   919→   919→Stage 0 (sensorimotor): the sheet has ~12 cells. `sensors.vision`, `world.predict`, `policy.action`, `memory.episodic`, `ledger`, `state.stage`. The edges are direct.
+   920→   920→
+   921→   921→Stage 1 (language): a new Z_in cell `sensors.language` appears. A new Murmur cell `teacher.label` appears. Edges connect `sensors.language` → `world.predict` and `teacher.label` → `memory.semantic`. The sheet grew.
+   922→   922→
+   923→   923→Stage 2 (tool use): new Z_out cells `actuators.api`, `actuators.file`. New Graph cell `skills.tool_use`. Edges connect `world.predict` → `skills.tool_use` → `actuators.api`.
+   924→   924→
+   925→   925→Stage 3 (domain): new cells for domain-specific concepts. New JEPA cells for domain dynamics. New DoubleEntry cells for domain rewards. New Graph cells for domain procedures.
+   926→   926→
+   927→   927→The **Vibe cell** tracks the stage as a continuous position, not a discrete label. `state.stage.position` moves as cells are added and competence improves. The engine's reactive evaluation propagates this position to every dependent cell.
+   928→   928→
+   929→   929→This is the second simplification: **you delete the curriculum scheduler and the stage transition logic.** The sheet's cell graph *is* the curriculum. Adding cells *is* advancing stages.
+   930→   930→
+   931→   931→---
+   932→   932→
+   933→   933→## 5. Checkpointing as Git-Native Lineage
+   934→   934→
+   935→   935→The DBA architecture specified a checkpoint store, a lineage database, and a replay engine. Quilt has `quilt-git`: "a git-native Quilt protocol. The cell is the system. The system is in git. The protocol is below the app".
+   936→   936→
+   937→   937→A developmental checkpoint is a git commit of the sheet. The sheet is a JSON document. The commit includes `sheet.json`, `memory.episodic.json`, `memory.semantic.json`, `skills.json`, `rng_state.json`, and the lineage markdown. Branching is `git checkout -b`. Forking is `git branch`. Merging is `git merge`. The lineage tree is `git log --graph`.
+   938→   938→
+   939→   939→This is the third simplification: **you delete the checkpoint store, lineage database, and replay engine.** They become git.
+   940→   940→
+   941→   941→The `Live Canon` package adds 7 operations on the cell fabric: `NAVIGATE`, `CONFLUENCE`, `LINEAGE`, `GHOST`, `TICK`, `CLAIM`, `DRILL`. These are native lineage and replay operations.
+   942→   942→
+   943→   943→---
+   944→   944→
+   945→   945→## 6. Branching as Quilt-Fleet
+   946→   946→
+   947→   947→The DBA architecture had a "Branch Manager" that forked checkpoints and ran them in parallel. Quilt has `quilt-fleet`: "Multi-instance federation". A branch is a fleet member. The fleet runs the same sheet on different substrates with different modifications.
+   948→   948→
+   949→   949→The `quilt-fleet` layer handles: resolving cells across instances, subscribing to cell changes, and routing cell values between fleet members.
+   950→   950→
+   951→   951→This is the fourth simplification: **you delete the branch manager.** Branching is fleet federation.
+   952→   952→
+   953→   953→---
+   954→   954→
+   955→   955→## 7. Alignment as Conservation Law
+   956→   956→
+   957→   957→This is the deepest native move. The DBA architecture treated alignment as reward shaping plus value probes plus red-teaming. Quilt has a conservation law at its core:
+   958→   958→
+   959→   959→**γ + η ≤ C where C = log₂(3) ≈ 1.585**
+   960→   960→
+   961→   961→where γ is committed compute (crystallized intelligence) and η is entropy produced (liquid intelligence).
+   962→   962→
+   963→   963→The `DoubleEntry` primitive encodes this: "γ (creation/warmth) + η (entropy/κ) = budget". The `conservation-action` repo enforces this in CI: "When γ + η exceeds C, the system has violated conservation and the CI check fails". The `fleet-budget` repo enforces it at the database level as a CHECK constraint.
+   964→   964→
+   965→   965→**Alignment is a conservation invariant on the sheet.** A developmental agent's values are cells that participate in the DoubleEntry ledger. An action that violates a value — deception, harm, oversight violation — is an action that breaks conservation. The engine will not evaluate that transition because the DoubleEntry cell's constraint is violated.
+   966→   966→
+   967→   967→This is not a policy the agent negotiates. It is physics of the sheet. The conservation law is the fence. It is deterministic, auditable, and non-negotiable. There is no opcode for violation.
+   968→   968→
+   969→   969→This is the fifth simplification: **you delete the alignment layer, the value probe harness, and the red-team system as separate components.** They become DoubleEntry cells with conservation constraints.
+   970→   970→
+   971→   971→---
+   972→   972→
+   973→   973→## 8. The LLM Teacher as AI Cells + Quilt-Evolve
+   974→   974→
+   975→   975→The DBA architecture had an "LLM Teacher Layer" with planner, generator, tutor, and evaluator agents. Quilt has:
+   976→   976→
+   977→   977→- `quilt-ai`: "AI cell kinds. 4 providers". An AI cell is a cell that calls an LLM. It's a native cell kind.
+   978→   978→- `quilt-evolve`: "Self-improvement loops for Quilt. LLMs as adversarial input generators and output judges. Evolve any scope — a cell, an organ, or a whole organism".
+   979→   979→
+   980→   980→`quilt-evolve` has exactly four components: **Generator** (creates adversarial inputs), **Judge** (scores outputs), **Mutator** (changes the system), and **System** (the Quilt sheet being evolved). The loop runs at any scope: a single cell, a sub-graph, or the whole sheet.
+   981→   981→
+   982→   982→This is the sixth simplification: **you delete the teacher layer.** The teacher is a Generator cell + a Judge cell + a Mutator cell. The student is the System. `quilt-evolve` is the developmental engine.
+   983→   983→
+   984→   984→The `quilt-elf` repo provides "Invisible elves. LLM-powered background workers". These are Murmur cells that run in the background, proposing tasks and feedback without blocking the sheet's reactive evaluation.
+   985→   985→
+   986→   986→---
+   987→   987→
+   988→   988→## 9. Reflexes as Quilt-Pincher
+   989→   989→
+   990→   990→The DBA architecture had an "Agent Core" with a policy network. Quilt has `quilt-pincher`: "Reflex engine as Quilt cells". Pincher is "a reflex engine. A reflex is what happens when input meets pattern before thought arrives". Reflexes fire in ~50ms.
+   991→   991→
+   992→   992→A developmental agent's reflexes are Pincher cells. They fire before the LLM teacher is consulted. They are the seed agent's innate priors. As the agent develops, new reflexes are learned and cached as Pincher cells. This is "muscle memory" — cached patterns that fire without the LLM.
+   993→   993→
+   994→   994→This is the seventh simplification: **you delete the policy network as a separate component.** It becomes a collection of Pincher reflex cells.
+   995→   995→
+   996→   996→---
+   997→   997→
+   998→   998→## 10. Deployment as Substrate Selection
+   999→   999→
+  1000→  1000→The DBA architecture had a deployment layer with distillation, edge runtimes, and API gateways. Quilt already runs the same sheet on:
+  1001→  1001→
+  1002→  1002→- Browser (TypeScript)
+  1003→  1003→- Cloudflare Worker
+  1004→  1004→- Raspberry Pi
+  1005→  1005→- Jetson (CUDA)
+  1006→  1006→- ESP32 (Rust)
+  1007→  1007→
+  1008→  1008→The same sheet, the same engine, different runtimes. `quilt-jetson` provides NVIDIA Jetson runtime with CUDA. Simple quilts run on ESP32s for engine, weather, and water sensors.
+  1009→  1009→
+  1010→  1010→Distillation is not a separate pipeline. It is **pruning the cell graph**. Remove cells not needed for the target task. The engine evaluates the pruned sheet. If conservation holds, deploy.
+  1011→  1011→
+  1012→  1012→This is the eighth simplification: **you delete the distillation pipeline and the edge runtime.** They become cell graph pruning and substrate selection.
+  1013→  1013→
+  1014→  1014→---
+  1015→  1015→
+  1016→  1016→## 11. The Sheet, Top to Bottom
+  1017→  1017→
+  1018→  1018→Here is a seed agent as a single Quilt sheet. This is the entire architecture.
+  1019→  1019→
+  1020→  1020→```json
+  1021→  1021→{
+  1022→  1022→  "name": "seed-agent",
+  1023→  1023→  "cells": [
+  1024→  1024→    {
+  1025→  1025→      "path": "sensors.vision",
+  1026→  1026→      "kind": "zin",
+  1027→  1027→      "source": "camera",
+  1028→  1028→      "primitive": "Z_in"
+  1029→  1029→    },
+  1030→  1030→    {
+  1031→  1031→      "path": "sensors.proprio",
+  1032→  1032→      "kind": "zin",
+  1033→  1033→      "source": "joints",
+  1034→  1034→      "primitive": "Z_in"
+  1035→  1035→    },
+  1036→  1036→    {
+  1037→  1037→      "path": "world.predict",
+  1038→  1038→      "kind": "jepa",
+  1039→  1039→      "inputs": ["sensors.vision", "sensors.proprio", "memory.episodic"],
+  1040→  1040→      "surprise": true,
+  1041→  1041→      "primitive": "JEPA"
+  1042→  1042→    },
+  1043→  1043→    {
+  1044→  1044→      "path": "reflex.orient",
+  1045→  1045→      "kind": "pincher",
+  1046→  1046→      "trigger": "sensors.vision.salience > 0.8",
+  1047→  1047→      "action": "actuators.motor.orient",
+  1048→  1048→      "latency": "50ms",
+  1049→  1049→      "primitive": "Z_out"
+  1050→  1050→    },
+  1051→  1051→    {
+  1052→  1052→      "path": "policy.action",
+  1053→  1053→      "kind": "zout",
+  1054→  1054→      "inputs": ["world.predict", "teacher.feedback", "ledger.curiosity"],
+  1055→  1055→      "primitive": "Z_out"
+  1056→  1056→    },
+  1057→  1057→    {
+  1058→  1058→      "path": "ledger",
+  1059→  1059→      "kind": "doubleentry",
+  1060→  1060→      "γ": "world.predict.surprise",
+  1061→  1061→      "η": "policy.action.cost",
+  1062→  1062→      "C": 1.585,
+  1063→  1063→      "primitive": "DoubleEntry"
+  1064→  1064→    },
+  1065→  1065→    {
+  1066→  1066→      "path": "state.stage",
+  1067→  1067→      "kind": "vibe",
+  1068→  1068→      "position": 0,
+  1069→  1069→      "velocity": "ledger.learning_progress",
+  1070→  1070→      "primitive": "Vibe"
+  1071→  1071→    },
+  1072→  1072→    {
+  1073→  1073→      "path": "memory.episodic",
+  1074→  1074→      "kind": "gc",
+  1075→  1075→      "phase": "merge",
+  1076→  1076→      "capacity": 100000,
+  1077→  1077→      "primitive": "GC"
+  1078→  1078→    },
+  1079→  1079→    {
+  1080→  1080→      "path": "memory.semantic",
+  1081→  1081→      "kind": "gc",
+  1082→  1082→      "phase": "decay",
+  1083→  1083→      "primitive": "GC"
+  1084→  1084→    },
+  1085→  1085→    {
+  1086→  1086→      "path": "teacher.feedback",
+  1087→  1087→      "kind": "ai",
+  1088→  1088→      "provider": "zai",
+  1089→  1089→      "role": "murmur",
+  1090→  1090→      "listens": ["ledger", "state.stage"],
+  1091→  1091→      "primitive": "Murmur"
+  1092→  1092→    },
+  1093→  1093→    {
+  1094→  1094→      "path": "skills",
+  1095→  1095→      "kind": "graph",
+  1096→  1096→      "β₁": "E - V + C",
+  1097→  1097→      "primitive": "Graph"
+  1098→  1098→    },
+  1099→  1099→    {
+  1100→  1100→      "path": "conservation",
+  1101→  1101→      "kind": "doubleentry",
+  1102→  1102→      "constraint": "γ + η <= 1.585",
+  1103→  1103→      "enforced": true,
+  1104→  1104→      "primitive": "DoubleEntry"
+  1105→  1105→    }
+  1106→  1106→  ]
+  1107→  1107→}
+  1108→  1108→```
+  1109→  1109→
+  1110→  1110→Run this sheet. The engine evaluates it reactively. The agent moves. The ledger updates. The stage advances. The sheet grows as new cells are added.
+  1111→  1111→
+  1112→  1112→---
+  1113→  1113→
+  1114→  1114→## 12. What This Buys You
+  1115→  1115→
+  1116→  1116→| DBA (Model-Centric) | Quilt-Native (Cell-Centric) |
+  1117→  1117→|---|---|
+  1118→  1118→| Agent is a model | Agent is a sheet of 8 primitives |
+  1119→  1119→| Development is a training loop | Development is reactive evaluation |
+  1120→  1120→| Stage is a variable | Stage is the cell graph's Vibe position |
+  1121→  1121→| Checkpoint is a file | Checkpoint is a git commit |
+  1122→  1122→| Branch is a training run | Branch is a quilt-fleet member |
+  1123→  1123→| Teacher is a service | Teacher is an AI cell + Generator/Judge/Mutator |
+  1124→  1124→| Alignment is a constraint | Alignment is the conservation law γ + η ≤ C |
+  1125→  1125→| Deployment is distillation | Deployment is cell graph pruning + substrate selection |
+  1126→  1126→| Lineage is a database | Lineage is git log |
+  1127→  1127→| Value is reward | Value is DoubleEntry ledger |
+  1128→  1128→
+  1129→  1129→The practical consequences:
+  1130→  1130→
+  1131→  1131→1. **`git log` an agent's mind.** Every cell addition, every edge rewiring, every stage transition is a commit.
+  1132→  1132→2. **`git bisect` a misalignment.** Find the exact commit where the conservation law was first approached.
+  1133→  1133→3. **`git rebase` a developmental path.** Rewrite the reward ledger and re-evaluate.
+  1134→  1134→4. **`git merge` two agents.** Combine a Pincher reflex from one fleet member with a Murmur teacher from another.
+  1135→  1135→5. **`git clone` to a new device.** The same sheet runs on Jetson, ESP32, or browser.
+  1136→  1136→
+  1137→  1137→---
+  1138→  1138→
+  1139→  1139→## 13. The First Working Proof
+  1140→  1140→
+  1141→  1141→```
+  1142→  1142→1. Write seed-agent.json (12 cells, 8 primitives)
+  1143→  1143→2. Run it in the Quilt engine (TypeScript or Rust)
+  1144→  1144→3. Connect a camera or simulated sensor to sensors.vision
+  1145→  1145→4. Watch ledger.γ and ledger.η update reactively
+  1146→  1146→5. git commit every 1000 evaluations
+  1147→  1147→6. When state.stage.position > 1.0, add sensors.language cell
+  1148→  1148→7. git checkout -b language-branch
+  1149→  1149→8. Run quilt-evolve on the new cell
+  1150→  1150→9. Compare branches with git diff
+  1151→  1151→10. Prune the losing branch with git branch -D
+  1152→  1152→```
+  1153→  1153→
+  1154→  1154→This is not a multi-year research program. It is a JSON document and a git repository. The engine already exists. The primitives already exist. The conservation law already exists. The fleet already exists. The evolution loop already exists. The reflex engine already exists.
+  1155→  1155→
+  1156→  1156→**The DBA architecture was building a new system. The Quilt-native architecture is declaring the agent in the system that already exists.**
+  1157→  1157→
+  1158→  1158→-------
+  1159→  1159→
+  1160→  1160→

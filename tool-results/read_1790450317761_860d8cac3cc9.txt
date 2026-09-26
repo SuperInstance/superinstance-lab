@@ -1,0 +1,682 @@
+     1→/**
+     2→ * @file engine.ts
+     3→ * @module @quilt/core
+     4→ *
+     5→ * =====================================================================
+     6→ *  THE QUILT ENGINE — the reactive runtime
+     7→ * =====================================================================
+     8→ *
+     9→ * This is the heart of Quilt. It holds the cell graph, tracks
+    10→ * dependencies, propagates changes, and exposes the universal API:
+    11→ * `get`, `set`, `call`, `push`, `subscribe`.
+    12→ *
+    13→ * Everything else (CLI, MCP, TUI, Web) is a view onto this engine.
+    14→ * If you understand this file, you understand the system.
+    15→ *
+    16→ * =====================================================================
+    17→ *  ROLE IN THE SYSTEM
+    18→ * =====================================================================
+    19→ *
+    20→ *     types.ts       ◄── Cell, CellDef, CellId, CellValue, CallerContext
+    21→ *     context.ts     ◄── extendContext, contextKey
+    22→ *     cells/*.ts     ◄── evaluateValue, evaluateFormula, evaluateApi,
+    23→ *                       evaluateProgram, evaluateRouter, fireListener,
+    24→ *                       makeSensorValue, makeIoValue
+    25→ *        ▲
+    26→ *        │ imports
+    27→ *        │
+    28→ *     engine.ts      ◄── THIS FILE: QuiltEngine (the runtime)
+    29→ *        ▲
+    30→ *        │ imports
+    31→ *        │
+    32→ *     parser.ts      (uses engine.loadSheet to install parsed cells)
+    33→ *     mcp/server.ts  (calls engine.get/call/subscribe for MCP tools)
+    34→ *     cli/index.ts   (calls engine.get/set/loadSheet for commands)
+    35→ *
+    36→ * The engine implements `ProgramRuntime` so that program cells can
+    37→ * call back into the runtime (read, write, call other cells). This
+    38→ * is the "user code can compose with the runtime" hook.
+    39→ *
+    40→ * =====================================================================
+    41→ *  THE LIFECYCLE OF A CELL
+    42→ * =====================================================================
+    43→ *
+    44→ *   1. loadSheet(sheet) — define cells, build dependency graph
+    45→ *      For each CellDef, create a Cell with empty value.
+    46→ *      For formulas, scan the expression and add dep edges.
+    47→ *      For others, use the declared `deps` field.
+    48→ *
+    49→ *   2. get(id, ctx) — pull a cell's value, computing if needed
+    50→ *      Pure cells (value, formula): recompute on demand.
+    51→ *      Effectful cells (api, program, router): de-duped, cached.
+    52→ *      Push-based cells (sensor, io, listener): return current.
+    53→ *
+    54→ *   3. set(id, value, ctx) — write a value, propagate changes
+    55→ *      Update the cell, mark dependents as stale,
+    56→ *      notify subscribers, fire listeners.
+    57→ *
+    58→ *   4. call(id, input, ctx) — invoke a cell as a capability
+    59→ *      Same as get for pure cells. For effectful, pass input.
+    60→ *
+    61→ *   5. push(id, data) — push a value into a sensor or IO cell
+    62→ *      External adapters call this. Triggers downstream.
+    63→ *
+    64→ * =====================================================================
+    65→ *  PROPAGATION ALGORITHM
+    66→ * =====================================================================
+    67→ *
+    68→ * When a cell's value changes (via set or push), the engine walks
+    69→ * the dependent graph depth-first:
+    70→ *
+    71→ *   1. Mark each formula/value dependent as 'stale' and clear its cache
+    72→ *   2. Recurse into their dependents
+    73→ *   3. For each listener dependent, check its condition and fire
+    74→ *   4. Notify external subscribers
+    75→ *
+    76→ * Pure cells are not auto-recomputed; they recompute lazily on the
+    77→ * next get(). Effectful cells are NEVER auto-recomputed by upstream
+    78→ * changes — they must be called explicitly.
+    79→ *
+    80→ * =====================================================================
+    81→ *  CACHING STRATEGY
+    82→ * =====================================================================
+    83→ *
+    84→ * Per-context memoization: same cell + same caller context (by
+    85→ * row/column/identity/tags) → same cached value.
+    86→ *
+    87→ *   - value cells: no cache needed (always O(1))
+    88→ *   - formula cells: cache the result by contextKey
+    89→ *   - api/program/router cells: cache the result by contextKey
+    90→ *   - sensor/io/listener cells: not cached (push-based)
+    91→ *
+    92→ * Cache is invalidated:
+    93→ *   - On set (to the same cell)
+    94→ *   - On propagation (to formula dependents)
+    95→ *   - Never on context change (we cache per context, not per cell)
+    96→ *
+    97→ * =====================================================================
+    98→ */
+    99→import { emptyContext, extendContext, contextKey, callKey } from './context.js';
+   100→import { evaluateValue } from './cells/value.js';
+   101→import { evaluateFormula } from './cells/formula.js';
+   102→import { evaluateApi } from './cells/api.js';
+   103→import { evaluateProgram } from './cells/program.js';
+   104→import { evaluateRouter } from './cells/router.js';
+   105→import { fireListener } from './cells/listener.js';
+   106→import { makeSensorValue } from './cells/sensor.js';
+   107→import { makeIoValue } from './cells/io.js';
+   108→import { evaluateAI } from './cells/ai.js';
+   109→const defaultOptions = {
+   110→    maxConcurrency: 16,
+   111→    tracing: false,
+   112→    eager: false,
+   113→};
+   114→/**
+   115→ * The Quilt reactive runtime. One instance per "session" or "agent"
+   116→ * or "deployment". Holds the cell graph and provides the universal
+   117→ * API.
+   118→ */
+   119→export class QuiltEngine {
+   120→    id;
+   121→    cells = new Map();
+   122→    subscriptions = new Map();
+   123→    inflight = new Map();
+   124→    traces = [];
+   125→    options;
+   126→    subscriptionCounter = 0;
+   127→    constructor(id = 'default', options = {}) {
+   128→        this.id = id;
+   129→        const { ai, ...rest } = options;
+   130→        this.options = { ...defaultOptions, ...rest, ai };
+   131→    }
+   132→    // ===========================================================================
+   133→    // SHEET LIFECYCLE
+   134→    // ===========================================================================
+   135→    /**
+   136→     * Load a sheet definition into the engine. Resets all cell state.
+   137→     *
+   138→     * Steps:
+   139→     *   1. Clear existing cells, in-flight evaluations, traces
+   140→     *   2. For each CellDef, create a Cell instance
+   141→     *   3. Build dependency edges (auto-detect for formulas, declared for others)
+   142→     *   4. Index dependents (reverse lookup)
+   143→     *
+   144→     * After loadSheet, the engine is ready to answer get/set/call.
+   145→     * No values are computed until something asks for them (pull-based).
+   146→     */
+   147→    loadSheet(sheet) {
+   148→        this.cells.clear();
+   149→        this.inflight.clear();
+   150→        this.traces = [];
+   151→        for (const def of sheet.cells) {
+   152→            this.defineCell(def);
+   153→        }
+   154→        // Build dependency edges. For formulas, auto-detect by scanning
+   155→        // the expression. For everything else, use the declared `deps`.
+   156→        for (const cell of this.cells.values()) {
+   157→            if (cell.def.kind === 'formula' || cell.def.kind === 'ai') {
+   158→                this.autoDetectDeps(cell);
+   159→            }
+   160→            // PLAY-TEST FIX: wire listener `watch` lists into the graph.
+   161→            // Without this edge, propagate() never reaches listener cells and
+   162→            // fireListener is dead code for sheets authored per the documented
+   163→            // schema (watch/condition/action with no deps).
+   164→            if (cell.def.kind === 'listener') {
+   165→                for (const w of cell.def.watch ?? []) {
+   166→                    this.addDep(cell.id, w);
+   167→                }
+   168→            }
+   169→            for (const dep of cell.def.deps ?? []) {
+   170→                this.addDep(cell.id, dep);
+   171→            }
+   172→        }
+   173→    }
+   174→    /**
+   175→     * Define a single cell. Adds it to the graph.
+   176→     *
+   177→     * Throws if a cell with the same id already exists. Use this for
+   178→     * static sheets (via loadSheet) or for one-off cells in tests.
+   179→     * For dynamic registration (e.g. agents defining cells at runtime),
+   180→     * use `register()`.
+   181→     */
+   182→    defineCell(def) {
+   183→        if (this.cells.has(def.id)) {
+   184→            throw new Error(`cell already defined: ${def.id}`);
+   185→        }
+   186→        // Seed the cell with its initial value. Value cells use
+   187→        // `def.value`; sensor cells use `def.default` (if any) so
+   188→        // demo sheets work without an adapter wired up.
+   189→        let initial = { data: undefined, status: 'idle' };
+   190→        if (def.value !== undefined) {
+   191→            initial = { data: def.value, status: 'ready', computedAt: Date.now() };
+   192→        }
+   193→        else if (def.kind === 'sensor' && def.default !== undefined) {
+   194→            initial = { data: def.default, status: 'ready', computedAt: Date.now() };
+   195→        }
+   196→        const cell = {
+   197→            id: def.id,
+   198→            def,
+   199→            value: initial,
+   200→            dependencies: new Set(),
+   201→            dependents: new Set(),
+   202→            contextCache: new Map(),
+   203→        };
+   204→        this.cells.set(def.id, cell);
+   205→        return cell;
+   206→    }
+   207→    /**
+   208→     * Register a new cell definition after load. Used for dynamic
+   209→     * registration (e.g. sensors connecting, agents defining new tools).
+   210→     *
+   211→     * Unlike defineCell, this also builds dependency edges from the
+   212→     * declared deps. (Formulas registered dynamically don't get
+   213→     * auto-detected deps — declare them explicitly.)
+   214→     */
+   215→    register(def) {
+   216→        const cell = this.defineCell(def);
+   217→        if (def.kind === 'listener') {
+   218→            for (const w of def.watch ?? []) {
+   219→                this.addDep(def.id, w);
+   220→            }
+   221→        }
+   222→        for (const dep of def.deps ?? []) {
+   223→            this.addDep(def.id, dep);
+   224→        }
+   225→        return cell;
+   226→    }
+   227→    // ===========================================================================
+   228→    // THE UNIVERSAL API: get, set, call
+   229→    // ===========================================================================
+   230→    /**
+   231→     * Get a cell's value. Evaluates if needed.
+   232→     *
+   233→     * Dispatch by cell kind:
+   234→     *   - value:   return the static value (no computation)
+   235→     *   - formula: refresh deps, then evaluate
+   236→     *   - api/program/router: de-dupe concurrent calls, evaluate
+   237→     *   - sensor/io/listener: return the current pushed value
+   238→     *
+   239→     * Per-context memoization: same cell + same context → cached.
+   240→     *
+   241→     * @param id - the cell id
+   242→     * @param ctx - the caller context (for routing and cache key)
+   243→     * @returns the cell's value, or an error CellValue
+   244→     */
+   245→    async get(id, ctx = emptyContext()) {
+   246→        const cell = this.cells.get(id);
+   247→        if (!cell) {
+   248→            return { data: undefined, status: 'error', error: { message: `no such cell: ${id}` } };
+   249→        }
+   250→        const fullCtx = extendContext(ctx, id);
+   251→        switch (cell.def.kind) {
+   252→            case 'value':
+   253→                // PLAY-TEST FIX: return the LIVE cell value (seeded from def.value at
+   254→                // load, updated by set()). Previously this called evaluateValue(),
+   255→                // which reads cell.def.value — so engine.set() on a value cell was
+   256→                // invisible to engine.get() (though downstream formulas DID see it,
+   257→                // since they read cell.value.data). Classic stale-read asymmetry.
+   258→                return cell.value.status === 'idle' ? evaluateValue(cell, fullCtx) : cell.value;
+   259→            case 'formula': {
+   260→                await this.refreshDeps(cell, fullCtx);
+   261→                return evaluateFormula(cell, fullCtx, this.cells);
+   262→            }
+   263→            case 'api':
+   264→            case 'program':
+   265→            case 'router':
+   266→            case 'ai': {
+   267→                // PLAY-TEST PATCH 12: effectful cells are honest functions of the
+   268→                // SHEET STATE, which contextKey cannot see. Serving them from the
+   269→                // caller-aware cache froze a stateful sheet (the hold'em arbiter
+   270→                // returned a stale verdict forever while match.seq read a stale 0
+   271→                // from the read-cache). Default is now FRESH evaluation; declare
+   272→                // `memo: true` on a pure cell to opt back into caching.
+   273→                if (!cell.def.memo) {
+   274→                    const value = await this.evaluateEffectful(cell, fullCtx, undefined);
+   275→                    return value;
+   276→                }
+   277→                const key = contextKey(fullCtx);
+   278→                const cached = cell.contextCache.get(key);
+   279→                if (cached && cached.status === 'ready') {
+   280→                    return cached;
+   281→                }
+   282→                const value2 = await this.evaluateEffectful(cell, fullCtx, undefined);
+   283→                cell.contextCache.set(key, value2);
+   284→                return value2;
+   285→            }
+   286→            case 'sensor':
+   287→            case 'io':
+   288→            case 'listener':
+   289→                return cell.value;
+   290→            default:
+   291→                return { data: undefined, status: 'error', error: { message: `unknown kind: ${cell.def.kind}` } };
+   292→        }
+   293→    }
+   294→    /**
+   295→     * Set a cell's value. Triggers downstream recomputation.
+   296→     *
+   297→     * Steps:
+   298→     *   1. Update the cell's value and invalidate its caller-aware cache
+   299→     *   2. Notify external subscribers
+   300→     *   3. Propagate to dependents (mark stale, fire listeners)
+   301→     *
+   302→     * Note: set only changes ONE cell. To update a transaction, you
+   303→     * make multiple set calls. They're not atomic, but they are
+   304→     * ordered — set is synchronous from the caller's perspective.
+   305→     */
+   306→    async set(id, value, ctx = emptyContext()) {
+   307→        const cell = this.cells.get(id);
+   308→        if (!cell) {
+   309→            throw new Error(`no such cell: ${id}`);
+   310→        }
+   311→        const fullCtx = extendContext(ctx, id);
+   312→        const prev = cell.value;
+   313→        const newValue = {
+   314→            data: value,
+   315→            status: 'ready',
+   316→            computedAt: Date.now(),
+   317→        };
+   318→        cell.value = newValue;
+   319→        cell.contextCache.clear();
+   320→        await this.notify(id, newValue, prev);
+   321→        await this.propagate(id, fullCtx, undefined, prev);
+   322→    }
+   323→    /**
+   324→     * Call a cell as a capability. Same as get for pure cells, but
+   325→     * allows passing an `input` argument for effectful cells.
+   326→     *
+   327→     * USAGE:
+   328→     *   const v = await engine.call('model.router', userInput, { row: 'boat-1' });
+   329→     *   // The router receives userInput and routes based on the caller context.
+   330→     */
+   331→    async call(id, input, ctx = emptyContext()) {
+   332→        const cell = this.cells.get(id);
+   333→        if (!cell) {
+   334→            return { data: undefined, status: 'error', error: { message: `no such cell: ${id}` } };
+   335→        }
+   336→        const fullCtx = extendContext(ctx, id);
+   337→        if (cell.def.kind === 'value' || cell.def.kind === 'formula') {
+   338→            return this.get(id, ctx);
+   339→        }
+   340→        if (cell.def.kind === 'sensor' || cell.def.kind === 'io' || cell.def.kind === 'listener') {
+   341→            return cell.value;
+   342→        }
+   343→        // PLAY-TEST PATCH 10: include the call's input in the memo key.
+   344→        // PLAY-TEST PATCH 12: ...and only memoize when the cell declares `memo: true`
+   345→        // (a program is a function of its arguments AND of the sheet state).
+   346→        const key = callKey(fullCtx, input);
+   347→        if (cell.def.memo) {
+   348→            const cached = cell.contextCache.get(key);
+   349→            if (cached && cached.status === 'ready') {
+   350→                return cached;
+   351→            }
+   352→        }
+   353→        const inflightKey = `${id}|${key}`;
+   354→        if (this.inflight.has(inflightKey)) {
+   355→            return this.inflight.get(inflightKey);
+   356→        }
+   357→        const promise = this.evaluateEffectful(cell, fullCtx, input);
+   358→        this.inflight.set(inflightKey, promise);
+   359→        try {
+   360→            const value = await promise;
+   361→            if (cell.def.memo)
+   362→                cell.contextCache.set(key, value);
+   363→            return value;
+   364→        }
+   365→        finally {
+   366→            this.inflight.delete(inflightKey);
+   367→        }
+   368→    }
+   369→    /**
+   370→     * Push a value into a sensor or IO cell. Triggers downstream.
+   371→     *
+   372→     * Called by external adapters (MQTT, Modbus, GPIO, MCP tools) when
+   373→     * they have a new reading/event for the cell.
+   374→     *
+   375→     * Throws if the cell isn't a sensor or IO. Use set for value/formula.
+   376→     */
+   377→    async push(id, data, ctx = emptyContext()) {
+   378→        const cell = this.cells.get(id);
+   379→        if (!cell)
+   380→            throw new Error(`no such cell: ${id}`);
+   381→        if (cell.def.kind !== 'sensor' && cell.def.kind !== 'io') {
+   382→            throw new Error(`cannot push to ${cell.def.kind} cell: ${id}`);
+   383→        }
+   384→        const newValue = cell.def.kind === 'sensor' ? makeSensorValue(data) : makeIoValue(data);
+   385→        const prev = cell.value;
+   386→        cell.value = newValue;
+   387→        await this.notify(id, newValue, prev);
+   388→        await this.propagate(id, extendContext(ctx, id), undefined, prev);
+   389→    }
+   390→    // ===========================================================================
+   391→    // SUBSCRIPTIONS
+   392→    // ===========================================================================
+   393→    /**
+   394→     * Subscribe to a cell's value changes. The callback fires every
+   395→     * time the cell's value changes (and the optional filter returns
+   396→     * true, if provided).
+   397→     *
+   398→     * Returns a subscription id. Pass it to `unsubscribe` to stop.
+   399→     */
+   400→    subscribe(cellId, callback, filter) {
+   401→        const id = `sub-${++this.subscriptionCounter}`;
+   402→        this.subscriptions.set(id, { id, cellId, callback, filter });
+   403→        return id;
+   404→    }
+   405→    /**
+   406→     * Stop a subscription. The callback will no longer fire.
+   407→     */
+   408→    unsubscribe(subscriptionId) {
+   409→        this.subscriptions.delete(subscriptionId);
+   410→    }
+   411→    // ===========================================================================
+   412→    // INTROSPECTION
+   413→    // ===========================================================================
+   414→    /**
+   415→     * Get a cell instance by id. Returns undefined if no such cell.
+   416→     * Use this to inspect a cell's dependencies, dependents, current value.
+   417→     */
+   418→    getCell(id) {
+   419→        return this.cells.get(id);
+   420→    }
+   421→    /**
+   422→     * List all cells, optionally filtered by kind.
+   423→     */
+   424→    listCells(kind) {
+   425→        const all = Array.from(this.cells.values());
+   426→        return kind ? all.filter(c => c.def.kind === kind) : all;
+   427→    }
+   428→    /**
+   429→     * Get recent evaluation traces (for debugging, time-travel).
+   430→     */
+   431→    getTraces(limit = 100) {
+   432→        return this.traces.slice(-limit);
+   433→    }
+   434→    /**
+   435→     * Export all cell definitions as an array of CellDef. Used by
+   436→     * `save` to serialize a runtime state back to YAML.
+   437→     */
+   438→    exportDefs() {
+   439→        return Array.from(this.cells.values()).map(c => c.def);
+   440→    }
+   441→    // ===========================================================================
+   442→    // INTERNAL: evaluation, propagation, dependencies
+   443→    // ===========================================================================
+   444→    /**
+   445→     * Evaluate an effectful cell (api, program, router). Caches the
+   446→     * result by context, notifies subscribers, and traces if enabled.
+   447→     */
+   448→    async evaluateEffectful(cell, ctx, input) {
+   449→        const startedAt = Date.now();
+   450→        let result;
+   451→        if (cell.def.kind === 'api') {
+   452→            result = await evaluateApi(cell, ctx, input);
+   453→        }
+   454→        else if (cell.def.kind === 'program') {
+   455→            // PLAY-TEST PATCH 11: programs receive a context-bound runtime.
+   456→            // Previously they got the raw engine, whose get/set/call default to
+   457→            // emptyContext() — so a nested runtime.call from inside a program
+   458→            // silently DROPPED the caller identity (tenant tier, tags, metadata).
+   459→            // Same bug family as the router-delegation fix: per-tenant memoization
+   460→            // collapsed to a single shared answer. Explicit contexts still win.
+   461→            const boundRuntime = {
+   462→                get: (id) => this.get(id, ctx),
+   463→                set: (id, value) => this.set(id, value, ctx),
+   464→                call: (id, i, c) => this.call(id, i, c ?? ctx),
+   465→            };
+   466→            result = await evaluateProgram(cell, ctx, input, boundRuntime);
+   467→        }
+   468→        else if (cell.def.kind === 'router') {
+   469→            result = await evaluateRouter(cell, ctx, input, this);
+   470→        }
+   471→        else if (cell.def.kind === 'ai') {
+   472→            if (!this.options.ai) {
+   473→                result = { data: null, status: 'error', error: { message: 'AI cell evaluated but no AI engine configured. Pass an `ai` engine to the QuiltEngine constructor.' } };
+   474→            }
+   475→            else {
+   476→                // Recursively resolve upstream cell values for {{id}} substitution
+   477→                const resolved = new Set();
+   478→                const resolver = (id) => {
+   479→                    if (resolved.has(id))
+   480→                        return null;
+   481→                    resolved.add(id);
+   482→                    const c = this.cells.get(id);
+   483→                    if (!c)
+   484→                        return null;
+   485→                    if (c.value.status === 'ready')
+   486→                        return c.value.data;
+   487→                    if (c.value.status === 'computing') {
+   488→                        // Upstream not yet evaluated — for value cells, evaluate sync
+   489→                        if (c.def.kind === 'value') {
+   490→                            c.value = evaluateValue(c, ctx);
+   491→                            return c.value.data;
+   492→                        }
+   493→                        return null;
+   494→                    }
+   495→                    if (c.value.status === 'error')
+   496→                        return null;
+   497→                    return c.value.data;
+   498→                };
+   499→                const aiResult = await evaluateAI(cell.def, ctx, this.options.ai, resolver);
+   500→                result = {
+   501→                    data: aiResult.value,
+   502→                    status: aiResult.error ? 'error' : 'ready',
+   503→                    error: aiResult.error ? { message: aiResult.error } : undefined,
+   504→                    effects: [{ kind: 'model', provider: cell.def.provider || 'unknown' }],
+   505→                    computedAt: Date.now(),
+   506→                };
+   507→            }
+   508→        }
+   509→        else {
+   510→            result = { data: undefined, status: 'error', error: { message: `not effectful: ${cell.def.kind}` } };
+   511→        }
+   512→        if (this.options.tracing) {
+   513→            this.traces.push({
+   514→                cellId: cell.id,
+   515→                startedAt,
+   516→                completedAt: Date.now(),
+   517→                durationMs: Date.now() - startedAt,
+   518→                context: ctx,
+   519→                effects: result.effects,
+   520→                error: result.error,
+   521→            });
+   522→        }
+   523→        const prev = cell.value;
+   524→        cell.value = result;
+   525→        await this.notify(cell.id, result, prev);
+   526→        return result;
+   527→    }
+   528→    /**
+   529→     * Recursively refresh formula/value dependencies before computing
+   530→     * a formula. This is the "pull" model: we walk down the dep graph
+   531→     * and ensure all values are computed.
+   532→     */
+   533→    async refreshDeps(cell, ctx) {
+   534→        for (const depId of cell.dependencies) {
+   535→            const dep = this.cells.get(depId);
+   536→            if (!dep)
+   537→                continue;
+   538→            if (dep.def.kind === 'value' && dep.value.status !== 'ready') {
+   539→                dep.value = evaluateValue(dep, ctx);
+   540→            }
+   541→            else if (dep.def.kind === 'formula' && dep.value.status !== 'ready') {
+   542→                await this.refreshDeps(dep, ctx);
+   543→                const v = evaluateFormula(dep, ctx, this.cells);
+   544→                dep.value = v;
+   545→                dep.contextCache.set(contextKey(ctx), v);
+   546→            }
+   547→        }
+   548→    }
+   549→    /**
+   550→     * Propagate a change to all dependents. Mark formula/value
+   551→     * dependents as stale and invalidate their cache. Fire listener
+   552→     * dependents whose conditions are met.
+   553→     *
+   554→     * PLAY-TEST ITERATION (SuperInstance play-test, Sep 2026):
+   555→     *  - cycle guard: `visited` prevents infinite recursion on cyclic graphs
+   556→     *    (previously a set/push on a cyclic sheet recursed forever).
+   557→     *  - eager mode (options.eager): stale formula cells are recomputed
+   558→     *    DURING propagation, so listeners and subscribers observe fresh
+   559→     *    transitions instead of stale data. Prev/new are real, which makes
+   560→     *    edge-triggered listener conditions (prev !== current) work.
+   561→     */
+   562→    async propagate(changedId, ctx, visited, changedPrev) {
+   563→        const cell = this.cells.get(changedId);
+   564→        if (!cell)
+   565→            return;
+   566→        const seen = visited ?? new Set();
+   567→        if (seen.has(changedId))
+   568→            return; // cycle guard
+   569→        seen.add(changedId);
+   570→        let current = cell.value;
+   571→        let prev = changedPrev ?? current;
+   572→        // EAGER: recompute a stale formula now so downstream sees fresh values.
+   573→        if (this.options.eager && cell.def.kind === 'formula' &&
+   574→            (cell.value.status === 'stale' || cell.value.status === 'idle')) {
+   575→            prev = cell.value; // the stale value still carries the OLD data
+   576→            await this.refreshDeps(cell, ctx);
+   577→            current = evaluateFormula(cell, ctx, this.cells);
+   578→            cell.value = current;
+   579→            await this.notify(cell.id, current, prev);
+   580→        }
+   581→        for (const depId of cell.dependents) {
+   582→            const dep = this.cells.get(depId);
+   583→            if (!dep || seen.has(depId))
+   584→                continue;
+   585→            // PLAY-TEST FIX: also invalidate program/router caches. Previously
+   586→            // only formula/value/ai were cleared, so a program cell that declared
+   587→            // deps on an upstream cell kept serving its FIRST result forever
+   588→            // (e.g. an LLM workflow that never saw new input).
+   589→            if (dep.def.kind === 'formula' || dep.def.kind === 'value' || dep.def.kind === 'ai' ||
+   590→                dep.def.kind === 'program' || dep.def.kind === 'router') {
+   591→                dep.value = { ...dep.value, status: 'stale' };
+   592→                dep.contextCache.clear();
+   593→            }
+   594→            await this.propagate(depId, ctx, seen);
+   595→        }
+   596→        for (const depId of cell.dependents) {
+   597→            const dep = this.cells.get(depId);
+   598→            if (!dep || dep.def.kind !== 'listener')
+   599→                continue;
+   600→            await fireListener(dep, changedId, current, prev, this);
+   601→        }
+   602→    }
+   603→    /**
+   604→     * Notify all subscribers of a cell change. Subscriptions can have
+   605→     * an optional filter that decides whether to fire.
+   606→     */
+   607→    async notify(id, value, prev) {
+   608→        for (const sub of this.subscriptions.values()) {
+   609→            if (sub.cellId !== id)
+   610→                continue;
+   611→            if (sub.filter && !sub.filter(value, prev))
+   612→                continue;
+   613→            try {
+   614→                await sub.callback(value, prev);
+   615→            }
+   616→            catch (err) {
+   617→                if (process.env.QUILT_DEBUG) {
+   618→                    console.error(`[quilt] subscription error for ${id}:`, err);
+   619→                }
+   620→            }
+   621→        }
+   622→    }
+   623→    /**
+   624→     * Add a dependency edge: `from` depends on `to`. Updates both
+   625→     * the forward index (from.dependencies) and the reverse index
+   626→     * (to.dependents).
+   627→     */
+   628→    addDep(from, to) {
+   629→        const fromCell = this.cells.get(from);
+   630→        const toCell = this.cells.get(to);
+   631→        if (!fromCell || !toCell)
+   632→            return;
+   633→        fromCell.dependencies.add(to);
+   634→        toCell.dependents.add(from);
+   635→    }
+   636→    /**
+   637→     * Naive auto-detection of formula dependencies: scan the
+   638→     * expression for any token that matches a known cell id.
+   639→     *
+   640→     * Good enough for MVP. A real implementation would parse the
+   641→     * expression into an AST and walk it.
+   642→     *
+   643→     * For AI cells, we scan the prompt, input, and image fields for
+   644→     * {{cell.id}} references.
+   645→     */
+   646→    autoDetectDeps(cell) {
+   647→        const fields = [];
+   648→        if (cell.def.expr)
+   649→            fields.push(cell.def.expr);
+   650→        if (cell.def.kind === 'ai') {
+   651→            const ai = cell.def;
+   652→            if (ai.prompt)
+   653→                fields.push(ai.prompt);
+   654→            if (ai.input)
+   655→                fields.push(ai.input);
+   656→            if (ai.image)
+   657→                fields.push(ai.image);
+   658→        }
+   659→        if (fields.length === 0)
+   660→            return;
+   661→        const text = fields.join(' ');
+   662→        const knownIds = new Set(this.cells.keys());
+   663→        for (const id of knownIds) {
+   664→            if (id === cell.id)
+   665→                continue;
+   666→            // Match either {{id}} (template) or \bid\b (raw token)
+   667→            const reTemplate = new RegExp(`\\{\\{\\s*${escapeRegex(id)}\\s*\\}\\}`);
+   668→            const reToken = new RegExp(`\\b${escapeRegex(id)}\\b`);
+   669→            if (reTemplate.test(text) || reToken.test(text)) {
+   670→                this.addDep(cell.id, id);
+   671→            }
+   672→        }
+   673→    }
+   674→}
+   675→/**
+   676→ * Escape a string for safe use inside a RegExp.
+   677→ * Used by `autoDetectDeps` when building patterns to match cell ids.
+   678→ */
+   679→function escapeRegex(s) {
+   680→    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+   681→}
+   682→//# sourceMappingURL=engine.js.map
