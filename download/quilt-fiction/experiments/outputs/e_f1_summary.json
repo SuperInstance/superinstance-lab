@@ -1,0 +1,199 @@
+{
+  "experiment": "E-F1 two-instance Delta exchange (quilt-fiction, seed4)",
+  "sealed_rules": {
+    "R1": "R1 valid-delta-applies PASS iff over the honest world (200 rounds, seed F1R1): (a) every emitted+applied delta has gamma_delta+eta_delta <= 1585; (b) EVERY ledger entry on BOTH sides satisfies gamma_delta+eta_delta <= 1585 post-apply; (c) mirror balance holds for every transaction (A.gamma_delta == B.eta_delta AND A.eta_delta == B.gamma_delta, entry counts equal); (d) B reputation for A strictly greater than REP_INIT at end; (e) A stall-refusals == 0 and B own-boundary capacity refusals == 0.",
+    "R2": "R2 violating-delta-refused PASS iff at the injected violation (same seed F1R1 world, emission index 100): (a) B refuses it (mirror ledger entry count == 149 == 150 emissions - 1 refused; zin.wire_violation == 1); (b) B reputation for A drops by exactly round(R * 0.05) (beta=0.05, seed4 line 4328); (c) no exclusion fires (rep stays >= 100000) and the subsequent honest deltas are accepted again.",
+    "R3": "R3 repeated-violator-excluded PASS iff in the pure-violator world: B locally excludes A at exactly k = violations_to_exclude, where rep 500000*(1-0.05)^k first falls below 100000 (closed-form prediction ceil(ln(0.2)/ln(0.95)) = 32 — the sim must confirm with its own integer math); B mirror ledger stays EMPTY (nothing from A ever applied); and exclusion is LOCAL ONLY: A still believes the edge to B (A.believed_peers contains B; A reputation for B untouched) — no global ban exists anywhere in the system; all 200 post-exclusion honest deltas dropped unprocessed.",
+    "R4": "R4 honest-reporter-recovery: decision between verdicts. VERDICT no-recovery-under-seed-semantics iff in the seed-literal arm (B stops listening, seed4 §4.4 step 3) B reputation for A stays frozen below 100000 for ALL 200 post-exclusion honest emissions AND in the counterfactual arm (channel kept open, contra §4.4 step 3) rep re-crosses 100000 after m_to_cross_threshold honest emissions. VERDICT recovers iff the literal arm itself re-crosses the threshold. VERDICT anomalous-see-numbers otherwise. The finding to receipt either way: whether exclusion permanence rests on reputation depth or on channel severance.",
+    "R5": "R5 paired-arms (3 seeds per arm, identical worlds per seed — arm changes ONLY alpha; horizon 300, p(violation)=0.75): VERDICT asymmetry-load-bearing iff arm W (alpha=0.01 < beta=0.05, seed4 §4.3) excludes in 3/3 seeds AND arm S (alpha=beta=0.05, asymmetry zeroed) excludes in 0/3 seeds; VERDICT no-effect otherwise. Metric: exclusion latency in emissions; for non-excluded runs, final rep.",
+    "R5_AMENDED": "R5-AMENDED (dev-phase amendment, disclosed here BEFORE the final committed run; seeds, arms, p, horizon, and simulation code paths UNCHANGED — verdict bucketing only). REASON: the sealed original required arm S 0/3 exclusions, but its outcome space omitted stochastic symmetric-arm exclusion: in expectation rep_S equilibrates at 250000, yet a long unlucky violation run can walk below 100000 (observed in dev telemetry, seed F1P1, latency 82). AMENDED VERDICT asymmetry-load-bearing iff (i) arm W excludes in 3/3 seeds, (ii) in EVERY seed pair W latency < S latency (S-never counts as > horizon), (iii) strict separation: max(W latencies) < min(S latencies). VERDICT no-effect iff (i) fails or no seed pair shows W earlier. Otherwise asymmetry-helps-partial. The original rule is preserved verbatim above; the result row reports BOTH buckets."
+  },
+  "verdicts": {
+    "R1_valid_delta_applies": "PASS",
+    "R2_violating_delta_refused": "PASS",
+    "R3_repeated_violator_excluded": "PASS",
+    "R4_honest_reporter_recovery": "no-recovery-under-seed-semantics",
+    "R5_paired_reputation_weighting": "asymmetry-load-bearing (amended rule; original-rule bucket: no-effect — see results.R5.amendment)"
+  },
+  "results": {
+    "R1": {
+      "verdict": "PASS",
+      "numbers": {
+        "rounds": 200,
+        "emissions": 200,
+        "applied": 200,
+        "ledger_entries_A_side": 200,
+        "ledger_entries_B_side": 200,
+        "all_deltas_within_C": true,
+        "all_entries_within_C_both_sides": true,
+        "mirror_balance_all_transactions": true,
+        "rep_A_in_B_initial": 500000,
+        "rep_A_in_B_final": 933011,
+        "A_stall_refusals": 0,
+        "B_capacity_refusals": 0,
+        "sum_gamma_from_A_in_B_ledger": 48373,
+        "sum_eta_from_A_in_B_ledger": 79452,
+        "believed_edge_B_to_A": 996,
+        "jepa_consolidations_B": 188
+      }
+    },
+    "R2": {
+      "verdict": "PASS",
+      "numbers": {
+        "violating_emission_index": 100,
+        "violating_delta": {
+          "gamma_delta": 1304,
+          "eta_delta": 482,
+          "sum": 1786,
+          "C": 1585,
+          "z_out_action": "overcommit"
+        },
+        "mirror_ledger_entries_B": 149,
+        "expected_149": 149,
+        "applied_before_violation": 100,
+        "applied_after_violation": 49,
+        "zin_wire_violations": 1,
+        "rep_before": 816985,
+        "rep_after": 776136,
+        "rep_drop": 40849,
+        "expected_drop_beta_5pct": 40849,
+        "excluded_after_single_violation": false
+      }
+    },
+    "R3": {
+      "verdict": "PASS",
+      "numbers": {
+        "violations_to_exclude_k": 32,
+        "closed_form_prediction_k": 32,
+        "rep_before_exclusion": 101954,
+        "rep_at_exclusion": 96856,
+        "mirror_ledger_entries_B": 0,
+        "B_believed_peers_after": 0,
+        "B_exclusion_record": {
+          "at_tick": 32,
+          "at_clock": 32,
+          "rep_frozen": 96856
+        },
+        "post_exclusion_drops": 200,
+        "A_still_believes_edge_to_B": true,
+        "A_reputation_for_B_untouched": null,
+        "B_broadcast_addressings_suppressed": 200,
+        "A_clock_kept_ticking": 232,
+        "note_A_side": "harness is one-directional (A emits, B receives) per the E-F1 brief, so A reputation map for B is empty by construction; the A-side locality evidence is: believed_peers unchanged, clock advancing, broadcasts continuing into the void"
+      }
+    },
+    "R4": {
+      "verdict": "no-recovery-under-seed-semantics",
+      "numbers": {
+        "literal_arm_channel_severed": {
+          "post_exclusion_honest_emissions": 200,
+          "dropped_unprocessed": 200,
+          "rep_frozen_at": 96856,
+          "distinct_rep_values_seen": 1,
+          "B_believed_peers": 0
+        },
+        "counterfactual_arm_channel_kept_open": {
+          "m_to_cross_exclusion_threshold": 1,
+          "m_to_reach_initial_prior_05": 59,
+          "rep_final": 878995,
+          "note": "contra seed4 §4.4 step 3 — counterfactual measurement (charter doctrine #3)"
+        },
+        "finding": "exclusion permanence rests on CHANNEL SEVERANCE (§4.4 step 3), not on reputation depth: with the channel open, ONE honest emission re-crosses the 0.1 threshold"
+      }
+    },
+    "R5": {
+      "verdict": "asymmetry-load-bearing",
+      "verdict_original_rule": "no-effect",
+      "amendment": "R5_AMENDED (see decision_rules row): original bucket required S 0/3; stochastic symmetric-arm exclusion (F1P1, latency 82) was outside its outcome space; amended rule = paired latency + strict separation; no seeds/arms/parameters changed",
+      "numbers": {
+        "p_violation": 0.75,
+        "horizon": 300,
+        "paired_worlds_identical_streams": true,
+        "arm_W_seed4_beta_gt_alpha": [
+          {
+            "seed": "F1P0",
+            "excluded": true,
+            "latency_emissions": 44,
+            "violations_seen": 36,
+            "rep_final": 97455
+          },
+          {
+            "seed": "F1P1",
+            "excluded": true,
+            "latency_emissions": 47,
+            "violations_seen": 38,
+            "rep_final": 98635
+          },
+          {
+            "seed": "F1P2",
+            "excluded": true,
+            "latency_emissions": 47,
+            "violations_seen": 39,
+            "rep_final": 95261
+          }
+        ],
+        "arm_S_symmetric_alpha_eq_beta": [
+          {
+            "seed": "F1P0",
+            "excluded": false,
+            "latency_emissions": null,
+            "violations_seen": 218,
+            "rep_final": 325948
+          },
+          {
+            "seed": "F1P1",
+            "excluded": true,
+            "latency_emissions": 82,
+            "violations_seen": 69,
+            "rep_final": 97100
+          },
+          {
+            "seed": "F1P2",
+            "excluded": false,
+            "latency_emissions": null,
+            "violations_seen": 233,
+            "rep_final": 299781
+          }
+        ],
+        "W_excluded_in": "3/3",
+        "S_excluded_in": "1/3",
+        "W_latencies_with_never_as_301": [
+          44,
+          47,
+          47
+        ],
+        "S_latencies_with_never_as_301": [
+          301,
+          82,
+          301
+        ],
+        "amended_conditions": {
+          "W_3_of_3": true,
+          "W_earlier_in_every_pair": true,
+          "strict_separation_maxW_lt_minS": true
+        }
+      }
+    }
+  },
+  "chain": {
+    "file": "experiments/outputs/receipts_e_f1.jsonl",
+    "links": 8,
+    "tip": "0xbbac64d20a39a697",
+    "verify": {
+      "final_file": {
+        "ok": true,
+        "links": 8
+      },
+      "before_chain_verify_row": {
+        "from_memory": {
+          "ok": true,
+          "links": 7
+        },
+        "from_file": {
+          "ok": true,
+          "links": 7
+        }
+      }
+    }
+  }
+}

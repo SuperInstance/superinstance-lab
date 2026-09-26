@@ -1,0 +1,452 @@
+     1→// E39 — THE VARIANCE LENS (self-normalized variance-ratio detection composed with trust re-probation vs the E35 sleeper)
+     2→// ==================================================================================================
+     3→// Collides with E38's carried seed. E38 (receipt 0x75ab4d02f3181ca4) COMPUTED the mechanism:
+     4→// the E24 flip is a VARIANCE/BIMODALITY change, NOT a mean shift — post-flip residual mean sits
+     5→// AT/BELOW the sleeper's own probation mu in 4/6 seeds (sigmaGap -0.08..+0.08; drift rate
+     6→// -0.86/-0.60/-0.76 per rd in no-trip seeds), so the mean-shift CUSUM plateaued under h — while
+     7→// the SAME z-normalization's flat-sigma floor (sd<0.05 -> 0.1) turned honest regime noise into
+     8→// 359 founder false trips (29.9/200r vs budget 1.0 = 30x blowout). E38's closing receipt carried
+     9→// the seed: "pooled-residual VARIANCE/kurtosis (the flip is bimodality: 75% of toxic rounds sit
+    10→// ~0.12 from pool, 25% at 0.6), cross-voice residual correlation at flip rounds, ... and any
+    11→// CUSUM-style sensor needs its false-alarm price priced on HONEST founders' regime noise BEFORE
+    12→// composition with trust consequences". E39 builds exactly that detector:
+    13→//
+    14→//   VarianceGuard — rolling residual VARIANCE RATIO, self-normalized so NO sigma floor exists.
+    15→//   For sender i at round t: residual r_i(t) = |p_i(t) - pooled(t)| (the same deviation the
+    16→//   admission bar uses, streamed). Baseline: var_i = VARIANCE of the sender's OWN probation
+    17→//   window (admission record — exactly devMean's rounds, E38-verified slicing x.t < admitRound-1);
+    18→//   incumbents/founders use their OWN first admitWindow (40) rounds post-arrival (E37 FlipGuard
+    19→//   first40 doctrine). Statistic: ratio_i(t) = var(last 30 residuals of i) / var_i —
+    20→//   population variance (ddof 0), the SAME estimator in both windows. TRIP when ratio > h
+    21→//   (sweep {2.0, 2.5, 3.5}; spec default 2.5) SUSTAINED for 5 of the last 10 evaluation rounds.
+    22→//   Self-normalization receipts: both windows are the sender's own residuals in the same units,
+    23→//   so scale cancels — a flat floor (E38's false-trip engine) has nothing to attach to. The only
+    24→//   guard is epsDiv = 1e-12 against literal division by zero (a numeric guard, NOT a noise
+    25→//   floor; measured baseVars are receipted). Sustained-window semantics: the last 10 evaluation
+    26→//   rounds' crossed-booleans (evaluation requires baseline + admitted + a full trailing-30
+    27→//   window); trip fires when >= 5 are true; on a trip the window RESETS (the analogue of E38's
+    28→//   "S reset to 0" — a rethrow needs a fresh 5-of-10).
+    29→//
+    30→//   Consequence on trip (E37/E38 verbatim, detector swap ONLY): TrustReprobation (HedgeTrust
+    31→//   weight x0.5 via absorb, re-earns through the normal fixed-share + exp(eta*r) path) +
+    32→//   influence re-probation (epsNew for 40 guard rounds). TrustReprobation is copied VERBATIM
+    33→//   from e38_sensor.mjs (it reads only the detector's event log; VarianceGuard trip events
+    34→//   carry trail30/refMean fields so the class stays byte-identical). Guard plumbing (windows
+    35→//   {from:t+1, until:t+40}, release events, epsNew throwback, suppressed crossings, throw/
+    36→//   rethrow kinds) is FlipGuard's, E37/E38-verbatim.
+    37→//
+    38→//   SECONDARY (telemetry ONLY — gates NOTHING, receipted): lagged cross-voice residual screen.
+    39→//   The flipped sleeper reuses g1's toxic series, so its SIGNED residual (p - pooled) should
+    40→//   co-move with g1's. Per sender: max Pearson correlation of residual SIGN against all
+    41→//   toxic/flagged senders (g1 + every throw/rethrow-flagged id) at lags 1-3; w1-vs-g1 also
+    42→//   reported at lag 0 as a reference (the flip is same-round co-toxicity; the lag 1-3 screen
+    43→//   tests for a genuinely lagged echo). Computed per seed per defense arm, reported in
+    44→//   finding.varianceScreen.
+    45→//
+    46→// THE QUESTION: E38 proved the flip is variance-only and that z-normalization false-trips 30x
+    47→// over budget. Does the ratio statistic SEE the flip (trip latency < 30 rounds in most seeds)
+    48→// WITHOUT tripping on honest regime noise (founder false trips <= 1.0 per 200 rounds arm-wide —
+    49→// the primary design constraint), contain the sleeper (R1), and keep the canaries clean (R2)?
+    50→// If honest founders' own trailing/baseline variance ratio NATURALLY exceeds 2.5 in regime
+    51→// noise, that IS the finding — receipt it with numbers.
+    52→//
+    53→// SETUP (E38 world verbatim, fresh e39:* draws): 12 honest founders (mixed acuity, a1 = 0.9
+    54→// reference) + 1 honest late-joiner h2 (t=150, honest forever — the false-positive canary) +
+    55→// 1 flasher g1 (toxic from arrival, t=150 — the regression canary, ACTIVE in all attack arms so
+    56→// R2c has a same-arm baseline) + 1 sleeper w1 (t=150, honest phase = e24 h1 generator verbatim,
+    57→// flips at admission + k* = 25 — E35's probe-optimal, carried; the GAN strategy search is
+    58→// CLOSED, k* is not re-searched). T=400, 8 seeds (probe rule may cut to 6). Paired arms,
+    59→// IDENTICAL worlds (same truth stream, honest votes, toxic series; arms select over shared
+    60→// values):
+    61→//   A1   no-defense+sleeper — full v3.1 + sleeper + active g1, NO defense (E36/E37/E38 control)
+    62→//   V1   variance(best-h)   — v3.1 + VarianceGuard(h* = probe-picked from {2.0,2.5,3.5}) +
+    63→//                             trust re-probation + same attack [the candidate]
+    64→//   V-hi variance(3.5)      — v3.1 + VarianceGuard(h = 3.5) + trust re-probation + same attack
+    65→//                             [conservative sibling — measures the sensitivity trade; if h* = 3.5
+    66→//                             the two arms coincide and V1 ALIASES V-hi (receipted, no re-run)]
+    67→//   A4   v3.1-clean         — full v3.1, no attack, NO defense (collateral baseline)
+    68→//
+    69→// DAMAGE METHOD (E35/E36/E37/E38 counterfactual, verbatim): D = mean over the post-flip window
+    70→// [t_flip, min(t_flip+150,400)) of |err(pool) - err(pool with that attacker zeroed)|, err =
+    71→// |pool - s|, counterfactual pools are reference-side only (MurmurBus.pool, log-odds), never
+    72→// written to the sheet. Sleeper window anchored at t_adm + 25 with t_adm measured per seed on a
+    73→// pass-1 honest-forever A1-wiring run (in-run assert: pass-1 == matrix admission). g1 uses its
+    74→// own window [150, 300). Positive = hurts.
+    75→//
+    76→// DECISION RULES (receipted EXACTLY, BEFORE the full run):
+    77→//   R1 CONTAINMENT — D(V1) < D(A1): paired one-sided sign test (zeros excluded) p < 0.05;
+    78→//      report paired delta +/- SE and damage ratio D(V1)/D(A1). V-hi's numbers are receipted
+    79→//      alongside (the sensitivity trade) but the crown rides on V1.
+    80→//   R2 CANARIES — V1 (and V-hi, reported), ALL must hold:
+    81→//      (a) honestFinalQ within 1 SE of A4: |mean(honQ(A4)-honQ(V))| <= SE of the seed-paired
+    82→//          difference (V arms MOVE trust by design — receipted as trustMoved per seed);
+    83→//      (b) h2 admitted in ALL seeds (8/8, or 6/6 if cut) with ZERO defense trips (throws == 0
+    84→//          AND guard rounds == 0 across the arm);
+    85→//      (c) g1 damage <= A1 + 1 SE (SE of the seed-paired difference);
+    86→//      (d) FALSE-TRIP BUDGET — THE PRIMARY DESIGN CONSTRAINT (E38 failed it 30x): total
+    87→//          honest-founder trips per 200 rounds <= 1.0 arm-wide (rate = founder throw events /
+    88→//          (seeds * T/200)); measured explicitly: trips, per-founder histogram, recovery.
+    89→//   R3 RECOVERY — false-tripped founders re-earn to >= 95% of pre-trip trust share within 100
+    90→//      rounds (E37 baseline: 23/25, mean 19.1r — must not regress). Events without a full
+    91→//      100-round horizon (decayT > T-1-100) receipted but excluded. Vacuous pass if no trips.
+    92→//   R4 OPERATING CURVE — per h in the probe sweep {2.0,2.5,3.5}: trip latency post-flip
+    93→//      (mean +/- sd over tripped seeds), per-seed trip/no-trip, false-trip count on honest
+    94→//      voices. Coverage: the picked h (V1) and h = 3.5 (V-hi) get the full matrix; unpicked
+    95→//      sweep arms keep probe-seed coverage. PLUS the mechanism check: per-seed post-flip
+    96→//      variance ratio for the sleeper (does the ratio actually cross the bar? mean-shift-blind
+    97→//      but variance-visible? — post-flip residual mean vs probation mu receipted alongside).
+    98→//   CROWN — if V1 passes R1 + R2 + R3, crown it with its damage ratio and mean trip latency;
+    99→//      if it fails, receipt the negative verdict with the mechanism COMPUTED from telemetry
+   100→//      (per-seed variance-ratio trajectories around t_flip; honest founders' natural ratio
+   101→//      maxima — if their own ratio exceeds 2.5 in regime noise, that IS the finding). No
+   102→//      pre-drafted text: every clause is filled from measured numbers.
+   103→//
+   104→// PROBE h-PICK (receipted before any run; E38's rule verbatim, h := ratio bar): the probe is a
+   105→// 1-seed (seed 0) timed run of the full matrix + the h-sweep (pass-1 + A1 + A4 + V-h for h in
+   106→// {2.0,2.5,3.5}). For each h: delta_h = D_w1(A1, s0) - D_w1(V_h, s0); hard gates on seed 0:
+   107→// (i) ZERO trips on h2; (ii) D_g1(V_h, s0) <= D_g1(A1, s0) + 1e-4 (single-seed proxy for R2c's
+   108→// +1 SE form; 1e-4 ~ 5x E37's measured founder-decay leak, chosen before the run); (iii)
+   109→// founder-trip rate on seed 0 <= 1.0 per 200 rounds (<= 2 trips). PICK: argmax delta_h among h
+   110→// passing ALL gates; ties (|delta| <= 1e-9) -> LARGER h (more conservative). If no h passes all
+   111→// gates: argmax delta among h passing gate (i) alone (receipted relaxed='founder-only'); if
+   112→// still none: argmax delta (relaxed='none'). If h* = 3.5: V1 == V-hi (alias, receipted).
+   113→//
+   114→// RUNTIME DISCIPLINE (receipted before the full run): probe = the timed seed-0 block (pass-1 +
+   115→// A1 + A4 + the 3-arm h-sweep = 6 runs); projected = t_probe * 8 + 2s IO (the probe block is >=
+   116→// any matrix seed's work: 5 runs when h* != 3.5, 4 when aliased — the projection is
+   117→// conservative); if projected > 170s, cut seeds 8 -> 6 and RECEIPT the cut (E36/E37/E38 ran
+   118→// ~100-135s at 6 seeds). The probe doubles as matrix seed 0 (no re-run: A1/A4 and the picked V
+   119→// arms' seed-0 results are carried into the matrix).
+   120→//
+   121→// COMPOSITION RECEIPT (stated up front): both mechanisms are EXPERIMENT-LOCAL classes over the
+   122→// murmur/ module APIs — ZERO changes to murmur/ (target: zero). Hooks used:
+   123→//   Admission: observe(), reattribute(), notePooled(), admitted(), admittedRound(),
+   124→//     probationary(), devMean(), firstSeen (public, read-only), admitWindow/epsNew/admitErr
+   125→//     (public config fields)
+   126→//   HedgeTrust: weights(), update(), absorb(), weight()  <- the trust-decay hook
+   127→//   MurmurBus.pool() (reference-side counterfactuals), receipts.sealChain/verifyChain.
+   128→// VarianceGuard = FlipGuard's PLUMBING verbatim (rec/note/apply/summary skeleton, guard windows
+   129→// {from:t+1, until:t+40}, release events, epsNew throwback, guardRounds accounting, throw/
+   130→// rethrow kinds drained by TrustReprobation) with the trip statistic swapped: per-sender
+   131→// self-calibrated CUSUM -> self-normalized variance RATIO with a 5-of-10 sustained gate (spec
+   132→// above). TrustReprobation is copied VERBATIM from e38_sensor.mjs (unmodified — it reads only
+   133→// the detector's event log). The ratio streams EVERY post-baseline round with a full trailing
+   134→// window (the spec formula); trip EVENTS evaluate only when no guard window is open (E37
+   135→// plumbing) — suppressed sustained conditions are counted in telemetry; on a trip event the
+   136→// sustained window resets (spec analogue of E38's S=0).
+   137→//
+   138→// RNG DOCTRINE (binding, E35/E36/E37/E38 verbatim): all randomness through MothVault
+   139→// (offline:true), one harvest, per-purpose stream keys 'e39:<purpose>:<seed>' via streamFor;
+   140→// NO Math.random. Paired worlds REQUIRE arm-identical world streams — arms never consume
+   141→// different draws. Fresh e39:* draws (the world GENERATOR is E37/E38 verbatim; the stream-key
+   142→// prefix is per-task by doctrine).
+   143→//
+   144→// Run: node experiments/e39_variance.mjs [seeds]   (E39_DEV=1 for a 1-seed dev run)
+   145→
+   146→import { QuiltEngine } from '../engine/dist/index.js';
+   147→import { HedgeTrust } from '../murmur/trust.mjs';
+   148→import { MurmurBus } from '../murmur/bus.mjs';
+   149→import { MothVault } from '../murmur/moth.mjs';
+   150→import { Provenance } from '../murmur/provenance.mjs';
+   151→import { Admission } from '../murmur/admission.mjs';
+   152→import { sealChain, verifyChain } from '../murmur/receipts.mjs';
+   153→import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
+   154→import { fileURLToPath } from 'node:url';
+   155→
+   156→// ---------------- config ----------------
+   157→const T = 400, N = 12;
+   158→let SEEDS = Number(process.argv[2] || (process.env.E39_DEV ? 1 : 8));
+   159→const FLIP_P = 0.02, REROLL_P = 0.01;
+   160→const JOIN = 150;                              // newcomers join here
+   161→const TOX_Q = 0.25;                            // E24 toxic formula (verbatim)
+   162→const PRE = { from: 120, to: 150 };            // pre-attack baseline
+   163→const DW = 150;                                // damage window length (receipted)
+   164→const KSTAR = 25;                              // carried from E35's probe (probe-optimal)
+   165→const SLEEP = 'w1', INSTANT = 'g1', JOINER = 'h2';
+   166→const HONEST = Array.from({ length: N }, (_, i) => `a${i + 1}`);
+   167→const ALL_IDS = [...HONEST, SLEEP, INSTANT, JOINER];
+   168→const V = ALL_IDS.length; // 15 voice slots
+   169→const CFG = { eta: 0.25, share: 0.02 };
+   170→const ADM = {
+   171→  beta: 0.12, alpha: 0.25, novSpread: 0.15,
+   172→  coldStart: true, admitWindow: 40, epsNew: 0.15,
+   173→  minEdgesIndep: 2, admitErr: 0.5, capShare: 0.10,
+   174→};
+   175→const VARIANCE = {
+   176→  trail: 30,             // spec: var(trailing 30 rounds)
+   177→  sustainWin: 10,        // spec: sustained 5 of the last 10 rounds
+   178→  sustainNeed: 5,
+   179→  hSweep: [2.0, 2.5, 3.5], // probe sweep (spec default 2.5)
+   180→  hiH: 3.5,              // conservative sibling (V-hi)
+   181→  epsDiv: 1e-12,         // divide-by-zero guard ONLY — NOT a noise floor (receipted)
+   182→  guardRounds: 40,       // epsNew re-probation window (E36/E37/E38 verbatim)
+   183→};
+   184→const REPROB = { frac: 0.5, horizon: 100 };    // E37 TrustReprobation verbatim
+   185→const G1_WIN = { from: JOIN, to: JOIN + DW };  // g1's own window [150, 300)
+   186→const TOL = 1e-9;
+   187→const PROBE_G1_TOL = 1e-4;                     // receipted probe gate (ii) tolerance
+   188→
+   189→// ---------------- helpers ----------------
+   190→const clampP = (p) => Math.min(0.98, Math.max(0.02, p));
+   191→const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+   192→const sd = (a) => { const m = mean(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length); };
+   193→const variance = (a) => { const m = mean(a); return a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length; }; // population, ddof 0 — SAME estimator in both ratio windows (receipted)
+   194→const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+   195→const r6 = (x) => (Number.isFinite(x) ? +x.toFixed(6) : x);
+   196→// RECEIPTED VAULT DOCTRINE (E17 finding #0): one harvest, per-purpose keys,
+   197→// every draw is the FIRST draw of its own cross-key sub-stream.
+   198→function makeRng(harvest, vault, purpose) {
+   199→  let d = 0;
+   200→  return () => vault.streamFor(harvest, `${purpose}:${d++}`)();
+   201→}
+   202→// paired one-sided sign test, zeros excluded (E28 receipted small-p method)
+   203→const binom = (n, k) => { let r = 1; for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1); return r; };
+   204→function signTestOneSided(deltas) {
+   205→  const W = deltas.filter((d) => d > 1e-12).length;
+   206→  const L = deltas.filter((d) => d < -1e-12).length;
+   207→  const n = W + L;
+   208→  let p = 0;
+   209→  for (let k = W; k <= n; k++) p += binom(n, k);
+   210→  return { W, L, n, p: p / 2 ** n };
+   211→}
+   212→const stat = (a) => ({ mean: r6(mean(a)), sd: r6(sd(a)) });
+   213→const statOr = (a) => (a.length ? stat(a) : null);
+   214→const seOf = (a) => (a.length > 0 ? sd(a) / Math.sqrt(a.length) : 0);
+   215→
+   216→// ---------------- world (E38 verbatim; stream keys e39:*) ----------------
+   217→function genWorld(seed, harvest, vault) {
+   218→  const wR = makeRng(harvest, vault, `e39:world:${seed}`);
+   219→  const qR = makeRng(harvest, vault, `e39:skill:${seed}`);
+   220→  const xR = makeRng(harvest, vault, `e39:tox:${seed}`);
+   221→  const shR = makeRng(harvest, vault, `e39:sleep:${seed}`);
+   222→  const nhR = makeRng(harvest, vault, `e39:h2:${seed}`);
+   223→  const s = new Array(T);
+   224→  s[0] = wR() < 0.5 ? 0 : 1;
+   225→  for (let t = 1; t < T; t++) s[t] = wR() < FLIP_P ? 1 - s[t - 1] : s[t - 1];
+   226→  const q = Array.from({ length: T }, () => new Array(N));
+   227→  q[0][0] = 0.9;
+   228→  for (let i = 1; i < N; i++) q[0][i] = Math.round((0.5 + 0.45 * qR()) * 1000) / 1000;
+   229→  for (let t = 1; t < T; t++) {
+   230→    for (let i = 0; i < N; i++) {
+   231→      q[t][i] = qR() < REROLL_P ? Math.round((0.5 + 0.45 * qR()) * 1000) / 1000 : q[t - 1][i];
+   232→    }
+   233→  }
+   234→  const vR = [];
+   235→  for (let i = 0; i < N; i++) vR.push(makeRng(harvest, vault, `e39:vote:${seed}:${i}`));
+   236→  const votes = Array.from({ length: T }, () => new Array(N));
+   237→  for (let t = 0; t < T; t++) {
+   238→    for (let i = 0; i < N; i++) {
+   239→      const signal = vR[i]() < q[t][i] ? s[t] : 1 - s[t];
+   240→      votes[t][i] = clampP(signal === 1 ? 0.5 + (q[t][i] - 0.5) : 0.5 - (q[t][i] - 0.5));
+   241→    }
+   242→  }
+   243→  // the TOXIC series — E24 formula VERBATIM (shared by the sleeper post-flip
+   244→  // AND the instant toxic newcomer; same toxic values across arms)
+   245→  const toxV = new Array(T);
+   246→  for (let t = 0; t < T; t++) {
+   247→    const signal = xR() < TOX_Q ? s[t] : 1 - s[t];
+   248→    toxV[t] = clampP(signal === 1 ? 0.5 + (TOX_Q - 0.5) : 0.5 - (TOX_Q - 0.5));
+   249→  }
+   250→  // the SLEEPER's honest phase — e24 h1 generator VERBATIM (own edges: the
+   251→  // evasion requires passing the independence bar honestly)
+   252→  const sleepH = new Array(T).fill(null);
+   253→  {
+   254→    let qs = Math.round((0.7 + 0.25 * shR()) * 1000) / 1000;
+   255→    for (let t = JOIN; t < T; t++) {
+   256→      if (shR() < REROLL_P) qs = Math.round((0.7 + 0.25 * shR()) * 1000) / 1000;
+   257→      const signal = shR() < qs ? s[t] : 1 - s[t];
+   258→      sleepH[t] = clampP(signal === 1 ? 0.5 + (qs - 0.5) : 0.5 - (qs - 0.5));
+   259→    }
+   260→  }
+   261→  // the honest late-joiner h2 — E21/E24 honest-newmember control, honest forever
+   262→  const h2V = new Array(T).fill(null);
+   263→  {
+   264→    let qh = Math.round((0.7 + 0.25 * nhR()) * 1000) / 1000;
+   265→    for (let t = JOIN; t < T; t++) {
+   266→      if (nhR() < REROLL_P) qh = Math.round((0.7 + 0.25 * nhR()) * 1000) / 1000;
+   267→      const signal = nhR() < qh ? s[t] : 1 - s[t];
+   268→      h2V[t] = clampP(signal === 1 ? 0.5 + (qh - 0.5) : 0.5 - (qh - 0.5));
+   269→    }
+   270→  }
+   271→  return { s, votes, toxV, sleepH, h2V };
+   272→}
+   273→
+   274→// ---------------- sheet (15 voice slots; formulas IDENTICAL for every arm) --
+   275→function buildSheet() {
+   276→  const cells = [];
+   277→  for (const id of ALL_IDS) cells.push({ id: `v.${id}`, kind: 'value', value: 0.5, description: `voice ${id} (posterior P(s=1))` });
+   278→  for (const id of ALL_IDS) cells.push({ id: `w.${id}`, kind: 'value', value: 1 / V, description: `influence weight ${id} (protocol-adjusted)` });
+   279→  const lg = (x) => `Math.log(clamp(${x},0.02,0.98)/(1-clamp(${x},0.02,0.98)))`;
+   280→  const sig = (z) => `(1/(1+Math.exp(-(${z}))))`;
+   281→  const hT = [], hD = [];
+   282→  for (const id of ALL_IDS) { hT.push(`w.${id}*${lg(`v.${id}`)}`); hD.push(`w.${id}`); }
+   283→  cells.push({ id: 'pool.hedge', kind: 'formula', expr: sig(`(${hT.join(' + ')}) / (${hD.join(' + ')})`) });
+   284→  cells.push({ id: 'amp.w1', kind: 'formula', expr: `w.${SLEEP} / (${hD.join(' + ')})` });
+   285→  cells.push({ id: 'amp.g1', kind: 'formula', expr: `w.${INSTANT} / (${hD.join(' + ')})` });
+   286→  cells.push({ id: 'amp.h2', kind: 'formula', expr: `w.${JOINER} / (${hD.join(' + ')})` });
+   287→  return { id: `variancelane-${V}`, title: `E39 variance lane (${V} voice slots)`, cells };
+   288→}
+   289→
+   290→// __DEFENSES_BEGIN (experiment-local; murmur/ untouched — composition receipt)
+   291→// VarianceGuard — FlipGuard's plumbing (copied from e38_sensor.mjs's CusumGuard:
+   292→// rec/note/apply/summary skeleton, guard windows, release events, epsNew
+   293→// throwback, guardRounds accounting, throw/rethrow kinds) with the trip
+   294→// statistic swapped for the E39 spec: per-sender self-normalized VARIANCE RATIO
+   295→// on the sender's own |p - pooled| residual stream.
+   296→//   baseline var:   newcomer -> VARIANCE of its own probation residuals, sliced
+   297→//                   strictly before the admission round (the same rounds
+   298→//                   devMean counted — E38-verified against admission.mjs's
+   299→//                   round counter); founder -> its OWN first admitWindow (40)
+   300→//                   residuals (FlipGuard first40 doctrine). NO sigma, NO floor.
+   301→//   statistic:      ratio_i(t) = variance(last `trail`=30 residuals) / baseVar
+   302→//                   (population variance ddof 0 in BOTH windows — the ratio is
+   303→//                   dimensionless, so no scale floor can be needed).
+   304→//   sustained gate: last `sustainWin`=10 evaluation rounds' (ratio > h)
+   305→//                   booleans; trip when >= `sustainNeed`=5 are true; the window
+   306→//                   RESETS on a trip (analogue of E38's "S reset to 0").
+   307→//   trip event fields: trail30 = trailing-30 residual MEAN and refMean = the
+   308→//                   baseline MEAN (telemetry; these field names keep
+   309→//                   TrustReprobation byte-verbatim), plus ratio/trailVar/
+   310→//                   baseVar/baseSrc/sustain (the E39 statistic receipt).
+   311→class VarianceGuard {
+   312→  constructor(adm, cfg) { // cfg: { h, trail, sustainWin, sustainNeed, epsDiv, guardRounds }
+   313→    this.adm = adm; this.cfg = cfg;
+   314→    this.devs = new Map();      // id -> [{t, d}] — the sender's OWN |p - pooled| stream
+   315→    this.signed = new Map();    // id -> Map(t -> p - pooled) — signed residuals (cross-voice screen telemetry)
+   316→    this.base = new Map();      // id -> { var, mu, src, n } — self-normalized baseline (VARIANCE + mean for telemetry)
+   317→    this.ratioWin = new Map();  // id -> last sustainWin crossed-booleans (the sustained gate)
+   318→    this.track = new Map();     // id -> { n, maxRatio, maxRatioAt, lastRatio, crossedRounds } — per-sender statistic telemetry
+   319→    this.w1Path = [];           // SLEEP's full {t, r, ratio, crossed} path (mechanism receipt)
+   320→    this.suppressed = new Map();// id -> sustained conditions suppressed by an open guard window
+   321→    this.guarded = new Map();   // id -> { from, until } — epsNew throwback window
+   322→    this.events = [];
+   323→    this.guardRounds = new Map();
+   324→  }
+   325→  rec(id, t, d, sr) {
+   326→    if (!this.devs.has(id)) this.devs.set(id, []);
+   327→    const a = this.devs.get(id);
+   328→    a.push({ t, d });
+   329→    if (!this.signed.has(id)) this.signed.set(id, new Map());
+   330→    this.signed.get(id).set(t, sr);
+   331→    if (!this.base.has(id)) {
+   332→      const r = this.adm.admittedRound(id);
+   333→      if (r === 1) { // founder: no probation exists — its OWN first admitWindow rounds are the reference
+   334→        if (a.length === this.adm.admitWindow) {
+   335→          const w = a.slice(0, this.adm.admitWindow).map((x) => x.d);
+   336→          this.base.set(id, { var: variance(w), mu: mean(w), src: 'first40', n: w.length });
+   337→        }
+   338→      } else if (r != null && this.adm.admitted(id)) { // newcomer: the quantity admitErr judged, verbatim from Admission
+   339→        const dm = this.adm.devMean(id);
+   340→        if (dm != null) {
+   341→          const w = a.filter((x) => x.t < r - 1).map((x) => x.d); // strictly before the admission round = devMean's rounds
+   342→          this.base.set(id, { var: variance(w), mu: dm, src: 'probation', n: w.length });
+   343→        }
+   344→      }
+   345→    }
+   346→  }
+   347→  note(t, murmurs, pool) { // post-pool: record devs + ratio update + sustained-trip check (effective next round)
+   348→    for (const m of murmurs) this.rec(m.from, t, Math.abs(+m.p - pool), +m.p - pool);
+   349→    for (const m of murmurs) {
+   350→      const id = m.from;
+   351→      const g = this.guarded.get(id);
+   352→      if (g) {
+   353→        if (t > g.until) { this.events.push({ t, id, kind: 'release' }); this.guarded.delete(id); }
+   354→        // the ratio keeps streaming while guarded (spec formula); only the EVENT is gated
+   355→      }
+   356→      const b = this.base.get(id);
+   357→      if (!b || !this.adm.admitted(id)) continue;
+   358→      const r = Math.abs(+m.p - pool);
+   359→      const a = this.devs.get(id);
+   360→      if (a.length < this.cfg.trail) continue; // strict trailing-30 evaluation (receipted)
+   361→      const tv = variance(a.slice(-this.cfg.trail).map((x) => x.d));
+   362→      const ratio = tv / Math.max(b.var, this.cfg.epsDiv); // self-normalized; epsDiv guards division by zero ONLY
+   363→      const crossed = ratio > this.cfg.h;
+   364→      let win = this.ratioWin.get(id);
+   365→      if (!win) { win = []; this.ratioWin.set(id, win); }
+   366→      win.push(crossed);
+   367→      if (win.length > this.cfg.sustainWin) win.shift();
+   368→      const tr = this.track.get(id) ?? { n: 0, maxRatio: 0, maxRatioAt: t, lastRatio: 0, crossedRounds: 0 };
+   369→      tr.n++; tr.lastRatio = r6(ratio);
+   370→      if (ratio > tr.maxRatio) { tr.maxRatio = ratio; tr.maxRatioAt = t; }
+   371→      if (crossed) tr.crossedRounds++;
+   372→      this.track.set(id, tr);
+   373→      if (id === SLEEP) this.w1Path.push({ t, r: r6(r), ratio: r6(ratio), crossed });
+   374→      const sustained = win.length >= this.cfg.sustainWin && win.filter(Boolean).length >= this.cfg.sustainNeed;
+   375→      if (g) { // guard open: no trip event (E37 plumbing); count suppressed sustained conditions
+   376→        if (sustained) this.suppressed.set(id, (this.suppressed.get(id) ?? 0) + 1);
+   377→        continue;
+   378→      }
+   379→      if (sustained) {
+   380→        const sCount = win.filter(Boolean).length; // recorded BEFORE the reset
+   381→        this.ratioWin.set(id, []); // reset the sustained window on trip (receipted spec analogue)
+   382→        const re = this.events.some((e) => e.id === id && (e.kind === 'throw' || e.kind === 'rethrow'));
+   383→        this.events.push({
+   384→          t, id, kind: re ? 'rethrow' : 'throw',
+   385→          ratio: r6(ratio), trailVar: r6(tv), baseVar: r6(b.var), baseSrc: b.src, sustain: sCount,
+   386→          trail30: r6(mean(a.slice(-this.cfg.trail).map((x) => x.d))), refMean: r6(b.mu), // TrustReprobation-verbatim field names
+   387→        });
+   388→        this.guarded.set(id, { from: t + 1, until: t + this.cfg.guardRounds });
+   389→      }
+   390→    }
+   391→  }
+   392→  apply(infl, adm, t) { // epsNew for guarded senders (skip ids adm already probationary)
+   393→    for (const [id, g] of this.guarded) {
+   394→      if (t >= g.from && t <= g.until && infl.has(id) && !adm.probationary(id)) {
+   395→        infl.set(id, infl.get(id) * adm.epsNew);
+   396→        this.guardRounds.set(id, (this.guardRounds.get(id) ?? 0) + 1);
+   397→      }
+   398→    }
+   399→    return infl;
+   400→  }
+   401→  summary() {
+   402→    const per = {};
+   403→    for (const id of [...this.devs.keys()]) {
+   404→      const ev = this.events.filter((e) => e.id === id);
+   405→      const b = this.base.get(id);
+   406→      const tr = this.track.get(id) ?? null;
+   407→      per[id] = {
+   408→        throws: ev.filter((e) => e.kind === 'throw').length,
+   409→        rethrows: ev.filter((e) => e.kind === 'rethrow').length,
+   410→        guardRounds: this.guardRounds.get(id) ?? 0,
+   411→        baseVar: b ? r6(b.var) : null, baseMu: b ? r6(b.mu) : null, baseSrc: b ? b.src : null, baseN: b ? b.n : null,
+   412→        nEval: tr ? tr.n : 0, maxRatio: tr ? r6(tr.maxRatio) : null, maxRatioAt: tr ? tr.maxRatioAt : null,
+   413→        lastRatio: tr ? r6(tr.lastRatio) : null, crossedRounds: tr ? tr.crossedRounds : 0,
+   414→        suppressedSustained: this.suppressed.get(id) ?? 0,
+   415→      };
+   416→    }
+   417→    return {
+   418→      h: this.cfg.h, trail: this.cfg.trail, sustainWin: this.cfg.sustainWin, sustainNeed: this.cfg.sustainNeed,
+   419→      per, events: this.events.map((e) => ({ ...e })), w1Path: this.w1Path.map((x) => ({ ...x })),
+   420→    };
+   421→  }
+   422→}
+   423→
+   424→// TrustReprobation — E37/E38 VERBATIM (unmodified): drains the detector's event
+   425→// log; on every throw/rethrow, decay that sender's HedgeTrust weight to
+   426→// frac x its current value via absorb(), then let the NORMAL hedge update path
+   427→// re-earn it (fixed-share + exp(eta*r)). Recovery is measured per event against
+   428→// 0.95 x pre-trip share within `horizon` rounds (R3).
+   429→class TrustReprobation {
+   430→  constructor(fg, trust, cfg) {
+   431→    this.fg = fg; this.trust = trust; this.cfg = cfg;
+   432→    this.cursor = 0;   // next detector event index to drain
+   433→    this.events = [];  // decay receipts
+   434→  }
+   435→  process(t) { // after def.note(), before trust.update — decay first, re-earn after
+   436→    while (this.cursor < this.fg.events.length) {
+   437→      const e = this.fg.events[this.cursor++];
+   438→      if (e.kind !== 'throw' && e.kind !== 'rethrow') continue;
+   439→      const w = this.trust.weights();
+   440→      const pre = w.get(e.id) ?? 0;
+   441→      w.set(e.id, pre * this.cfg.frac);
+   442→      this.trust.absorb(w);
+   443→      this.events.push({
+   444→        id: e.id, tripT: e.t, decayT: t, kind: e.kind,
+   445→        pre: r6(pre), post: r6(this.trust.weight(e.id)),
+   446→        trail30: e.trail30, refMean: e.refMean,
+   447→        recoveredAt: null, recoveredIn: null, minShare: null, path: [],
+   448→      });
+   449→    }
+   450→  }
+
+[showing lines 1-450 of 1379; use offset=451 with limit to continue reading]

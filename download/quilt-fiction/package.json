@@ -4,11 +4,12 @@
   "description": "The operational-fiction federation (seed4): instances ARE sheets — 8-primitive cell graphs that believe a quilt into existence; deltas are the only observable; the renderer infers the quilt from them",
   "type": "module",
   "scripts": {
-    "smoke": "node experiments/smoke.mjs",
-    "e_f1": "node experiments/e_f1_consensus.mjs",
-    "e_f2": "node experiments/e_f2_violator.mjs",
-    "e_f3": "node experiments/e_f3_withdrawal.mjs"
+    "smoke": "node smoke.mjs",
+    "smoke_ef1": "node experiments/smoke_ef1.mjs",
+    "e_f1": "node experiments/e_f1_deltas.mjs"
   },
   "license": "MIT",
-  "dependencies": { "yaml": "^2.4.0" }
+  "dependencies": {
+    "yaml": "^2.4.0"
+  }
 }
