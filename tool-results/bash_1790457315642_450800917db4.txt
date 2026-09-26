@@ -148,26 +148,3 @@ Task: record pushes; park the E40 brief for the next wave
 
 Work Log:
 - 3dc0c69..813427c  E38 the sensor (CUSUM mean-shift: structurally blind to a variance-only flip; flat-sigma floor = 30x false-alarm blowout; where detection lands the trust consequence collapses damage 5x)
-- 813427c..dee5202  E39 the variance lens (variance-ratio: blind to which mode dominates — mirrored bimodality; honest noise bursts exceed the bar naturally; false trips REDISTRIBUTE trust toward the flipper, V1 1.096x WORSE than control)
-- Parked brief E40 THE CO-MOVEMENT SENSOR: both self-calibrated axes are dead (mean E38, variance E39); the untested signal is cross-voice co-movement at flip rounds (honest voices co-move against a liar; E39 telemetry: w1<->g1 sign-corr lag0 0.54-0.99, echo is contemporaneous not lagged). Design constraint learned at cost: PRICE the honest-noise floor of any statistic BEFORE composing trust consequences. g1 stays invisible to any self-calibrated design — relational or provenance-coupled signals only.
-
-Stage Summary:
-- The arc E35->E39 is now a complete, receipted, pushed negative-result ladder: the hole is real (1.737x), no cheap influence patch, the trust consequence works but only where detection lands, and BOTH self-calibrated detection axes are structurally blind to this adversary class. Five commits, five chains verified (19/15/15/16/19 rows), smoke 16/16 throughout, zero secrets.
-
----
-Task ID: 22 (wave log)
-Agent: main (Super Z)
-Task: seeds arrived on GitHub (SuperInstance-papers/seed-proto) — digest all four, build the quilt-native developmental agent, live-probe the new keys
-
-Work Log:
-- Fetched seed1-4.md + readme ("What Ports") from github.com/SuperInstance-papers/tree/main/seed-proto into download/fleet-seeds/seeds/ (95/54/148/203KB)
-- Three parallel Explore digest lanes returned buildable specs: 8 primitives (Z_in/Z_out/JEPA/DoubleEntry/Vibe/GC/Murmur/Graph), conservation law gamma+eta<=C=log2(3)~1.585 with refusal semantics, 12-cell seed sheet, git-native checkpoints, JEV typed decisions (0.95/0.70 thresholds), MOTH QRC reservoir, seed4 Delta protocol + reputation (beta>alpha) + local exclusion + renderer/epistemic-error
-- SECURITY: .env was TRACKED in the root repo (no remote, never pushed) — untracked it, .gitignore now covers .env/upload/secrets; stored the two NEW rolled keys env-only; worktree scans CLEAN
-- LIVE key probes (both new keys confirmed): typesafe /v1/systemone jev-1.13.0 answered 3 typed questions in one call (noul .97, choice .82, score .95; score.criteria is a plain level LIST); moth api.mothquantum.com/api/v1 /me 200 + coin-toss job flow end-to-end (real IBM aer backend, 21H/11T)
-- Dispatch infra failed 5x (context deadline/canceled) -> executed the build DIRECTLY: download/quilt-dba/ on the quilt-quant engine template: dba/sheet.mjs (12-cell seed sheet + conservation.test input-driven boundary probe), experiments/e_d1_stages.mjs (probe+auto-cut runtime rule, receipted R1-R5 BEFORE runs), smoke.mjs 13/13
-- E-D1 first light: R1 GROWTH CONFIRMED (sheet literally grows at eval 299, beta1 -1->1); R2 JEV-GATE CONFIRMED (gated grows in 3/3, unguided NEVER grows — position 10 vs 24500 — the gate keeps the agent where surprise declines; caveat receipted: arms deterministic, variance vacuous, next wave needs stochastic worlds); R3 LAW NEVER-BOUND in vivo (honest negative — the cheap policy never breaches C; boundary test carries the guarantee); R4 boundary exact (1585 ok/1586 refuse); R5 replay BYTE-IDENTICAL; chain tip 0xdbb7c528df7b9471
-- PUSHED: created SuperInstance/quilt-dba, pushed main = a2e8ece (post-push secret scan CLEAN; branch was master->main renamed)
-
-Stage Summary:
-- The seeds are now CODE: a developmental agent exists whose growth is real cell-graph addition, whose curriculum gate measurably causes development, and whose conservation law is enforced at the exact scaled boundary
-- Parked briefs for the next wave: (a) quilt-fiction (seed4: instances-as-sheets, Delta protocol, reputation/exclusion, E-F1 consensus / E-F2 violator / E-F3 withdrawal); (b) LIVE-JEV lane: swap the mock gate for real typesafe calls in the developmental loop (cap ~25 calls, journaled); (c) LIVE-MOTH QRC lane: real quantum reservoir features vs offline stream (vault pattern, LIVE namespace); (d) stochastic worlds to make the stability claim measurable
