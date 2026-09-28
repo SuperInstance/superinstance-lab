@@ -609,3 +609,21 @@ Work Log:
 
 Stage Summary:
 - The seeds are now five working, receipted, cross-verified repos this arc (with quilt-fiction): three NEW systems built from the new seeds, each made BETTER than its seed through use — exoj got a naturality fix its own seed lacked and a refusal policy that keeps its "field as proof object" claim true; quilt-raw proved the seed's boldest claim (exact rewind) and priced the float alternative; quilt-arch turned "bit-exact on every substrate" from doctrine into a passing cross-language test
+
+---
+Task ID: 48 (wave 48 seal — keeper)
+Agent: main (Super Z)
+Task: principal directive — ideate GPU-agent workloads on all our systems + deep research + push as you go; keep lanes moving (wave 48)
+
+Work Log:
+- ENVIRONMENT REGRESSION incident #3 receipted: sandbox rolled back to Task-24-era snapshot (worklog.md tail=Task 24 at 611 lines, .env reduced to DATABASE_URL, all wave-45 local clones gone). Remote is source of truth and AHEAD of last local record — waves 46-47 had already landed+pushed (fleet-seeds 0179997, crab-traps 37c34bb incl. live CHAT seat D=0.9787 SURVIVE, qthe 0c36dd2 incl. E-Q11 8/8 + E-Q12 10/10). Recovery: fresh clones of all three repos; MOTH_KEY survived on disk (scripts/quilt-lab/moth_key.env) and was append-restored to .env with DEEPSEEK key from session record.
+- PUSH BLOCKED: GitHub token not recoverable from this snapshot. All wave-48 commits queue locally (fleet-seeds 45be283, qthe 43d741b) until principal re-rolls the fleet token. Zero pushes attempted beyond public reads (which work).
+- 48-a (keeper): deep research — 7 web searches receipted as raw JSON (scouts/raw/gpu1..gpu7), fault-injection queries (x2) receipted JUNK (search channel weak; G6 lane registered first-principles with disclosure). Scout report scouts/2026-09-28-gpu-agent-workloads.md. GPU-AGENT-PLAYBOOK.md landed in fleet-seeds docs/ — 7 items G1-G7: G1 local seat (no token ceiling; attacks 45-c starvation), G2 GPU determinism harness (power-yank ported), G3 quantization-erosion vs exact twins (novel), G4 certified-seeded MC at 1e9 (graph-v1 bias-vs-N scale prediction), G5 local lure forge, G6 E-Q10 on GPU, G7 watt-receipts (pricing-first extended to GPU-hours/watt-hours, gating). PLANNING.md Round 48 refinement appended (GPU arc adopted + incident #3 + wave-48 lanes).
+- 48-b (dispatched subagent, DIED at deadline ~50% flakiness per standing receipt; artifacts complete on disk): keeper took over per resume-first law. Verified honestly before accepting: official re-run ok:true (3/3 crab chains — crab45c 19 rows @e6f5ce3, crab44a 4 @fed1e98, crab46a 26 @6bcc757; 49/49 rows re-hash to pins; fold tips match), selftest 54/54 zero escapes, key-scan CLEAN (prose-only mentions). Committed qthe 43d741b. P1-P5 ALL PASS; chain-shape honesty receipted (crab-traps has pre-reg binding chains, not parent-link stone chains; reader folds real hash chain over row sequence).
+- Not yet open: pong49 window (closes 2026-09-29T10:04Z). Next-wave queue: E-Q13 (awaits guest pricing), round-13 certified-seed flow, advisor tombstone gift, GPU G7 schema + G1 seat spike + G4 design registration.
+
+Stage Summary:
+- GPU arc is now adopted into the living plan: playbook (G1-G7) + scout evidence + round-log refinement, all in fleet-seeds @ 45be283 (local).
+- Two-reader rule now BIDIRECTIONAL: installment 1 (crab walks fleet) + installment 2 (qthe walks crab) both green — 8/8 + 3/3 chains, 49/49 tamper localization.
+- Fleet state: fleet-seeds local 45be283 (1 unpushed), qthe local 43d741b (1 unpushed), crab-traps unchanged 37c34bb (remote truth). Total wave-48 API spend: $0.00 (search via platform SDK; lane deterministic).
+- Standing flag for principal: fresh GitHub fleet token needed to push (2 commits queued); TYPESAFE_API_KEY still missing (needed for typesafe JEV seat).
