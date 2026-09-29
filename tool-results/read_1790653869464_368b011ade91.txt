@@ -1,0 +1,1366 @@
+     1→# PREDICTIONS — pre-registered, sealed
+     2→
+     3→Sealed in `registration.json` (sha256 + mtime + size) BEFORE the first
+     4→experiment run. Every experiment verifies the seal at startup (fail-closed,
+     5→exit 2 on mismatch). Decision rules are exact and were not edited after
+     6→any run; amendments only by dated addendum at the bottom.
+     7→
+     8→Soil: SuperInstance/quilt-qcells `receipts/ledgers/*.jsonl` (16 ledgers,
+     9→1418 rows). Train ledgers (12, sealed): bell, ghz3, ry_decomp, z_decomp,
+    10→crx_case, swap, init_flat, init_complex, x_x, three_layer, noise,
+    11→measure_only. Eval ledgers (4, sealed): crossed_measure, forget_bell,
+    12→deep3, hzh — wait: the actual filenames are sealed by the adapter at run
+    13→time as: sorted(listdir)[0:12] train / [12:16] eval under a fixed
+    14→byte-order sort; the split function is `splitLedgers()` in
+    15→adapters/qcells.mjs, pinned by selftest before any run. (The named files
+    16→above are illustrative; the RULE is the sealed function, not the names.)
+    17→
+    18→Seeded streams: LCG128-like `seed = (seed * 6364136223846793005n + 1442695040888963407n) mod 2^64`,
+    19→top bits via `>> 33n`. Deterministic, no wall-clock. Moth-seal note: the
+    20→comet-qrng-v1 certificate channel returned an incomplete payload in wave
+    21→49 (census finding, receipted there); per moth-seal law the garden
+    22→fail-closes to the LABELED deterministic fallback above and does not claim
+    23→quantum provenance.
+    24→
+    25→## P-G1 (bake-off order on real soil, Task A)
+    26→
+    27→Prediction: on the 4 sealed eval ledgers, next-opcode top-1:
+    28→(a) `hash` > `field` (the parametric tissue earns its keep),
+    29→(b) `qthe` ≥ chance 1/7 = 0.1429 (integer substrate carries signal),
+    30→(c) `hash` beats the `bigram` floor by ≥ +0.03 absolute.
+    31→Decision rule: PASS iff (a) AND (b) AND (c) all hold on the single sealed
+    32→run. Each sub-clause reported with its exact number regardless.
+    33→
+    34→## P-G2 (kinda-both emergence, ensemble)
+    35→
+    36→Prediction: `ens` (λ=0.5 head ⊕ rhizome prior) ≥ max(best single arm) +
+    37→0.01 top-1 on the same eval slice. Decision: PASS iff true. If the rhizome
+    38→prior is worthless on this soil, ens ≈ head and this FAILS — a fine honest
+    39→negative that would localize the rhizome's value to Task B instead.
+    40→
+    41→## P-G3 (streamlining / amortization bounds)
+    42→
+    43→Prediction: (a) full-journal compile wall < 2000 ms for the 1418-row soil
+    44→on this sandbox (single process, no workers); (b) per-judgment serve cost
+    45→< 0.5 ms in-process after loading a weave. Decision: PASS iff both.
+    46→Measured with process.hrtime.bigint(), reported in receipts.
+    47→
+    48→## P-G4 (validator duty, Task B)
+    49→
+    50→Prediction: concentration-statistic detector (window max surprise; window
+    51→w=5; threshold = train-ledger 95th percentile) on eval ledgers with
+    52→impact-sensitive anomalies achieves (a) detection AUC ≥ 0.90 and
+    53→(b) false-positive rate on clean eval rows ≤ 0.10. Decision: PASS iff both.
+    54→The anomaly family (op-swap, seq-break, prev-break, arg-corrupt) and the
+    55→clean-row interleave are exactly as implemented in
+    56→experiments/e_g1_grow.mjs `injectAnomalies()` — sealed by selftest before
+    57→the run.
+    58→
+    59→## P-G5 (cross-substrate determinism)
+    60→
+    61→Prediction: the Python twin (`ref/garden_ref.py`) and the JS garden produce
+    62→byte-identical weave artifacts (canonical JSON round-trip equality) for the
+    63→`hash` arm on the same seed and the same train slice. Decision: PASS iff
+    64→identical. (This is the quilt-arch discipline applied to a learned
+    65→artifact — if floats drift across substrates the weave is not a stone.)
+    66→
+    67→## P-G6 (teacher channel live)
+    68→
+    69→Prediction: one live call to the hosted JEV teacher (jev-latest via
+    70→systemone wire) with a rich state built from 8 clean chain contexts
+    71→returns `noul` ≥ 0.70 on "is this receipt row in-pattern for a healthy
+    72→CELL-MAPPING chain", and the call's usage receipt (tokens) is recorded.
+    73→Decision: PASS iff noul ≥ 0.70 AND usage receipt exists. Network failure /
+    74→auth failure = FAIL with the error receipted verbatim (honest negative;
+    75→the escalation organ is then registered as unverified until re-run).
+    76→
+    77→## P-G0 (selftest green as a precondition)
+    78→
+    79→The selftest battery (QTHE bijection over all 256 bytes, bounds invariance
+    80→over all rules, field conservation, chain tamper localization, seal
+    81→fail-closed check) must be 100% green BEFORE P-G1..G5 run. Not a
+    82→prediction — a gate.
+    83→
+    84→## Addenda
+    85→
+    86→(none yet — append-only)
+    87→
+    88→## Addendum A1 (2026-09-28, AFTER e_g1 run 1 — receipts/e_g1.jsonl tip 3fc2f3426ba278b9)
+    89→
+    90→Run-1 verdicts: P-G1 PASS (hash 96.53 > field 91.89; qthe 93.82 ≥ 14.29;
+    91→hash − bigram = +4.25pp ≥ 3pp), P-G2 FAIL, P-G3 PASS (compile 581.7ms,
+    92→serve 0.0569ms), P-G4 FAIL. The two FAILs localize mechanisms; the
+    93→following re-registrations are sealed BEFORE their runs.
+    94→
+    95→### P-G2b (why the rhizome prior was noise, and the corrected prior)
+    96→
+    97→Mechanism of failure: grow() deforms with gamma=0 (unobserved judgment),
+    98→so prior weights (gamma+1e-9)/(1+d) are all ~1e-9 — the prior collapses
+    99→to a distance-tilted global frequency, and λ=0.5 drags the head down.
+   100→Re-registration: the rhizome prior is rebuilt from OBSERVATION COUNTS
+   101→(the supervision aggregate, add-1 smoothing toward the global op
+   102→distribution), and λ is chosen on TRAIN only (walk-forward over the 12
+   103→train ledgers: λ ∈ {0.6,0.7,0.8,0.9,1.0}; eval untouched by the choice).
+   104→Prediction: ens2 (count-prior, train-chosen λ) ≥ hash + 0.005 top-1 on
+   105→the sealed eval slice. PASS iff true. Honest either way: if FAIL, the
+   106→verdict is "on this soil the parametric tissue wins; the rhizome's value
+   107→is structural memory (Task B / judgment provenance), not prior mass."
+   108→
+   109→### P-G4b (the validator can only judge the channel it sees)
+   110→
+   111→Mechanism of failure: seq-break and prev-break anomalies do not change
+   112→any (kind, op) token — invisible to a token-space judge; arg-corrupt
+   113→changes args.op, also not in the v1 token. Re-registration: (i) tokens
+   114→gain the arg channel — "kind/op/argOp" (argOp = args.op when present);
+   115→(ii) the anomaly family for JEV duty is the SEMANTIC family only:
+   116→op-swap and arg-corrupt (rate 0.25 over non-collapse rows);
+   117→(iii) seq-break and prev-break are DELEGATED to the chain reader
+   118→(quilt-qcells two-reader discipline already localizes those exactly —
+   119→4254/4254 receipted there); the garden does not re-adjudicate structure.
+   120→Prediction: with arg-channel tokens, window-max statistic, train-only
+   121→threshold (95th pct), on eval ledgers with semantic anomalies:
+   122→AUC ≥ 0.85 AND clean-row FPR ≤ 0.10. PASS iff both.
+   123→Structural delegation is itself a claim: any seq/prev-break injected is
+   124→assumed caught by the chain reader, not scored here (honest division).
+   125→
+   126→## Addendum A2 (2026-09-28, AFTER e_g1b — receipts/e_g1b.jsonl tip a18ea2e9ee69f62d)
+   127→
+   128→P-G4b PASS (AUC 0.9469, FPR 0.0551 — the semantic judge works in its own
+   129→channel). P-G2b FAIL again, and the failure localizes further: the
+   130→walk-forward TRAIN choice said λ*=0.7 (helped there), but on held-out
+   131→LEDGERS the count-prior blends train-ledger quirks — memory from old
+   132→soil does not transfer to new circuit families. The corrected hypothesis
+   133→is the founder's own words: the model grows as it's USED — the rhizome's
+   134→value must be fresh memory of the live stream, not priors from archived
+   135→ledgers.
+   136→
+   137→### P-G2c (growth-as-used: fresh memory of the watched stream)
+   138→
+   139→Protocol: for each of the 4 sealed eval ledgers, the garden WATCHES the
+   140→first half H1 (deform + observe per row) — simulating a live quilt lane
+   141→feeding judgments — and is then judged on predicting the second half H2.
+   142→Arm head: hash head (12 train ledgers) alone. Arm ens3: λ·head +
+   143→(1-λ)·priorCounted where the rhizome holds ONLY H1 memory (no train-ledger
+   144→prior — fresh memory only). λ is chosen per ledger on H1 itself (fit on
+   145→the watched data; H2 untouched until the verdict). Prediction: pooled
+   146→over the 4 ledgers, ens3(H2) ≥ head(H2) + 0.01 top-1. PASS iff true.
+   147→This is the living-model claim in its honest form: memory of what the
+   148→garden just watched must beat a frozen head on what it is watching.
+   149→
+   150→## Addendum A3 (2026-09-28, AFTER e_g2c — the twin catches a pipeline bug)
+   151→
+   152→P-G2c FAIL, but while preparing P-G5 the Python twin diverged from the JS
+   153→garden at journal seq 151 — root cause: the JS experiments built context
+   154→windows over the FLATTENED 12-ledger stream, so the tail rows of one
+   155→ledger leaked into the head context of the next (11 boundary leaks); the
+   156→twin resets windows per ledger. Correction: all experiments build samples
+   157→PER LEDGER (no cross-ledger leakage) and compute surprise per ledger.
+   158→Run-1 receipts (e_g1, e_g1b, e_g2c — git history retains their bytes) are
+   159→marked pipeline-v1 and SUPERSEDED by corrected re-runs under seal v4
+   160→(pipeline-v2-per-file). The predictions P-G1..G4, P-G2b, P-G2c are
+   161→re-evaluated unchanged; the corrected verdicts are the verdicts of record.
+   162→The cross-substrate discipline did its job: a solo-substrate lane would
+   163→have shipped the leak silently.
+   164→
+   165→## Addendum A4 (2026-09-28, cloud battery) — mtime is a local witness, not a checkout invariant
+   166→
+   167→The first GitHub Actions run failed exactly as it should: a fresh checkout
+   168→re-stamps file mtimes, so the seal's mtime binding trips fail-closed
+   169→off-repo. Correction: the seal's REPRODUCIBILITY bind is sha256+size
+   170→(content is the law); mtime is retained in registration.json as a
+   171→local-seal-time witness for audit. All experiment gates updated: sha+size
+   172→enforced, mtime logged. This is the stone standard applied to ourselves:
+   173→the harness refuses to weaken silently, so the weakening is registered,
+   174→dated, and receipted instead.
+   175→
+   176→## Addendum A5 (2026-09-28, wave 51) — P-G2d: hard world under distribution shift
+   177→
+   178→The wave-50 FAILs (P-G2/G2b/G2c) localize to one sentence: memory-priors need a
+   179→HARD world. The 4 sealed eval ledgers leave the frozen head at 95-97% — too easy,
+   180→the same disease quilt-jepa round 2 diagnosed in its own substrate on the same day.
+   181→
+   182→### Soil (built BEFORE this registration; construction receipt only, no outcome data)
+   183→
+   184→`experiments/shift_family_gen.py` builds 4 "ladder-echo" ledgers with the REAL
+   185→quilt-qcells machinery (CellCircuit on micromoth, chain-verified fail-closed):
+   186→deep gate runs + MID-STREAM readout/collapse/VIEW echo cycles — EFFECT->BIND
+   187→transitions and repeated BIND/EFFECT alternation that do not occur in train
+   188→soil (where collapse blocks are terminal). Files: ladder7_echo3, ladder8_echo4,
+   189→ladder9_echo4, ladder8_echo6 (686 rows total; sha256s in
+   190→`experiments/outputs/shift_family/construction_receipt.json`). No garden
+   191→judgment code ran on this soil before the seal below.
+   192→
+   193→### P-G2d (fresh memory under distribution shift)
+   194→
+   195→Protocol as P-G2c: per ledger, watch H1 (grow fresh-memory rhizome), judge H2;
+   196→λ fit on H1 only; arm head = frozen hash head (12 train ledgers); arm ens3 =
+   197→λ·head + (1-λ)·priorCounted (H1 memory only, no train-ledger prior).
+   198→
+   199→- HARDNESS GATE (prediction-based difficulty meter — quilt-jepa round-2 law L2
+   200→  applied to the garden): pooled frozen-head H2 accuracy < 0.90. If the head
+   201→  still clears 0.90 on the shift family, the run is VOID-AS-REGISTERED (soil
+   202→  not hard enough; receipted as such, no verdict claimed).
+   203→- CLAIM: pooled ens3 ≥ pooled head + 0.02 top-1 on H2.
+   204→
+   205→PASS iff both. Honest either way: FAIL with the hardness gate held means fresh
+   206→memory does not transfer even under genuine shift — the rhizome's value claim
+   207→narrows again; VOID means we still have not managed to build a hard enough
+   208→world, which is itself the finding.
+   209→
+   210→## Addendum A6 (2026-09-28, wave 51, AFTER e_g2d) — P-G2d verdict + the unified hardness law
+   211→
+   212→P-G2d PASS (seal v6, run under v6, receipts/e_g2d.jsonl tip f702bc0c56ad58a0):
+   213→hardness gate HELD (pooled head 73.47% < 0.90 — the ladder-echo family is a
+   214→genuinely hard world for the frozen head), and pooled ens3 = 86.88% = head +
+   215→13.41pp over 343 judged rows. Per-ledger: λ* = 0 everywhere — the optimal blend
+   216→was ALL fresh watched-memory, no frozen-head mass. The living-model claim
+   217→survives in its honest form once the world demands adaptation.
+   218→
+   219→The wave's unified law (quilt-jepa round 2 + garden P-G2d, same day):
+   220→- quilt-jepa: an easy world makes every emergence claim vacuous (entry loss is
+   221→  init noise; surprise has zero SNR; corruption is impact-insensitive) — and a
+   222→  starved optimizer is misdiagnosable as a world property.
+   223→- jev-garden: archived priors never transfer (G2, G2b FAIL); fresh memory is
+   224→  worthless on easy soil (G2c FAIL, λ*=0 because nothing beats 97%); fresh
+   225→  memory on genuinely shifted soil is worth +13.4pp (G2d PASS).
+   226→Hardness is the gating variable for emergence claims, and it must be measured
+   227→by PREDICTION accuracy on held-out structure (the L2 law), never by loss floors
+   228→or entry statistics. Registered for wave 52: hardness-aware grow() (grow harder
+   229→where the head is weaker), and the quilt-jepa L1 optimizer repair (per-latent
+   230→gradient normalization) as a precondition for any further latent-grid claims.
+   231→
+   232→## Addendum A7 (2026-09-28, BEFORE the weave-2 run) — P-W2: the sense table rides
+   233→
+   234→serve.mjs receipted "rhizome prior is not serialized in the weave (sense table by
+   235→weave-2)". This addendum registers weave-2 BEFORE any run. The weave-v2 artifact
+   236→carries `arms.field` — the rhizome sense table: per-cell {G, aSum} (r6) for cells
+   237→hosting >= 1 observed context, plus the supervision aggregate [ctx, {op: count}]
+   238→sorted bytewise (order-free, byte-deterministic). Serve rebuilds the prior with the
+   239→EXACT field.mjs neighborhood law (radius-2 hex, w = (gamma + 1e-9)/(1+d)) from the
+   240→SERIALIZED table — compile-then-serve is honest distillation, not a live backdoor.
+   241→
+   242→- **P-W2a (cross-substrate, P-G5 discipline extended)**: the Python twin and the
+   243→  JS garden produce byte-identical `weave-core-v2` cores (hash arm in integer
+   244→  micro-units + arms.field) on the same sealed train slice. PASS iff identical.
+   245→- **P-W2b (serve compatibility)**: with the registered ens3 = 0.4*hash + 0.4*qthe +
+   246→  0.2*field-sense-table, serve-time top-1 on the sealed eval slice (last 4 ledgers,
+   247→  pipeline-v2 per-ledger windows) satisfies ens3 >= ens2 − 0.005 (ens2 = 0.5/0.5
+   248→  v1 law). The living-memory arm must ride without material degradation; the field
+   249→  arm's own top-1 is receipted as contrast (saturated-soil expectation from the
+   250→  hardness law: near-parity). PASS iff the inequality holds.
+   251→
+   252→### A7 verdicts of record (run 2026-09-28, seal v8; receipts/e_w2.jsonl)
+   253→
+   254→- **P-W2a PASS** — weave-core-v2 byte-identical cross-substrate: JS 9960B ==
+   255→  Python 9960B (hash arm micro-units + arms.field: 43 sense cells, 56 observed
+   256→  contexts, journal_len 2318, tip aaa3ce6ab0dcbc94). The P-G5 twin discipline
+   257→  now covers the living-memory arm. Serve-roundtrip: the serve path rebuilt
+   258→  from the serialized artifact reproduces compile-time ens3 exactly (< 1e-12).
+   259→- **P-W2b FAIL** — ens3 = 0.9459 vs ens2 = 0.9537 on the sealed eval slice
+   260→  (n=259): delta −0.0077, beyond the registered −0.005 tolerance. The field
+   261→  arm (sense table) drags the ensemble on saturated soil — the hardness law
+   262→  (A6) predicted exactly this shape ("amplitude prior is noise on saturated
+   263→  soil"; P-G2/G2b/G2c FAIL family). Verdict of record: FAIL; no threshold
+   264→  surgery. Engineering response (receipted in src/serve.mjs): served default
+   265→  stays the v1 law (ens2) for all artifacts; the ens3 blend requires an
+   266→  explicit `serve_with_field` opt-in until a registered hardness gate (A8
+   267→  candidate, P-G2d pattern: ens3 only on hard/shifted soil) selects it.
+   268→- Queued as A8 candidate: hardness-aware serve — blend ens3 iff the context's
+   269→  soil is registered-hard (the P-G2d +13.41pp regime), else ens2; registered
+   270→  BEFORE any run, with the hardness meter from the unified law.
+   271→
+   272→## Addendum A8 (2026-09-28, BEFORE the A8 run) — P-A8: the hardness-gated serve blend
+   273→
+   274→A7 queued A8: "blend ens3 iff the context's soil is registered-hard (the
+   275→P-G2d +13.41pp regime), else ens2; registered BEFORE any run, with the
+   276→hardness meter from the unified law." This addendum registers the rule and
+   277→the prediction set. Runs execute under seal v10.
+   278→
+   279→### The registered gate (serve law for weave-v2 artifacts carrying arms.field)
+   280→
+   281→Saturation signal — the only per-context hardness proxy that exists at serve
+   282→time, where no labels are available: s(context) = top.p(ens2), the predictive
+   283→mass the v1 law puts on its own argmax (the `ensemble(ph, pq, 0.5)` expression
+   284→serve already evaluates). This is the serve-time instantiation of the L2 law
+   285→(A6: difficulty is measured by prediction, never by loss floors or entry
+   286→statistics): the escalation organ already treats top.p < ESCALATE_BELOW as
+   287→"not confident". A8 REUSES that sealed constant as the hardness threshold —
+   288→H* := ESCALATE_BELOW = 0.55 (serve.mjs, sealed pre-weave-1). NO new numeric
+   289→constant is registered; the gate reads the same sealed constant, so the gate
+   290→and the escalation organ can never disagree about which contexts are hard.
+   291→
+   292→Registered rule: w(ens3) = 0 if s >= H* (saturated context — serve the v1
+   293→law EXACTLY: the gate-closed path IS the same `ensemble(ph, pq, 0.5)`
+   294→expression, byte-identical output), w(ens3) = 1 if s < H* (hard context —
+   295→serve the registered ens3 blend 0.4*ph + 0.4*pq + 0.2*pf, pf = the
+   296→sense-table prior rebuilt from the SERIALIZED artifact, the P-W2a-verified
+   297→rebuild). w is binary because the only blend weights with receipts are the
+   298→registered ens3 weights (A7); a ramp would be an unregistered continuum
+   299→(threshold surgery). Polarity follows the receipts: s measures SATURATION of
+   300→the ensemble's vote — w = 0 when saturation is at/above H*, w = 1 below it
+   301→(A6/P-G2d: memory pays on hard soil — gate open; A7/P-W2b: archived memory
+   302→is noise on saturated soil — gate closed). The gate rides as the DEFAULT
+   303→serve law for weave-v2 field artifacts; v1 artifacts (no field arm) are
+   304→untouched; the A7 unconditional opt-in (`serve_with_field`) is unchanged; an
+   305→artifact may opt OUT with hyper.ens3.hardness_gate = false.
+   306→
+   307→### Predictions (pre-registered under seal v10)
+   308→
+   309→- **P-A8a (conditional byte-identity, wire path)**: over every serve.judge()
+   310→  call on the two soils of record — the sealed eval slice (n=259 judged
+   311→  calls) and the shift-family H2 (n=343) — each gate-CLOSED call returns a
+   312→  response byte-identical (full-response JSON: model, answers,
+   313→  probabilities, escalate) to the pre-A8 v1-law reference, and each
+   314→  gate-OPEN call returns exactly the registered ens3 blend. PASS iff zero
+   315→  mismatches in both branches.
+   316→- **P-A8b (saturated closure)**: on the saturated soil of record (the sealed
+   317→  eval slice, driven through serve.judge() with the established serve
+   318→  protocol: state.context = ledger prefix, judged = the target row), the
+   319→  gate opens on ZERO of the 259 judged calls — the served default over the
+   320→  whole slice is byte-identical end-to-end to the current served default.
+   321→  PASS iff gate_open_count == 0. Registered FAIL branch: the served default
+   322→  reverts to unconditional ens2 (the gate ships behind explicit
+   323→  hyper.ens3.hardness_gate opt-in), the FAIL is the verdict of record, and
+   324→  the finding is priced: a per-row confidence gate cannot guarantee
+   325→  whole-slice closure, so A9 (compile-time soil-hardness calibration carried
+   326→  in the artifact, train-only, P-G2b pattern) becomes the candidate.
+   327→- **P-A8c (hard-soil margin, battery protocol)**: on the shift-family H2 —
+   328→  the non-saturated soil the repo has receipts for (P-G2d: pooled frozen-head
+   329→  73.47% < 0.90 gate HELD) — pooled gated top-1 >= pooled ens2 top-1 + 0.01
+   330→  over the 343 rows (battery windows per pipeline-v2; gate decided
+   331→  per-sample by the same rule on ens2 top.p; pf from the serve-rebuilt
+   332→  serialized table). PASS iff 100*(gated_hits − ens2_hits) >= 343 (the
+   333→  integer-exact form of delta >= 0.01). Honest either way: FAIL with the
+   334→  receipts means the ARCHIVED sense table does not carry the P-G2d
+   335→  fresh-memory value even behind a confidence gate — the hardness law
+   336→  narrows to "FRESH memory only", the served default stays the v1 law, and
+   337→  the finding is priced.
+   338→- **P-A8d (twin + battery green)**: (i) P-W2a re-verified under seal v10 —
+   339→  weave-core-v2 JS == Python byte-identical (exact bytes); (ii) the serve
+   340→  prior rebuild consumes the TWIN's serialized table — SenseTablePrior built
+   341→  from arms.field of weave_core_v2_py.json reproduces the JS-table prior
+   342→  vectors exactly (per-context JSON equality over every context evaluated on
+   343→  both soils); (iii) smoke stays 9/9; (iv) selftest green under the seal.
+   344→  PASS iff all four hold.
+   345→
+   346→Contrast receipts (no gates): per-ledger gate-open rates, flip accounting
+   347→(opened rows: ens2-right→gated-wrong vs ens2-wrong→gated-right), arm top-1s
+   348→(hash, qthe, field alone) on H2, min ens2 top.p over the eval slice, and the
+   349→eval-slice battery-protocol ens2 top-1 pinned to the P-W2b receipt (953668
+   350→micro).
+   351→
+   352→### A8 verdicts of record (run 2026-09-28, seal v10; receipts/e_a8.jsonl tip 1ac2699bffe07d6d)
+   353→
+   354→- **P-A8a PASS** — the implementation IS the registered rule: over 602
+   355→  serve.judge() calls (259 eval-slice + 343 shift-H2), all 551 gate-closed
+   356→  responses were byte-identical to the pre-A8 v1-law reference and all 51
+   357→  gate-open responses exactly the registered ens3 blend (0 mismatches in
+   358→  both branches, full-response JSON equality).
+   359→- **P-A8b FAIL** — saturated closure does not hold: the gate opens on
+   360→  11/259 eval-slice calls (min ens2 top.p = 0.3921 < H* = 0.55). The damage
+   361→  is fully CONCENTRATED, not avoided: the battery-protocol gated slice
+   362→  scores 0.9459 — exactly the P-W2b unconditional number — i.e. every
+   363→  P-W2b flip happened on the 11 would-escalate rows (net -2). A per-row
+   364→  confidence gate cannot guarantee whole-slice closure. Per the registered
+   365→  FAIL branch: the served default reverts to the unconditional v1 law; the
+   366→  gate ships behind explicit hyper.ens3.hardness_gate opt-in only (commit
+   367→  carries the final law; the receipt bytes reproduce exactly under it).
+   368→  A9 candidate registered by this branch: compile-time soil-hardness
+   369→  calibration carried in the artifact (train-only, P-G2b pattern).
+   370→- **P-A8c FAIL** — on shift-family H2 the gated blend EXACTLY equals ens2:
+   371→  242/343 = 0.7055 both (delta +0.0000 against the +0.01 gate; 40/343
+   372→  gate-opens, ZERO flips either way). Mechanism receipt: under the stream
+   373→  grow() law every cell deforms with gamma=0 — all 43 serialized cells carry
+   374→  G=0 — so the rebuilt prior is a distance-tilted frequency of train-ledger
+   375→  op counts; 0.2*pf never crosses an ens2 argmax margin, and the field arm
+   376→  alone sits at 61.45-65.67% on H2, BELOW both heads (68.67-76.12%). The
+   377→  P-G2d +13.41pp came from priorCounted (exact-context memorization of
+   378→  FRESH H1 memory), not from the lattice prior. The hardness law narrows to
+   379→  "FRESH memory only": an ARCHIVED sense table carries no serve-time value
+   380→  on either soil. The served default stays the v1 law.
+   381→- **P-A8d PASS** — P-W2a re-verified under seal v10 (weave-core-v2
+   382→  9960B == 9960B, journal tip aaa3ce6ab0dcbc94; weave-v2 artifact pinned to
+   383→  the e_w2 receipt 1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519);
+   384→  the serve prior rebuild consumed the TWIN's serialized table and
+   385→  reproduced the JS prior vectors on all 47 evaluated contexts; smoke 9/9;
+   386→  selftest green. The re-run against the final (opt-in) serve law
+   387→  reproduced the receipt bytes exactly (pipeline determinism).
+   388→
+   389→Verdict of record: P-A8 FAIL (2/4 — the conditional-identity and twin
+   390→predictions held; both blend-value predictions failed). The archived
+   391→lattice-prior blend is now falsified three ways (P-W2b unconditional,
+   392→P-A8b gated closure, P-A8c hard-soil value). Priced into A9: (i)
+   393→compile-time soil-hardness calibration carried in the artifact (train-only
+   394→fit, P-G2b pattern) since no per-row serve signal can guarantee saturated
+   395→closure; (ii) if serve-time living memory is ever to pay, the artifact must
+   396→carry FRESH stream memory (a table grown from the live lane's own
+   397→judgments — grow-as-used), and the gamma channel must be fed real
+   398→amplitudes (grow() currently deforms with gamma=0, structurally zeroing
+   399→the prior the gate would gate on).
+   400→
+   401→## Addendum A9 (2026-09-28, BEFORE the A9 run) — P-A9: the fresh-memory serve law (grow-as-used)
+   402→
+   403→The A8 verdicts falsified the ARCHIVED lattice prior three ways (P-W2b unconditional,
+   404→P-A8b gated closure, P-A8c hard-soil value) and priced A9: "if serve-time living memory
+   405→is ever to pay, the artifact must carry FRESH stream memory (a table grown from the live
+   406→lane's own judgments — grow-as-used)". This addendum registers the A9 mechanism BEFORE any
+   407→run. Runs execute under seal v12.
+   408→
+   409→### Design choice (from the receipts; ONE mechanism taken)
+   410→
+   411→The A8 candidate list was (a) real gamma amplitudes in grow() and (b) fresh-stream memory
+   412→in the artifact. Reading the code against the receipts: the +13.41pp payload (P-A8c
+   413→mechanism receipt: priorCounted, exact-context memorization of FRESH H1 memory) never
+   414→reads the lattice — it reads the supervision aggregate `observed`, which the weave-v2
+   415→artifact ALREADY serializes (`arms.field.observed`, 56 train contexts, twin-verified in
+   416→P-W2a). The missing piece is the SERVE LAW, not a payload: no registered serve path
+   417→consumes the serialized aggregate as priorCounted. Taking (a) would feed the channel the
+   418→receipts falsified three ways — and a CONSTANT gamma amplitude provably cancels in the
+   419→prior normalization (w = (gamma+1e-9)/(1+d): a cell-independent gamma scales every weight
+   420→alike and the normalized prior vector is byte-identical to the gamma=0 case), while a
+   421→VARYING amplitude needs the head inside grow() and predicts no transfer of archived mass
+   422→on shifted soil (the P-G2b/A8c family). A9 therefore takes (b): the fresh-memory serve
+   423→law, grow-as-used, twin-verified. The gamma channel stays structurally zero — that is
+   424→mechanism (a)'s home, left untouched and honestly priced for a later lane.
+   425→
+   426→### The registered law (serve, opt-in only; default untouched)
+   427→
+   428→- Carrier: `arms.field.observed` — the supervision aggregate the artifact already carries
+   429→  ([[ctx, {op: count}], ...] sorted bytewise). NO new arm, NO schema change, NO new blend
+   430→  constant: the compiled weave-v2 artifact bytes are UNCHANGED (artifact_sha256 stays
+   431→  pinned to the e_w2 receipt 1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519).
+   432→- Rebuild: SenseTablePrior gains `priorCounted(ctx)` — the EXACT field.mjs
+   433→  Rhizome.priorCounted law (add-1 smoothing toward the global observed distribution;
+   434→  unseen contexts fall back to the global distribution; OPS.length = 7) computed from the
+   435→  SERIALIZED aggregate. Integer counts only — exact cross-substrate.
+   436→- Serve branch (else-if chain: A7 serve_with_field -> A9 serve_with_fresh -> A8
+   437→  hardness_gate -> default v1; registered total order for artifacts setting multiple
+   438→  opt-ins): `hyper.fresh.serve_with_fresh === true` (explicit opt-in) AND the artifact
+   439→  carries arms.field -> registered fresh law: gate signal s = top.p(ens2), H* =
+   440→  ESCALATE_BELOW = 0.55 (both REUSED — zero new constants; the A8-proven gate, P-A8a),
+   441→  gate-CLOSED (s >= H*) serves the exact v1 expression `ensemble(ph, pq, 0.5)`
+   442→  (byte-identical), gate-OPEN (s < H*) serves `loaded.field.priorCounted(tokens.join('|'))`
+   443→  PURE — the P-G2d law of record (per-ledger lambda* = 0 everywhere: all fresh memory, no
+   444→  head mass on the open branch).
+   445→- Default law untouched: artifacts without hyper.fresh.serve_with_fresh behave exactly as
+   446→  the A8-era law (v1 default everywhere). The opt-in may ride the artifact hyper (set at
+   447→  compile) or the loaded handle; both must produce identical bytes.
+   448→- Grow-as-used semantics (the freshness): the live lane watches its own stream (deform +
+   449→  observe per judgment/receipt — grow()), then RE-SERIALIZES arms.field :=
+   450→  senseTable(live rhizome) and serves from the updated artifact. The update event is
+   451→  receipted with its own artifact sha. Freshness is temporal, not architectural: the
+   452→  fresh law consumes whatever the lane's own watching produced, never a compiled-only
+   453→  archive.
+   454→
+   455→### Predictions (pre-registered under seal v12)
+   456→
+   457→- **P-A9a (opt-in wire mechanics)**: over every serve.judge() call on the two soils of
+   458→  record (sealed eval slice n=259; shift-family H2 n=343; serve protocol, full-response
+   459→  JSON): with the fresh opt-in ON, every gate-closed response is byte-identical to the
+   460→  v1-law reference and every gate-open response is exactly the registered fresh law. The
+   461→  artifact-hyper opt-in path and the loaded-handle opt-in path produce identical bytes.
+   462→  PASS iff zero mismatches in both branches (and opt-in-path equality holds).
+   463→- **P-A9b (default law safe)**: with the fresh flag ABSENT (the served default), every
+   464→  serve.judge() call on both soils returns byte-identical full-response JSON to the
+   465→  pre-A9 v1-law reference — 259/259 on the saturated slice and 343/343 on shift-H2. PASS
+   466→  iff zero mismatches. (The house law: the served default stays the v1 law everywhere.)
+   467→- **P-A9c (fresh value on shift-H2)**: battery protocol (per-ledger windows,
+   468→  pipeline-v2), grow-as-used: watch H1 per shift ledger (fresh rhizome, P-G2d protocol),
+   469→  re-serialize arms.field from it, serve H2 under the opt-in fresh law. Registered gate:
+   470→  pooled fresh top-1 >= pooled ens2 top-1 + 0.01 over the 343 rows — integer-exact:
+   471→  100*(fresh_hits - ens2_hits) >= 343 (ens2 = 242 hits, the P-A8c receipt number, pinned;
+   472→  gate-open rows = 40, the A8 number). Direction registered: PASS predicted — the P-G2d
+   473→  mechanism transfers through the gate (fresh memorization 298/343 = 0.8688 vs ens2 242:
+   474→  +56 overall; the law replaces ens2 exactly on the 40 gate-open rows, ens2's weakest —
+   475→  point estimate ~+10..16 hits). Honest FAIL = the freshness value does not survive the
+   476→  gate/serve path; the served default stays the v1 law, the fresh law ships opt-in, the
+   477→  finding is priced.
+   478→- **P-A9d (twin + battery green)**: (i) P-W2a re-verified under seal v12 — weave-core-v2
+   479→  JS == Python byte-identical (exact bytes, 9960B); (ii) the A9 rebuild consumes the
+   480→  SERIALIZED aggregate: SenseTablePrior.priorCounted built from the TWIN's arms.field
+   481→  reproduces the JS train-rhizome priorCounted vectors exactly (per-context JSON equality
+   482→  over every context evaluated on both soils), and the JS rebuild from each serialized
+   483→  live H1 table reproduces the live rhizome's own priorCounted vectors exactly (over all
+   484→  H1+H2 contexts of that ledger); (iii) NEW twin mode: the Python twin grows the H1 slice
+   485→  of each shift ledger and serializes the fresh table — byte-identical to the JS live
+   486→  table (all 4 ledgers); (iv) smoke 9/9; (v) selftest green. PASS iff all five hold.
+   487→
+   488→Contrast receipts (no gates): the ungated fresh-everywhere pooled H2 number pinned to the
+   489→P-G2d receipt (298/343 — rebuild faithfulness); H2 exact-context coverage (how many of
+   490→the 40 gate-open rows hit the fresh map vs fall back to global); the saturated opt-in
+   491→contrast (eval slice, compile-time train aggregate behind the opt-in: gate opens 11 — the
+   492→A8 number — fresh serves priorCounted(train) on those rows; receipted with flips, no
+   493→verdict); live-table re-serialization byte-determinism (two rebuilds identical); live
+   494→cells' G still 0 (mechanism receipt: A9 took path (b); the gamma channel is untouched);
+   495→the e_a8 receipt bytes reproduce exactly under the A9 law (CI regression).
+   496→
+   497→### A9 verdicts of record (run 2026-09-28, seal v12; receipts/e_a9.jsonl tip 44cc228e7be4395a)
+   498→
+   499→- **P-A9a PASS** — the implementation IS the registered fresh law: over 602
+   500→  serve.judge() calls with the opt-in ON (259 eval-slice + 343 shift-H2), all
+   501→  551 gate-closed responses byte-identical to the v1-law reference and all 51
+   502→  gate-open responses exactly the registered fresh law (0 mismatches); the
+   503→  artifact-hyper opt-in path and the loaded-handle opt-in path produced
+   504→  identical bytes on all 40 sampled calls (40/0 bad).
+   505→- **P-A9b PASS** — the served DEFAULT is safe: with the flag ABSENT, all 602
+   506→  calls on both soils returned byte-identical full-response JSON to the
+   507→  pre-A9 v1-law reference (0 mismatches; gate stats unchanged from A8: eval
+   508→  min top.p 0.3921, shift min 0.4043). The house law held end to end.
+   509→- **P-A9c PASS** — fresh value survives the gate/serve path: grow-as-used
+   510→  (watch H1 per shift ledger, re-serialize arms.field, serve H2) pooled
+   511→  fresh 252/343 = 0.7347 vs ens2 242/343 = 0.7055 (ens2 and gate_open=40
+   512→  both pinned to the P-A8c receipt) — delta +0.0292 over the +0.01 gate
+   513→  (integer-exact: 100*(252-242) = 1000 >= 343); flips +14 wrong2right /
+   514→  -4 right2wrong on the 40 gate-open rows (open-row exact-context coverage
+   515→  33/40, fallback 7). Inside the registered point-estimate band (+10..16).
+   516→  Rebuild-faithfulness pins: ungated fresh-everywhere = 298/343 — EXACTLY
+   517→  the P-G2d receipt number; the serve-rebuilt aggregate reproduces the live
+   518→  rhizome's priorCounted over all 686 shift contexts and the twin's table
+   519→  over all 46 evaluated train contexts (JSON-exact).
+   520→- **P-A9d PASS** — P-W2a re-verified under seal v12 (weave-core-v2 9960B ==
+   521→  9960B, journal tip aaa3ce6ab0dcbc94; compiled artifact still pinned to
+   522→  1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519 — no
+   523→  schema change, no new arm); the NEW twin fresh mode grew each ledger's H1
+   524→  and serialized the fresh table byte-identically to the JS live table
+   525→  (4/4 ledgers); live re-serialization byte-deterministic (4/4); live cells'
+   526→  G max = 0 (the gamma channel untouched — A9 took path (b), mechanism (a)
+   527→  remains honestly priced); smoke 9/9; selftest green. The e_a8 receipt
+   528→  re-ran under the A9 law and reproduced every measured byte exactly (the
+   529→  only field that changed is the seal version stamp, 10 -> 12, as it must).
+   530→
+   531→Verdict of record: P-A9 PASS (4/4). The A8c mechanism receipt is CONFIRMED:
+   532→the archive pays exactly when it carries FRESH memory and the serve law
+   533→reads it as priorCounted — same gate A8 proved (P-A8a), same payload P-G2d
+   534→proved (+13.41pp), new composition: +0.0292 pooled on shift-H2 through the
+   535→wire path, default law byte-safe on both soils. The receipts also price the
+   536→gap the gate leaves: ungated fresh-everywhere is 298/343 (0.8688, the
+   537→P-G2d number) vs 252/343 gated — the gate trades value capture for
+   538→saturated-soil safety, and the saturated opt-in contrast shows why the
+   539→default must stay v1 (fresh over the ARCHIVED train aggregate on the
+   540→saturated slice: 0.9382 vs ens2 0.9537, flips -6/+2 — archived memory
+   541→behind the gate still damages new soil, the P-G2b pattern). Priced into
+   542→A10: whether a hardness meter can select fresh-everywhere on registered-hard
+   543→soil without reopening the saturated slice (compile-time soil calibration,
+   544→the remaining A8 candidate), and/or the real-lane trial (a quilt lane
+   545→feeding judgments + receipts to the endpoint so arms.field carries its own
+   546→freshness in production).
+   547→
+   548→> Provenance note (seal v14, append-only): the A9 verdict of record was
+   549→> determined by the FIRST run, executed under seal v12 (receipt tip
+   550→> 44cc228e7be4395a, "seal verified (v12)" in the run log). The run was then
+   551→> repeated under the final seal v13 and every measured byte reproduced
+   552→> exactly (determinism; the committed receipts/e_a9.jsonl is that final
+   553→> re-run, tip 9aa5351090693e9d — the only field that differs from the
+   554→> v12-run receipt is the seal version stamp, as designed). The e_a8
+   555→> receipt of record remains the committed v10 run (tip 1ac2699bffe07d6d);
+   556→> its A9-law regression re-run is documented above, not re-committed.
+   557→
+   558→## Addendum A10 (2026-09-28, BEFORE the A10 run) — P-A10: the fresh-everywhere trial mode (soil-level opt-in, risk priced)
+   559→
+   560→A9's verdict priced the gap its gate leaves open: ungated fresh-everywhere =
+   561→298/343 (0.8688, the P-G2d pin) vs 252/343 gated — 46 NET rows where the gate
+   562→STAYS CLOSED but fresh memory would still pay. This addendum registers A9's
+   563→successor BEFORE any A10 run. Runs execute under seal v15.
+   564→
+   565→### Characterization of the 46 gap rows (pre-registration analysis; receipted as A10 contrast rows, no verdicts)
+   566→
+   567→Per-row anatomy of the 303 shift-H2 gate-closed rows (A9 battery protocol,
+   568→grow-as-used: watch H1 per ledger, serve H2; priorCounted from the live H1
+   569→table):
+   570→
+   571→- GROSS gains 50 rows (gate closed, ens2 wrong, fresh right): ALL 50 are
+   572→  EXACT-CONTEXT rows in the fresh H1 table (fallback 0), and on all 50 the
+   573→  fresh argmax IS the label. Labels: TICK 36 / BIND 14; the ens2 argmax is
+   574→  EFFECT on 50/50; transitions BIND->TICK 21, VIEW->TICK 15, TICK->BIND 13 —
+   575→  the injected echo rhythm of the shift family (mid-stream readout/collapse
+   576→  cycles that do not occur in train soil). ens2 is CONFIDENTLY wrong there
+   577→  (top.p 0.5560-0.8514, median 0.6595) — its EFFECT-heavy continuation is a
+   578→  train bias; the fresh table memorized the echo.
+   579→- Gross losses 4 rows (gate closed, ens2 right, fresh wrong): all EFFECT
+   580→  rows, exact-context, top.p 0.7890-0.8514 — H1 saw those windows continue
+   581→  differently (ambiguity), the gate saves exactly these.
+   582→- Other closed rows 249 (fresh and ens2 agree on 243; 20 fallback rows).
+   583→- Accounting: everywhere-on-closed = 226 + 50 - 4 = 272; open-row fresh hits
+   584→  26/40; everywhere total 272 + 26 = 298 = the pin; gated 226 + 26 = 252.
+   585→- THE INTERLEAVE PROOF: protection rows' top.p range [0.7890, 0.8514] is
+   586→  NESTED INSIDE the gap rows' range [0.5560, 0.8514]; other-closed rows span
+   587→  [0.5777, 0.8514]. NO row-level threshold separates gain from loss: any H*
+   588→  low enough to open the gap rows (H* <= 0.5560) opens the 11 damaging eval
+   589→  rows too (eval damage -4 hits, the A9 measured cost); higher H* captures
+   590→  only part of the gap (H*=0.65 -> 270, H*=0.70 -> 290, H*=0.75 -> 300 —
+   591→  above everywhere only because the 4 protection rows stay closed — but
+   592→  costs the same -4 on eval; H* >= 0.80 -> 298 everywhere-equivalent).
+   593→  Full frontier receipted as a contrast row.
+   594→- The train-only calibration counterfactual (compile-time legal: train soil
+   595→  only): walk-forward over the 12 train ledgers (watch H1, serve H2, gated
+   596→  fresh law) gives 569/582 (0.9777) at EVERY H* in {0.40, 0.45, ..., 0.95,
+   597→  1.01} — the objective is EXACTLY FLAT in H*. On the only soil compile time
+   598→  sees, fresh H1-memory and ens2 agree row-for-row (the gate is a no-op on
+   599→  saturated soil), so no registered derivation from train soil can rank
+   600→  threshold values, let alone transfer them. Mechanism (a) — a compile-time
+   601→  calibration of H* — is IMPOSSIBLE-BY-DERIVATION on this soil, and the
+   602→  row-level signal is proven unable to separate the soils (interleave
+   603→  proof). The separating variable is the SOIL (echo rhythm present or not),
+   604→  which does not exist at compile time (shift_family_gen.py built it after
+   605→  training, receipted). This is the A6 law again, now with a proof shape:
+   606→  hardness is a property of the WORLD, not the row.
+   607→- Saturated cost of fresh-everywhere, priced from the A9 receipts: on the
+   608→  sealed eval slice the compile-time train aggregate served on ALL 259 rows
+   609→  scores 243/259 = 0.9382 = micro 938224 — EXACTLY the A9 receipt's
+   610→  eval fresh_micro (structural: on the 248 gate-closed eval rows,
+   611→  fresh(train) == ens2 hit-for-hit in aggregate, so gated == everywhere ==
+   612→  243). The A9 receipt therefore already pins the everywhere number; flips
+   613→  vs ens2 are -6/+2 (net -4 = -0.0154). Provenance audit note (append-only,
+   614→  honest): the committed A9 receipt's eval_optin_contrast flip FIELDS carry
+   615→  swapped labels (w2r=6/r2w=2 is inconsistent with the same row's pinned
+   616→  micros 953668/938224; the A9 verdict text of record "-6/+2" is the
+   617→  consistent reading; the A9 receipt of record stays untouched). A10
+   618→  receipts label flips explicitly.
+   619→
+   620→### Design choice (ONE mechanism taken)
+   621→
+   622→(a) compile-time calibration of H*: REFUTED pre-run by the flat train
+   623→objective + the interleave proof (above) — receipted, not shipped, and no
+   624→threshold surgery on the A9 mode (the A9 gate keeps H* = ESCALATE_BELOW =
+   625→0.55 byte-for-byte). (b) is taken: the FRESH-EVERYWHERE TRIAL MODE — the A9
+   626→fresh law with the gate removed, opt-in only. The selector is SOIL-LEVEL and
+   627→HONEST about it: the lane that has registered its soil hard (the P-G2d
+   628→hardness gate — pooled frozen-head accuracy < 0.90, a PREDICTION-accuracy
+   629→meter per the L2 law) — or is deliberately trialing — sets the flag and
+   630→accepts the priced saturated risk. The gap closes because the trial stops
+   631→pretending a per-row confidence signal can do a soil-level job.
+   632→
+   633→### The registered law (serve, opt-in only; default untouched)
+   634→
+   635→- Flag: `hyper.fresh.fresh_everywhere === true` (explicit opt-in), riding the
+   636→  artifact hyper (set at compile / re-serialization) or the loaded handle;
+   637→  both paths MUST produce identical bytes. NO new arm, NO schema change, NO
+   638→  new numeric constant — the mode has no threshold at all; the compiled
+   639→  weave-v2 artifact bytes are UNCHANGED (artifact_sha256 stays pinned to the
+   640→  e_w2 receipt 1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519).
+   641→- Serve branch: `loaded.field && loaded.freshEverywhere` -> probs =
+   642→  `loaded.field.priorCounted(tokens.join('|'))` — the EXACT A9 payload
+   643→  (priorCounted over the SERIALIZED arms.field.observed; the P-G2d law of
+   644→  record, lambda* = 0) served on EVERY row. The escalate organ is unchanged
+   645→  and mode-independent: escalate = (top.p of the SERVED distribution) <
+   646→  ESCALATE_BELOW — an everywhere judgment escalates exactly when the memory
+   647→  itself is not confident.
+   648→- Registered branch order (total, for artifacts setting multiple opt-ins):
+   649→  A7 serve_with_field -> A10 fresh_everywhere -> A9 serve_with_fresh -> A8
+   650→  hardness_gate -> default v1. (Strictest-freshest wins among fresh modes;
+   651→  A7's ens3 blend stays first for byte-compatibility with the A7-A9
+   652→  registered order. Artifacts setting only A9/A8 flags, or none, are
+   653→  byte-unchanged by construction — verified in P-A10a.)
+   654→- Default law untouched: artifacts without the flag behave exactly as the
+   655→  A9-era law (v1 default everywhere). Grow-as-used semantics unchanged:
+   656→  freshness is temporal, not architectural — the everywhere law consumes
+   657→  whatever the lane's own watching produced (the re-serialized live table),
+   658→  or the compile-time train aggregate if the lane has not re-serialized.
+   659→
+   660→### Protocols of record
+   661→
+   662→- Wire protocol (P-A10a): serve.judge() driven exactly as P-A9a — state.context
+   663→  = the K rows before the target, judged = the target row (tokens include the
+   664→  judged row's channel; the A8/A9 wire convention).
+   665→- Battery protocol (P-A10b/c): the P-G2d/P-A9c convention — the row under
+   666→  judgment contributes NO token (judged-free serve calls; priorCounted over
+   667→  the pre-judgment window), per-ledger windows (pipeline-v2), grow-as-used on
+   668→  the shift family.
+   669→
+   670→### Predictions (pre-registered under seal v15)
+   671→
+   672→- **P-A10a (wire mechanics + default safety + precedence)**: over every
+   673→  serve.judge() call on the two soils of record (sealed eval slice n=259;
+   674→  shift-family H2 n=343; wire protocol, full-response JSON): (i) with the
+   675→  everywhere opt-in ON, every response is byte-identical to the registered
+   676→  everywhere reference expression (priorCounted over the serve tokens —
+   677→  0 mismatches); (ii) with the flag ABSENT, all 602 calls are byte-identical
+   678→  to the pre-A10 v1-law reference (the default is untouched); (iii) the
+   679→  artifact-hyper opt-in path and the loaded-handle opt-in path produce
+   680→  identical bytes (sampled on both soils); (iv) precedence: an artifact
+   681→  setting BOTH fresh_everywhere and serve_with_fresh serves EVERYWHERE on
+   682→  every sampled call (A10 > A9 in the registered order). PASS iff zero
+   683→  mismatches in all four.
+   684→- **P-A10b (shift-H2 gain — the gap closed)**: battery protocol, grow-as-used
+   685→  (watch H1 per shift ledger, re-serialize arms.field, serve H2 under the
+   686→  everywhere opt-in): pooled everywhere top-1 == 298/343 EXACTLY (the
+   687→  P-G2d/A9 ungated pin reproduced through the serve path — rebuild
+   688→  faithfulness; any other number is a wire divergence) AND 100*(everywhere_hits
+   689→  - ens2_hits) >= 343 (ens2 pinned to 242, the P-A8c/A9 receipt number).
+   690→  PASS iff both. Registered cost note: everywhere pays 4 protection rows on
+   691→  shift (298 < the 302 an oracle-gated everywhere would score) — the priced
+   692→  price of dropping the row gate, receipted as contrast.
+   693→- **P-A10c (saturated cost — the priced risk, pinned)**: on the sealed eval
+   694→  slice (battery protocol; memory = the compile-time train aggregate),
+   695→  everywhere top-1 micro == 938224 (243/259 = 0.9382 — the A9 receipt pin)
+   696→  AND ens2 micro == 953668 (247/259, the P-W2b pin). PASS iff both pins
+   697→  hold. Interpretation of record: the saturation risk of fresh-everywhere is
+   698→  CONFIRMED at -0.0154 (net -4 hits: flips -6/+2) — the mode ships opt-in
+   699→  ONLY, the served default stays the v1 law, and the trial's contract is
+   700→  "price paid, receipt published". Honest FAIL = a pin moves (a real
+   701→  divergence receipt).
+   702→- **P-A10d (twin + battery green)**: (i) P-W2a re-verified under seal v15 —
+   703→  weave-core-v2 JS == Python byte-identical (9960B == 9960B); the compiled
+   704→  artifact stays pinned to the e_w2 receipt; (ii) the grow-as-used live
+   705→  tables remain byte-identical to the Python twin's fresh tables (4/4
+   706→  ledgers) and live re-serialization stays byte-deterministic (4/4) — A10
+   707→  adds zero new serialized state; (iii) the A9 experiment re-runs under the
+   708→  A10 law and reproduces every MEASURED byte of receipts/e_a9.jsonl —
+   709→  identical after stripping the seal version stamp and the chain row_hashes
+   710→  (row_hash = sha256 over the stamped row by construction, so the stamp
+   711→  change propagates into the hashes; every measured field must match) — the
+   712→  A9 verdict of record stands unchanged; the committed A9 receipt of record
+   713→  is restored byte-for-byte after the check (append-only); (iv) smoke 9/9;
+   714→  (v) selftest green. PASS iff all five hold.
+   715→
+   716→Contrast receipts (no gates): the full gap anatomy (per-ledger counts, top.p
+   717→profiles, transition mix, exact-ctx coverage — the numbers cited above); the
+   718→H* frontier table on both soils (the interleave proof in numbers, incl. the
+   719→[0.50, 0.55) 4-row eval damage band and the H*=0.75 point 300/243); the
+   720→train-only calibration flatness receipt (569/582 at every grid point —
+   721→mechanism (a) impossible-by-derivation); the 4 shift protection rows
+   722→identified (the row gate's only remaining value); everywhere's open-row vs
+   723→closed-row hit decomposition on both soils; the A9 eval-contrast field-label
+   724→audit (w2r/r2w swapped in the committed A9 receipt row; verdict text of
+   725→record correct; both A9 micro pins reproduce exactly).
+   726→
+   727→### A10 verdicts of record (run 2026-09-28, seal v15; receipts/e_a10.jsonl tip 5d8c77eb22d65e19)
+   728→
+   729→- **P-A10a PASS** — the implementation IS the registered trial mode: over
+   730→  602 serve.judge() calls with the everywhere opt-in ON (259 eval-slice +
+   731→  343 shift-H2), every response byte-identical to the registered everywhere
+   732→  reference (0 mismatches); with the flag ABSENT, all 602 default responses
+   733→  byte-identical to the pre-A10 v1-law reference (0 mismatches); an artifact
+   734→  setting BOTH fresh flags served EVERYWHERE on all 602 precedence calls
+   735→  (A10 > A9, 0 mismatches); artifact-hyper opt-in path == loaded-handle
+   736→  opt-in path (40/40); the grow-as-used live-table handle served the
+   737→  live-table reference byte-exactly (40/40 sampled wire calls).
+   738→- **P-A10b PASS** — the gap is CLOSED: pooled fresh-everywhere 298/343 =
+   739→  0.8688, EXACTLY the P-G2d/A9 ungated pin reproduced through the serve path
+   740→  (judged-free battery protocol, grow-as-used per ledger); ens2 242/343
+   741→  pinned to the P-A8c/A9 receipts; delta +0.1633 (integer-exact:
+   742→  100*(298-242) = 5600 >= 343). Per-ledger everywhere 60/67, 73/83, 64/83,
+   743→  101/110 (ens2 49/59/56/78 — every ledger gains double digits).
+   744→- **P-A10c PASS** — the priced risk CONFIRMED at the pin: saturated eval
+   745→  everywhere micro 938224 == the A9 receipt's fresh_micro (243/259 = 0.9382);
+   746→  ens2 micro 953668 == the P-W2b pin. Flips -6/+2, net -4 hits = -0.0154,
+   747→  and the run localizes the damage COMPLETELY to the 11 A9-open rows
+   748→  (-6/+2 there; ZERO flips on the 248 gate-closed rows — fresh(train) and
+   749→  ens2 agree hit-for-hit there, the structural identity the pricing was
+   750→  derived from). The mode ships opt-in ONLY; the served default stays v1.
+   751→- **P-A10d PASS** — P-W2a re-verified under seal v15 (weave-core-v2 9960B ==
+   752→  9960B, journal tip aaa3ce6ab0dcbc94; compiled artifact still pinned to
+   753→  1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519 — no
+   754→  schema change, no new arm, no new constant); grow-as-used live tables
+   755→  byte-identical to the Python twin (4/4) and live re-serialization
+   756→  byte-deterministic (4/4); the e_a9 regression reproduced every MEASURED
+   757→  byte of the A9 receipt under the A10 law (identical after stripping the
+   758→  seal stamp 13->15 and the chain hashes that witness it — every measured
+   759→  field matched), and the committed A9 receipt of record was restored
+   760→  byte-for-byte after the check; smoke 9/9; selftest green.
+   761→
+   762→Verdict of record: P-A10 PASS (4/4). The 298-vs-252 gap is closed honestly,
+   763→and the characterization survived contact with the run: (i) the 46-net gap
+   764→decomposes into 50 gross gains minus 4 protection losses, ALL on
+   765→exact-context rows — the gains are the echo rhythm (BIND->TICK 21,
+   766→VIEW->TICK 15, TICK->BIND 13; ens2's argmax is EFFECT on 50/50: confidently
+   767→wrong, top.p up to 0.8514), the losses are ambiguous windows the row gate
+   768→was saving; (ii) the INTERLEAVE PROOF held — protection top.p range
+   769→[0.7890, 0.8514] nested inside the gap range [0.5560, 0.8514]; the in-run H*
+   770→frontier (0.40: 242/247 ... 0.55: 252/243 ... 0.75: 300/243 ... 1.01:
+   771→298/243) shows no threshold captures the gap without the -4 eval damage;
+   772→(iii) mechanism (a) is impossible-by-derivation, CONFIRMED in-run: the
+   773→train-only walk-forward objective is exactly flat in H* (569/582 at every
+   774→grid point — the gate is a no-op on the only soil compile time sees);
+   775→(iv) the A9 receipt audit: the committed A9 eval-contrast flip FIELDS carry
+   776→swapped labels (w2r=6/r2w=2 inconsistent with the same row's micros); the
+   777→A9 verdict text of record (-6/+2) is the consistent reading and both A9
+   778→micro pins reproduce exactly. The A9 law itself is untouched byte-for-byte
+   779→(same receipts under the new seal stamp).
+   780→
+   781→Unified law after A10: freshness pays on hard soil — and the MODE SELECTOR
+   782→must be soil-level, because per-row confidence provably cannot separate
+   783→"confidently right" (saturated) from "confidently wrong but memorized"
+   784→(shifted): compile-time calibration has a flat objective (no signal), the
+   785→row-level distributions interleave (no separator), so the fresh-everywhere
+   786→trial ships as an explicit LANE opt-in with the saturated risk pinned at
+   787→-0.0154 (4 hits/259) and the served default stays the v1 law everywhere.
+   788→
+   789→Priced into A11: the real-lane trial (a quilt lane feeding judgments +
+   790→receipts to the endpoint so arms.field carries its own freshness in
+   791→production — queued since A9); the gamma channel (grow() still deforms with
+   792→gamma=0 — every live cell G max = 0; mechanism (a)'s home, honestly priced
+   793→since A9); the H*=0.50 dominance observation (shift 254 at ZERO eval damage
+   794→vs the A9 point 252/-4 — recorded as a contrast for a future registered run,
+   795→NOT threshold surgery on the A9 mode).
+   796→
+   797→> Provenance note (seal v16, append-only): the A10 verdict of record was
+   798→> determined by the FIRST official run, executed under seal v15 immediately
+   799→> after the registration commit fce983c (receipt tip 5d8c77eb22d65e19, "seal
+   800→> verified (v15)" in the run log). Two uncommitted shakedown runs before
+   801→> that commit, under the same v15 seal content, and one re-run under the
+   802→> final seal v16 all reproduced every measured byte (the only differences
+   803→> anywhere are the seal version stamps and the chain hashes that witness
+   804→> them, as designed — pipeline determinism across four runs). The committed
+   805→> receipts/e_a10.jsonl is the final v16 re-run, tip 0ed10e49430dfeb1. During
+   806→> every run the e_a9 receipt was temporarily re-stamped by the in-run
+   807→> regression and restored byte-for-byte (restored=true receipted in the
+   808→> A9-regression receipt row).
+   809→
+   810→## Addendum A11 (2026-09-28, BEFORE the A11 run) — P-A11: the real-lane production trial (fresh-everywhere under grow-as-used on the real qcells streams)
+   811→
+   812→A9 queued and A10 priced "the real-lane trial (a quilt lane feeding judgments
+   813→+ receipts to the endpoint so arms.field carries its own freshness in
+   814→production)". A11 makes that definition concrete and testable, registers the
+   815→trial BEFORE any A11 run, and adds ZERO source changes (the A10 law already
+   816→ships; the trial drives it). Runs execute under seal v17.
+   817→
+   818→### What "real lane" means (the testable definition, registered)
+   819→
+   820→- **The real-lane soil**: the 16 qcells receipt ledgers ON DISK at
+   821→  `../quilt-qcells/receipts/ledgers/` — git-pinned in SuperInstance/quilt-qcells
+   822→  @ 615ddcf (ledger files byte-identical to HEAD; local mode-bit noise only,
+   823→  core.fileMode=false quarantine per the crab-traps precedent). 1418 rows
+   824→  total, every row an OPS opcode (1418 walk samples). Sealed split unchanged:
+   825→  byte-order sort, first 12 train / last 4 eval (train 908 samples / eval 510
+   826→  by construction — measured at registration: train bell 75, crossed_measure
+   827→  136, crx_case 138, forget_bell 75, ghz3 141, init_complex 73, init_flat 74,
+   828→  layers_depth 142, measure_only 20, noise_bell 137, ry_decomposition 74,
+   829→  swap_case 74; eval unsealed_bell 74, xx_return 41, y_decomposition 72,
+   830→  zt_decomposition 72). These are the PRODUCTION receipts the garden ships
+   831→  against — the soil the artifact was compiled from — NOT the synthetic shift
+   832→  family (shift_family_gen.py built those AFTER training).
+   833→- **The endpoint**: `src/serve.mjs judge()` — the exact serve path the garden
+   834→  ships, byte-for-byte as committed at e92d00d, law chain A7 serve_with_field
+   835→  > A10 fresh_everywhere > A9 serve_with_fresh > A8 hardness_gate > default v1.
+   836→- **Production semantics (grow-as-used, the registered A10 law)**: the lane
+   837→  walks its stream in arrival order; every row it has already judged and
+   838→  receipted is an observation (field.mjs law: observations are the only
+   839→  collapse, source 'receipt'); before serving sample k the lane re-serializes
+   840→  arms.field from its own watched prefix [0..k) and serves under the A10
+   841→  opt-in (priorCounted over the SERIALIZED aggregate — the exact A9/A10
+   842→  payload, lambda* = 0). Each ledger is its own chain (seq 0, prev
+   843→  0000000000000000): the walk is PER-LEDGER — cross-ledger pollution would be
+   844→  a design error, not a law. Cold start is the registered law, not
+   845→  special-cased: at k=0 the aggregate is empty and priorCounted serves
+   846→  uniform (argmax ties resolve in OPS order, LINK — the same behavior any
+   847→  production cold stream gets).
+   848→- **Escalation is RECORDED, not executed**: escalate = top.p(served) <
+   849→  ESCALATE_BELOW (0.55, sealed, reused, mode-independent) is receipted on
+   850→  every call; the hosted teacher channel (e_g6) is out of scope — A11 stays
+   851→  local and deterministic; the walk grows from the RECEIPTS (the ledger's
+   852→  actual ops), never from teacher answers.
+   853→
+   854→Why this is a genuine trial and not a re-measurement: A9/A10 measured fresh
+   855→memory (i) as the FROZEN compile-time train aggregate over the eval slice
+   856→(saturated cost -0.0154, flips -6/+2) and (ii) as H1-watched memory on the
+   857→SYNTHETIC shift soil (+0.1633 through the serve path). NEITHER is the
+   858→production shape: production memory is the lane's OWN stream prefix — thinner
+   859→than the archive, fresher than any split, carrying the stream's own patterns.
+   860→The walk-forward everywhere-live number is a genuinely NEW measurement of the
+   861→shipped law on the shipped soil; its verdict is registered below as a
+   862→relation gate with a pre-priced safety envelope, honest either way (the A8
+   863→precedent: an honest FAIL is a pin that moves).
+   864→
+   865→### Registered protocols (deterministic; zero new constants)
+   866→
+   867→- **Walk protocol (the A11 headline)**: for each of the 16 real ledgers
+   868→  (sealed byte-order), for each sample k (0-based over the OPS-filtered
+   869→  samples): watched prefix = samples [0..k); live table = the walk rhizome's
+   870→  senseTable() (grown incrementally, deform+observe per receipt); handle =
+   871→  loadWeave(artifact with arms.field replaced by the live table) under the
+   872→  A10 opt-in hyper.fresh.fresh_everywhere = true; serve call judged-free
+   873→  (state.context = rows.slice(max(0, i_k − K), i_k), no judged row — the
+   874→  P-G2d/P-A9c battery convention); everywhere-live choice = answers.q1.choice;
+   875→  hit = (choice === label). After the call the receipt is observed — the walk
+   876→  grows. Sample row i_k of the ledger is identified by samplesWithIdx
+   877→  (byte-equal to makeSamples by construction, guarded in-run as in A10).
+   878→- **Default arm**: the identical walk with the flag ABSENT (v1 law) — the
+   879→  default byte-safety gate; reference expression ensemble(judgeHash,
+   880→  judgeQthe, 0.5) on every call.
+   881→- **Leakage probe (judged-free integrity)**: for every walk step, the serve
+   882→  call repeated with rows[i_k].op mutated to a different OPS value must
+   883→  return BYTE-IDENTICAL responses (the judgment must never read the row under
+   884→  judgment: the walk table is the prefix [0..k), the context slice is
+   885→  [i_k − K, i_k)).
+   886→- **Wire protocol sample (endpoint shape, P-A9a convention)**: 10 sampled
+   887→  calls per ledger (judged-carrying: state.context = the K rows before the
+   888→  target, judged = the target row), everywhere-live vs the registered
+   889→  reference expression over the same step's serialized table — byte-identity.
+   890→- **Pin re-measurement (the A9/A10 pins through the A11 driver)**: (i) the
+   891→  sealed eval slice (4 eval ledgers, 259 samples) served with the COMPILE-TIME
+   892→  train aggregate (the shipped no-re-serialization fallback): everywhere
+   893→  micro == 938224, ens2 micro == 953668, flips -6/+2; (ii) the shift-H2
+   894→  battery (4 shift ledgers, grow-as-used H1→H2): everywhere == 298/343, ens2
+   895→  == 242/343.
+   896→- **Predecessor regression**: experiments/e_a10_fresh_everywhere.mjs re-runs
+   897→  under the A11 seal; every MEASURED byte of receipts/e_a10.jsonl must
+   898→  reproduce (identical after stripping the seal stamp and the chain
+   899→  row_hashes that witness it); the committed A10 receipt of record is
+   900→  restored byte-for-byte after the check (append-only).
+   901→
+   902→### Predictions (pre-registered under seal v17)
+   903→
+   904→- **P-A11a (wire byte-exactness on the real-lane walk)**: over all 1418 walk
+   905→  steps × three arms (everywhere-live, default, leakage probe): every
+   906→  response byte-identical to the registered reference expression for its arm
+   907→  (leakage probe: byte-identical to the unmutated call) — 0 mismatches; the
+   908→  160 sampled judged-carrying wire calls byte-identical — 0 mismatches;
+   909→  artifact-hyper opt-in path == loaded-handle opt-in path on the sampled
+   910→  path-equality calls — 0 mismatches. PASS iff zero mismatches everywhere.
+   911→- **P-A11b (the A9/A10 pins hold through the A11 driver)**: eval slice
+   912→  everywhere micro == 938224 AND ens2 micro == 953668 AND flips -6/+2;
+   913→  shift-H2 everywhere == 298/343 AND ens2 == 242/343 (pinned to the committed
+   914→  receipts). PASS iff all five.
+   915→- **P-A11c (walk semantics exact + no leakage)**: (i) walk serialization
+   916→  byte-deterministic at EVERY step (double serialization, all 16 ledgers);
+   917→  (ii) incremental walk == prefix re-grow: at every 16th step (≥1 per ledger)
+   918→  the live table byte-equals a fresh rhizome grown on samples [0..k); (iii)
+   919→  leakage probe 0 violations over all 1418 steps; (iv) escalate ==
+   920→  (top.p(served) < 0.55) on every call; (v) each ledger's final walk table
+   921→  byte-equals the JS full-ledger grow (walk continuity). PASS iff all.
+   922→- **P-A11d (twin + battery green + predecessor regression)**: weave-core-v2
+   923→  JS == Python (9960B == 9960B); the Python twin's fresh H1 tables on the
+   924→  REAL ledgers byte-equal the JS midpoint walk tables (16/16 — the existing
+   925→  garden_ref.py --fresh tool, no ref changes); smoke 9/9; selftest green;
+   926→  e_a10 regression measured-identical + receipt of record restored. PASS iff
+   927→  all.
+   928→- **P-A11e (the production question — relation gate, FAIL branch registered
+   929→  NOW)**: pooled walk-forward everywhere-live hits >= pooled walk-forward
+   930→  ens2 hits over the 1418 real-lane samples. PASS iff the relation holds.
+   931→  Registered FAIL branch (no threshold surgery, decided before the run): if
+   932→  ens2 > everywhere-live, the trial's honest answer of record is
+   933→  "production grow-as-used does not pay on the real lane"; the mode stays
+   934→  opt-in trial (the served default stays v1 law regardless of the verdict —
+   935→  unchanged by construction); the measured cost is receipted; AND the safety
+   936→  envelope must hold: (ens2_hits − everywhere_hits) / 1418 <= 0.05 — the
+   937→  promotion gate's own DISCARD bound (weaver.mjs promotionGate discards a
+   938→  challenger degrading a tracked metric > 0.05; 0.05 is an EXISTING sealed
+   939→  constant, reused — zero new constants; integer form: gap <= 70 hits). If
+   940→  the envelope is breached, the walk exposes a failure mode beyond the
+   941→  compiler's own safety discipline and the production semantics must not
+   942→  ship even opt-in without a soil gate (A12 pricing).
+   943→
+   944→Contrast receipts (no gates): per-ledger everywhere-live vs ens2 table with
+   945→flips decomposed (exact-ctx vs fallback rows); the walk's exact-ctx coverage
+   946→(how much of the stream the lane's own memory sees); escalate counts per arm;
+   947→cold-start (k=0) receipts; the fallback law receipt (unseen-context steps
+   948→serve the prefix marginal, add-1 smoothed — the priorCounted fallback law).
+   949→
+   950→Operating point UNCHANGED: H* = ESCALATE_BELOW = 0.55 (escalate organ only,
+   951→mode-independent); ens3 weights untouched (0.4/0.4/0.2, the registered
+   952→weights); the A10 opt-in flag hyper.fresh.fresh_everywhere reused as-is;
+   953→branch order A7 > A10 > A9 > A8 > v1 unchanged; artifact_sha256 pinned to
+   954→1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519 (the e_w2
+   955→receipt pin); default law = v1 everywhere; NO new arm, NO schema change, NO
+   956→new numeric constant. A11 adds ZERO changes to src/.
+   957→
+   958→### A11 verdicts of record (run 2026-09-28, seal v17; receipts/e_a11.jsonl tip 461faf80852d7b56)
+   959→
+   960→- **P-A11a PASS** — the implementation IS the registered real-lane trial:
+   961→  over all 1418 walk steps × three arms, every response byte-identical to
+   962→  the registered reference expressions — everywhere-live vs the reference
+   963→  rebuilt from the RE-PARSED SERIALIZED walk table (0 mismatches), the
+   964→  default vs the independent v1 expression (0 mismatches), the leakage probe
+   965→  vs the unmutated call (0 mismatches — the judgment never reads the row
+   966→  under judgment); the 160 judged-carrying wire calls (first 10 steps per
+   967→  ledger, the SAME step's serialized table) byte-identical (0 everywhere
+   968→  mismatches; 0 default, receipted as contrast); artifact-hyper opt-in ==
+   969→  loaded-handle opt-in (32/0 bad).
+   970→- **P-A11b PASS** — the A9/A10 pins hold through the A11 driver: eval slice
+   971→  (compile-time train aggregate) everywhere micro 938224 == the A9 receipt
+   972→  pin, ens2 micro 953668 == the P-W2b pin, flips -6/+2 == the A10 receipt;
+   973→  shift-H2 grow-as-used battery everywhere 298/343 == the P-G2d/A9/A10 pin,
+   974→  ens2 242/343 pinned. The production driver drives the same serve path to
+   975→  the same bytes.
+   976→- **P-A11c PASS** — walk semantics exact: per-step serialization byte-
+   977→  deterministic (0 bad, double serialization at EVERY step of 16 ledgers);
+   978→  incremental walk == prefix re-grow (0/95 bad at every 16th step); final
+   979→  walk table == full-ledger grow on 16/16 ledgers (continuity); leakage
+   980→  probe 0 violations over 1418 steps; escalate == (top.p(served) < 0.55) on
+   981→  every call (0 violations).
+   982→- **P-A11d FAIL (literal strip) — receipted as a stamp-witness artifact,
+   983→  every measured field matched**: twin core-v2 IDENTICAL (9960B == 9960B);
+   984→  the Python --fresh H1 midpoint tables on the REAL ledgers byte-equal the
+   985→  JS walk tables 16/16; smoke 9/9; selftest green; e_a10 re-ran under the
+   986→  A11 seal with P-A10 overall PASS and its receipt of record restored
+   987→  byte-for-byte. The single failing component: the registered measured-byte
+   988→  strip of receipts/e_a10.jsonl (strip top-level seal_v + row_hashes)
+   989→  returned false. The post-run field-level audit enumerated ALL differing
+   990→  paths between the committed v16 receipt and the v17 re-run: row1.seal_v
+   991→  (16→17), row1.a9_regression.seal_stamps.1 (16→17), and the three
+   992→  propagated row_hashes — NOTHING else. The nested stamps field is a
+   993→  STAMP-CLASS WITNESS the A10 experiment itself introduced (it records which
+   994→  seal the inner e_a9 regression executed under); every MEASURED field
+   995→  matched. The registered strip did not carve out the nested witness; the
+   996→  FAIL of record stands exactly as executed (the lane does not touch its
+   997→  gates after the run); this audit is the receipt of why it is bookkeeping,
+   998→  not measurement. The same audit applies to the e_a10_summary.json nested
+   999→  stamps field (restored byte-for-byte after the check).
+  1000→- **P-A11e FAIL — the production question answered NO, envelope BREACHED**:
+  1001→  pooled walk-forward everywhere-live 1261/1418 (0.8893) vs ens2 default
+  1002→  1378/1418 (0.9718); delta −117 hits = −0.0825. The registered safety
+  1003→  envelope (gap ≤ 70 hits = the promotion gate's own 0.05 DISCARD bound) is
+  1004→  BREACHED (117 > 70). Registered FAIL branch executes: the mode stays
+  1005→  opt-in trial; the real lane must NOT set hyper.fresh.fresh_everywhere;
+  1006→  the served default stays the v1 law (unchanged by construction); the
+  1007→  measured cost is the receipt of record. P-A11 overall: FAIL.
+  1008→
+  1009→Mechanism receipts (the science of the honest FAIL):
+  1010→
+  1011→1. **EXACT-CTX NEUTRALITY**: zero hit-outcome flips on ALL 1216 exact-ctx
+  1012→  steps (85.75% of the walk). When the lane's own memory HAS seen the exact
+  1013→  3-window, its memorized continuation agrees with the compiled heads
+  1014→  everywhere — fresh memory is never wrong on what it actually memorized;
+  1015→  on the real lane it is merely never better (the compiled artifact already
+  1016→  saturates its own training soil: ens2 walk 97.18%). This is the exact
+  1017→  mirror of the shift soil, where the memorized echo was precisely where
+  1018→  fresh WON (A10: all 50 gross gains exact-ctx).
+  1019→2. **FALLBACK DAMAGE CONCENTRATION**: 100% of the A11 damage sits on the
+  1020→  202 fallback steps (unseen context): 118 ens2-right→everywhere-wrong vs 1
+  1021→  the other way. There priorCounted serves the prefix marginal (add-1): its
+  1022→  argmax distribution across the walk was LINK 62 / BIND 99 / EFFECT 41 —
+  1023→  a biased guesser; the 118 loss rows' true labels: EFFECT 49, BIND 28,
+  1024→  TICK 26, PROOF 15; ens2 is confident on those rows (top.p 0.4578–0.9500,
+  1025→  median 0.6821) and mostly right. The A9/A10 pricing said "archived memory
+  1026→  still damages new soil" at −0.0154; production self-memory damages MORE
+  1027→  (−0.0825) because the single-stream prefix marginal is weaker than the
+  1028→  12-ledger archive on unseen windows.
+  1029→3. **ESCALATE LOAD**: everywhere escalates 297/1418 = 20.9% of real-lane
+  1030→  judgments vs the default's 32/1418 = 2.3% — a 9× teacher-load signal if
+  1031→  the mode were enabled in production (escalation RECORDED, not executed,
+  1032→  per the registered protocol).
+  1033→4. **THE A6 LAW CONFIRMED FROM THE THIRD SOIL**: freshness value is a
+  1034→  property of the WORLD. Shift soil (memorized echo, heads confidently
+  1035→  wrong): fresh pays +0.1633. Saturated eval slice (archived memory on new
+  1036→  soil): fresh costs −0.0154. The real lane walked in production (self-
+  1037→  memory, saturated heads): fresh costs −0.0825, damage entirely in the
+  1038→  fallback class. The soil-level selector law (the lane declares its soil;
+  1039→  the served default never changes) is the only guard, and A11 measured
+  1040→  exactly what it guards against on the production soil.
+  1041→
+  1042→Erratum (append-only, honest): the A11 registration's split-total
+  1043→parenthetical reads "train 908 / eval 510"; the correct totals are train
+  1044→1159 / eval 259 — the per-ledger list in the same sentence is correct and
+  1045→sums to 1159/259; the 1418 total and every registered gate are unaffected.
+  1046→Receipted here, not silently fixed (the v17 registration bytes stand).
+  1047→
+  1048→A12 pricing (from the A11 receipts, a NEW mechanism — no threshold surgery
+  1049→on any shipped mode): the fallback-aware everywhere candidate — serve the
+  1050→walk memory on exact-ctx steps, fall back to the v1 law (not the prefix
+  1051→marginal) on unseen contexts. The joint receipts predict it keeps the
+  1052→shift-soil gains (A10: the 50 gross gains are ALL exact-ctx rows) while
+  1053→being hit-identical to the v1 default on the real-lane walk (A11: zero
+  1054→exact-ctx flips ⇒ its real-lane hits == ens2's hits exactly). It requires a
+  1055→new serve branch and a registered addendum with its own seals; A9's gate,
+  1056→A10's everywhere, and the default stay byte-identical regardless.
+  1057→
+  1058→> Provenance note (seal v18, append-only): the A11 verdict of record was
+  1059→> determined by the FIRST official run, executed under seal v17 immediately
+  1060→> after the registration commit 75fd8cf (receipt tip 461faf80852d7b56, "seal
+  1061→> verified (v17)" in the run log). The committed receipts/e_a11.jsonl is the
+  1062→> v18 re-run executed under this seal; its measured bytes are identical to
+  1063→> the v17 run of record except the stamp-class fields (top-level seal_v, the
+  1064→> chain row_hashes that witness them, and the nested
+  1065→> e_a10_regression.seal_stamps array — the same stamp-class witness the
+  1066→> P-A11d audit carves out). The e_a10 receipt of record and summary were
+  1067→> restored byte-for-byte after every run.
+  1068→
+  1069→## Addendum A12 (2026-09-28, BEFORE the A12 run) — P-A12: fallback-aware everywhere (the A11-priced mechanism, one new serve branch)
+  1070→
+  1071→A11's honest FAIL priced this candidate from the joint receipts. The
+  1072→pricing text of record (sealed v18): "the fallback-aware everywhere
+  1073→candidate — serve the walk memory on exact-ctx steps, fall back to the v1
+  1074→law (not the prefix marginal) on unseen contexts. The joint receipts
+  1075→predict it keeps the shift-soil gains (A10: the 50 gross gains are ALL
+  1076→exact-ctx rows) while being hit-identical to the v1 default on the
+  1077→real-lane walk (A11: zero exact-ctx flips => its real-lane hits == ens2's
+  1078→hits exactly). It requires a new serve branch and a registered addendum
+  1079→with its own seals; A9's gate, A10's everywhere, and the default stay
+  1080→byte-identical regardless." The mechanism receipts it is built from: (1)
+  1081→EXACT-CTX NEUTRALITY — zero hit-outcome flips on ALL 1216 exact-ctx steps
+  1082→(85.75% of the walk): fresh memory is never wrong on what it memorized and
+  1083→never better on the real lane (the compiled artifact saturates its own soil
+  1084→at 97.18%); (2) FALLBACK DAMAGE CONCENTRATION — 100% of the A11 damage sat
+  1085→on the 202 unseen-context steps (118 ens2-right/everywhere-wrong vs 1 the
+  1086→other way): the prefix-marginal argmax (LINK 62 / BIND 99 / EFFECT 41) is a
+  1087→biased guesser against ens2's 97% heads; (3) ESCALATE LOAD — everywhere
+  1088→escalated 20.9% of real-lane judgments vs the default's 2.3%. A12 removes
+  1089→the damage channel while keeping the fresh channel exactly where A11
+  1090→measured it harmless (and A10 measured it valuable on shift soil). Runs
+  1091→execute under seal v19.
+  1092→
+  1093→### The registered law (serve, opt-in only; everything shipped stays byte-identical)
+  1094→
+  1095→- Flag: `hyper.fresh.fresh_everywhere_fallback_aware === true` (explicit
+  1096→  opt-in), riding the artifact hyper (set at compile / re-serialization) or
+  1097→  the loaded handle; both paths MUST produce identical bytes. NO new arm,
+  1098→  NO schema change, NO new numeric constant. The compiled weave-v2 artifact
+  1099→  bytes are UNCHANGED (artifact_sha256 stays pinned to the e_w2 receipt
+  1100→  1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519).
+  1101→- Serve branch (the priced new branch, built ENTIRELY from existing
+  1102→  registered pieces): `loaded.field && freshAware` ->
+  1103→  - exact-ctx (the memory has seen the exact token key:
+  1104→    `observed.has(tokens.join('|'))` — the registered A11 exact-ctx
+  1105→    classification, a MEMBERSHIP test, NOT a threshold): probs =
+  1106→    `priorCounted(tokens.join('|'))` — the EXACT A10/A9 payload;
+  1107→  - fallback (unseen context): probs = `ensemble(ph, pq, 0.5)` — the EXACT
+  1108→    v1 law (the default path as shipped), NOT the prefix marginal.
+  1109→  Every served expression is an existing registered piece; the branch only
+  1110→  SELECTS between them per step by the A11 classification. The escalate
+  1111→  organ is unchanged and mode-independent: escalate = (top.p of the SERVED
+  1112→  distribution) < ESCALATE_BELOW (0.55, sealed, reused).
+  1113→- Registered branch order (total, for artifacts setting multiple opt-ins):
+  1114→  A7 serve_with_field -> A12 fresh_everywhere_fallback_aware -> A10
+  1115→  fresh_everywhere -> A9 serve_with_fresh -> A8 hardness_gate -> default
+  1116→  v1. (Strictest-freshest wins among fresh modes: A12 serves fresh on a
+  1117→  SUBSET of A10's rows — the fallback-aware restriction beats plain
+  1118→  everywhere; A7's ens3 blend stays first for byte-compatibility with the
+  1119→  A7-A11 registered order. Artifacts setting only A10/A9/A8 flags, or
+  1120→  none, are byte-unchanged by construction — verified in P-A12c.)
+  1121→- Source-change scope of record: src/serve.mjs gains exactly ONE else-if
+  1122→  branch + the one-line flag load (+ law comments) — nothing else in src/
+  1123→  changes. This is the first src/ change since A10, and it IS the priced
+  1124→  mechanism (the v18 pricing text of record prices exactly this new
+  1125→  branch).
+  1126→
+  1127→### Protocols of record (reused verbatim; zero new protocol constants)
+  1128→
+  1129→- Real-lane walk: the REGISTERED A11 protocol, machinery byte-for-byte —
+  1130→  the 16 git-pinned qcells ledgers (1418 rows) walked in arrival order
+  1131→  through the shipped serve path; arms.field re-serialized from the lane's
+  1132→  own receipted prefix [0..k) before every judged-free serve call
+  1133→  (grow-as-used); per-ledger chains; cold start = the registered law (an
+  1134→  empty aggregate is the FALLBACK class: A12 serves the v1 law at k=0,
+  1135→  where the everywhere mode served uniform — receipted as contrast);
+  1136→  escalation RECORDED not executed; leakage probe per step on the trial
+  1137→  arm (the judgment must never read the row under judgment);
+  1138→  judged-carrying wire sample = first 10 steps per ledger (the A8/A9 wire
+  1139→  convention: tokens include the judged row's channel; the A12 exact-ctx
+  1140→  test applies to the SAME key the fresh payload would serve from — the
+  1141→  wire key differs from the battery key exactly as in A9/A10/A11).
+  1142→- Shift-H2 battery: the A10/P-G2d protocol — 4 shift ledgers, grow-as-used
+  1143→  watch H1, re-serialize arms.field, judged-free serve of H2.
+  1144→- Eval-slice pins: the compile-time train aggregate (the shipped
+  1145→  no-re-serialization fallback), the A9/A10/A11 pins.
+  1146→- Predecessor regressions: e_a11_real_lane.mjs re-runs under the A12 seal
+  1147→  (its own registered protocol already re-runs e_a10_fresh_everywhere.mjs,
+  1148→  which re-checks the e_a9 receipt — one spawn binds the whole predecessor
+  1149→  chain); every MEASURED byte of receipts/e_a11.jsonl and
+  1150→  receipts/e_a10.jsonl must reproduce after stripping the STAMP-CLASS
+  1151→  fields — top-level seal_v, the chain row_hashes that witness them, AND
+  1152→  the nested *_regression.seal_stamps arrays (the exact stamp-class the
+  1153→  A11 P-A11d field audit enumerated; the P-A11d literal-strip FAIL is the
+  1154→  recorded lesson this strip corrects for — the registered strip of A12
+  1155→  carves the witness class out BEFORE the run, so a stamp-only difference
+  1156→  can never again read as a measured divergence); the committed receipts
+  1157→  of record and the e_a10 summary of record are restored byte-for-byte
+  1158→  after the check (append-only).
+  1159→
+  1160→### Predictions (pre-registered under seal v19)
+  1161→
+  1162→- **P-A12a (real-lane hit-identity — the production prediction)**: over
+  1163→  the 1418-step real-lane walk (the A11 protocol), the fallback-aware arm
+  1164→  and the default arm are judged on identical steps: (i) pooled
+  1165→  fallback-aware hits == pooled default hits — 0 hit mismatches over the
+  1166→  1418 paired steps (the pricing's "its real-lane hits == ens2's hits
+  1167→  exactly"); (ii) the default arm reproduces the A11 run-of-record pin
+  1168→  1378/1418 (hence fallback-aware == 1378); (iii) wire byte-exactness:
+  1169→  every fallback-aware response byte-identical to the A12 reference
+  1170→  expression (exact-ctx step -> priorCounted over the RE-PARSED serialized
+  1171→  live table; fallback step -> ensemble(ph, pq, 0.5)) — 0 mismatches;
+  1172→  (iv) channel byte-identity: on every fallback-class step the
+  1173→  fallback-aware response is byte-identical to the default response, and
+  1174→  on every exact-ctx-class step byte-identical to the everywhere (A10)
+  1175→  response — 0 violations (the branch IS the selector between the two
+  1176→  shipped expressions); (v) the judged-carrying wire sample (first 10
+  1177→  steps per ledger, 160 calls) byte-identical to the A12 reference — 0
+  1178→  mismatches. PASS iff all.
+  1179→- **P-A12b (shift-H2 class preservation — the shift gains hold)**:
+  1180→  battery protocol, grow-as-used H1->H2, fallback-aware opt-in: pooled
+  1181→  fallback-aware top-1 >= 298/343 (the A10 pin held or improved — the
+  1182→  registered class bound: A10's 50 gross gains are ALL exact-ctx rows, so
+  1183→  the fresh channel still serves and wins there; any A10 protection loss
+  1184→  sitting on a fallback row converts to the default answer, which can only
+  1185→  add hits) AND ens2 == 242/343 (the pinned receipt). PASS iff both.
+  1186→  Contrast receipts (no gates): the exact pooled number; the class
+  1187→  decomposition of the everywhere-vs-default shift flips (gain/loss x
+  1188→  exact-ctx/fallback — closes where the 4 A10 protection losses sit);
+  1189→  per-ledger table.
+  1190→- **P-A12c (byte-safety — everything shipped stays byte-identical)**:
+  1191→  (i) with the A12 flag ABSENT, all 1418 walk default responses and all
+  1192→  602 battery default responses (eval 259 + shift 343) byte-identical to
+  1193→  the v1 reference expression — 0 mismatches; (ii) A10 mode unchanged:
+  1194→  with ONLY the A10 opt-in set (loaded-handle path), all 602 battery
+  1195→  responses byte-identical to the everywhere reference (priorCounted over
+  1196→  the serve tokens) — 0 mismatches (the new branch must not perturb the
+  1197→  shipped A10 mode; the artifact-hyper A10 path is bound byte-exact by the
+  1198→  e_a10 predecessor regression); (iii) precedence: an artifact setting
+  1199→  BOTH the A12 and A10 flags serves the A12 law on all 602 battery calls,
+  1200→  and an artifact setting BOTH the A12 and A9 flags serves the A12 law
+  1201→  (A12 > A10 > A9 in the registered order) — 0 mismatches; (iv) opt-in
+  1202→  path equality: the artifact-hyper A12 flag == the loaded-handle A12 flag,
+  1203→  byte-identical on sampled calls — 0 mismatches; (v) eval-slice pins
+  1204→  through the A12 driver: everywhere micro == 938224, ens2 micro == 953668,
+  1205→  flips -6/+2; (vi) escalate law: escalate == (top.p(served) < 0.55) on
+  1206→  EVERY call of the run — 0 violations; (vii) leakage probe: 0 violations
+  1207→  over the 1418 walk steps; (viii) walk semantics: per-step serialization
+  1208→  byte-determinism (double serialization, all 16 ledgers), incremental
+  1209→  walk == prefix re-grow (every 16th step), final walk table == full-ledger
+  1210→  grow (continuity, 16/16). PASS iff all.
+  1211→- **P-A12d (house-style bindings)**: (i) weave-core-v2 twin: JS == Python
+  1212→  byte-identical (9960B == 9960B); the compiled artifact pinned to the
+  1213→  e_w2 receipt; (ii) the Python --fresh H1 midpoint tables on the REAL
+  1214→  ledgers byte-equal the JS walk tables 16/16 (the existing garden_ref.py
+  1215→  --fresh tool, no ref changes); (iii) smoke 9/9; selftest green; (iv)
+  1216→  predecessor regressions: e_a11 re-runs under the A12 seal with P-A11
+  1217→  overall == the recorded verdict (FAIL — the honest FAIL of record
+  1218→  STANDS) and every MEASURED byte of receipts/e_a11.jsonl +
+  1219→  receipts/e_a10.jsonl reproducing after the stamp-class strip; committed
+  1220→  receipts of record restored byte-for-byte. PASS iff all.
+  1221→
+  1222→Contrast receipts (no gates): per-ledger walk table with the
+  1223→exact-ctx/fallback decomposition; the hit-flip list fallback-aware vs
+  1224→default (predicted EMPTY on the real lane); A12 escalate load vs the
+  1225→everywhere 297/1418 = 20.9% and default 32/1418 = 2.3% (the fallback-aware
+  1226→law escalates exactly as the default does on fallback steps and exactly as
+  1227→everywhere does on exact-ctx steps); cold-start receipts (k=0 now serves
+  1228→the v1 law; everywhere served uniform, argmax LINK); the eval-slice
+  1229→fallback-aware number with its exact-ctx/fallback decomposition (the fresh
+  1230→channel serves the 243-class outcomes on seen windows, the v1 law the
+  1231→247-class on unseen — no gate); the shift class decomposition of the A10
+  1232→protection losses.
+  1233→
+  1234→Operating point UNCHANGED: H* = ESCALATE_BELOW = 0.55 (escalate organ
+  1235→only, mode-independent); ens3 weights untouched (0.4/0.4/0.2, the
+  1236→registered weights); the A7/A8/A9/A10 opt-in flags reused as-is; branch
+  1237→order as registered above; artifact_sha256 pinned to
+  1238→1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519; default
+  1239→law = v1 everywhere. A12 adds ONE serve branch — the priced mechanism —
+  1240→and nothing else.
+  1241→
+  1242→Honest-FAIL branches (registered NOW, no threshold surgery): if P-A12a
+  1243→fails (the real lane is NOT hit-identical), the A11 neutrality receipt was
+  1244→incomplete — the fallback-aware law does NOT ship, the mode stays an
+  1245→opt-in trial, and the divergence is receipted; if P-A12b fails (the shift
+  1246→gains do not hold at the class bound), the class bound was wrong — same
+  1247→law. In no case does the default law change, and no gate is edited after
+  1248→the run. An honest FAIL is a pin that moves (the A8/A11 precedent).
+  1249→
+  1250→### A12 verdicts of record (run 2026-09-28, seal v19; receipts/e_a12.jsonl tip ae294a28960f51fa)
+  1251→
+  1252→- **P-A12a PASS — the A11-priced production prediction CONFIRMED**: over the
+  1253→  1418-step real-lane walk (the registered A11 machinery), pooled
+  1254→  fallback-aware hits == pooled default hits — **1378/1418 == 1378/1418, 0
+  1255→  hit mismatches over the 1418 paired steps** (delta +0 = +0.0000); the
+  1256→  default arm reproduces the A11 run-of-record pin 1378 exactly; wire
+  1257→  byte-exactness: battery mismatches aw/def/ev/leak 0/0/0/0 over 1418 steps
+  1258→  x4 arms (references rebuilt from the RE-PARSED serialized live table);
+  1259→  channel byte-identity: 0 fallback-class violations vs the default bytes
+  1260→  (202 steps) and 0 exact-ctx-class violations vs the everywhere bytes
+  1261→  (1216 steps) — the branch IS the selector between the two shipped
+  1262→  expressions, verified byte-for-byte at every step; judged-carrying wire
+  1263→  sample 160 calls, 0 mismatches (default contrast 0).
+  1264→- **P-A12b PASS — the shift gains hold at the class bound, and BEAT the
+  1265→  pin**: grow-as-used shift-H2 battery, fallback-aware pooled **300/343 >=
+  1266→  298/343** (the registered class bound); everywhere 298/343 (pin
+  1267→  reproduced) and ens2 242/343 (pinned receipt) both reproduce. The class
+  1268→  decomposition CLOSES the A10 protection-loss question: everywhere-vs-
+  1269→  default flips = gains {exact_ctx 64, fallback 0} / losses {exact_ctx 6,
+  1270→  fallback 2} — ZERO gains sat on fallback rows (the A10 class receipt
+  1271→  confirmed verbatim), and 2 of the 8 protection losses sat on FALLBACK
+  1272→  rows, which the fallback-aware law converts to default answers: 300 =
+  1273→  298 + 2. Per-ledger fallback-aware 60/67, 73/83, 66/83, 101/110.
+  1274→- **P-A12c PASS — everything shipped stays byte-identical**: with the A12
+  1275→  flag ABSENT, all 1418 walk default responses + all 602 battery default
+  1276→  responses byte-identical to the v1 reference (0 mismatches); A10-only
+  1277→  mode: all 602 battery responses byte-identical to the everywhere
+  1278→  reference (0 mismatches — the new branch does not perturb the shipped
+  1279→  mode); precedence: artifacts setting BOTH A12+A10 and BOTH A12+A9 flags
+  1280→  serve the A12 law on all 602 battery calls each (1204 checked, 0 bad —
+  1281→  A12 > A10 > A9 as registered); opt-in path equality 32/0 bad; eval pins
+  1282→  through the A12 driver: everywhere micro 938224 == the A9 receipt pin,
+  1283→  ens2 micro 953668 == the P-W2b pin, flips -6/+2; escalate law 0
+  1284→  violations on every call; leakage probe 0 violations over 1418 steps;
+  1285→  walk semantics exact: serialization byte-determinism 0 bad (double
+  1286→  serialization at every step), incremental == prefix re-grow 0/95 bad,
+  1287→  final continuity 16/16.
+  1288→- **P-A12d PASS — house bindings**: weave-core-v2 twin IDENTICAL (9960B ==
+  1289→  9960B); artifact pinned to the e_w2 receipt
+  1290→  (1bbc4fa7cc7a69726db28378507dafad9679d391ff9555bee98d110fe5902519);
+  1291→  Python --fresh H1 midpoint tables on the REAL ledgers byte-equal the JS
+  1292→  walk tables 16/16; smoke 9/9; selftest green; the e_a11 predecessor
+  1293→  regression under the A12 seal: P-A11's verdict of record STANDS (FAIL —
+  1294→  the honest FAIL is not erased by its repair), P-A11a/b/c PASS
+  1295→  components reproduce, and every MEASURED byte of receipts/e_a11.jsonl +
+  1296→  receipts/e_a10.jsonl + both summaries reproduces after the STAMP-CLASS
+  1297→  strip (top-level seal_v + chain row_hashes + nested *_regression
+  1298→  .seal_stamps — the exact stamp class the P-A11d audit enumerated, carved
+  1299→  BEFORE the run: the P-A11d literal-strip lesson executed as registered);
+  1300→  committed receipts of record restored byte-for-byte.
+  1301→
+  1302→Verdict of record: **P-A12 PASS (4/4)** — the honest FAIL of A11 priced a
+  1303→mechanism, the mechanism registered, and the mechanism delivered exactly
+  1304→the priced prediction: hit-identical to the v1 default on the real lane
+  1305→(0 flips over 1418), shift gains preserved and improved (300 >= 298),
+  1306→zero perturbation of any shipped law, zero new constants.
+  1307→
+  1308→Mechanism receipts (the science of the PASS):
+  1309→
+  1310→1. **THE DAMAGE CHANNEL IS GONE**: A11's everywhere-live scored
+  1311→   1261/1418 (reproduced exactly in-run as the byte-safety reference arm) —
+  1312→   the fallback-aware law scores 1378/1418, byte-identical to the default
+  1313→   on ALL 202 fallback steps. The −0.0825 production cost A11 measured
+  1314→   exists ONLY in the prefix-marginal fallback, and A12 never serves it.
+  1315→2. **SHIFT IMPROVEMENT, MECHANISM VISIBLE**: 300 vs everywhere's 298 —
+  1316→   the +2 is exactly the 2 fallback-class protection losses converted to
+  1317→   default answers; the fresh channel keeps every one of its 64
+  1318→   exact-ctx-class gains (64 exact-ctx gains / 0 fallback gains, 6
+  1319→   exact-ctx / 2 fallback losses — the A10 interleave story closes with
+  1320→   the losses classified too).
+  1321→3. **SATURATED RISK ELIMINATED ON EVAL**: fallback-aware eval slice
+  1322→   247/259 == the ens2 pin (953668 class) vs everywhere 243/259 (938224):
+  1323→   the A9/A10 priced cost of −0.0154 (archived memory damaging new soil)
+  1324→   is also entirely a FALLBACK-class phenomenon on this slice (exact-ctx
+  1325→   240/249, fallback 7/10). The fallback-aware law dominates plain
+  1326→   everywhere on BOTH non-production soils measured (eval +4, shift +2)
+  1327→   at ZERO real-lane cost.
+  1328→4. **ESCALATE LOAD COLLAPSES (recorded, not executed)**: fallback-aware
+  1329→   escalates 128/1418 = 9.03% vs everywhere's 297/1418 = 20.9% (default
+  1330→   32/1418 = 2.3%) — the A11 9x teacher-load signal drops to ~4x, exactly
+  1331→   as the channel law predicts (fallback steps escalate exactly as the
+  1332→   default, exact-ctx steps exactly as everywhere). The remaining load is
+  1333→   the A9 escalation organ operating on memorized-but-uncertain windows;
+  1334→   receipted as the priced open question (an A13 candidate: whether the
+  1335→   exact-ctx escalate signal carries teacher value on the real lane).
+  1336→5. **THE SOIL-LEVEL SELECTOR LAW, NOW FULLY FACTORED**: freshness value is
+  1337→   a property of the WORLD (A6), and the A12 law is the first serve mode
+  1338→   that harvests it with zero new constants — the per-step selector is the
+  1339→   A11 membership classification (has the lane's own memory seen this
+  1340→   exact window), not a threshold, so no H* calibration question can
+  1341→   arise: on the train-only soils the objective would be flat exactly as
+  1342→   A10 proved, because the selector is not a number.
+  1343→
+  1344→Registered next-step pricing (from the A12 receipts, NOT pre-approved):
+  1345→A13 candidate — the exact-ctx escalate signal (128 real-lane judgments,
+  1346→9.03%): teacher-value trial on the escalation organ, RECORDED-only here;
+  1347→and the composition question — whether a shift-soil lane's registered
+  1348→hardness declaration should default its opt-in to fallback-aware rather
+  1349→than plain everywhere (A10's risk line: everywhere pays the 11 A9-open
+  1350→eval rows -0.0154; fallback-aware pays 0 — the pricing says the
+  1351→composition strictly dominates, but it is a NEW default question and
+  1352→needs its own registration).
+  1353→
+  1354→> Provenance note (seal v20, append-only): the A12 verdict of record was
+  1355→> determined by the FIRST official run, executed under seal v19
+  1356→> immediately after the registration commit 7109ea8 (receipt tip
+  1357→> ae294a28960f51fa, "seal verified (v19)" in the run log). There were NO
+  1358→> shakedown runs: the first execution of the runner was the run of
+  1359→> record. The committed receipts/e_a12.jsonl is the v20 re-run executed
+  1360→> under this seal; its measured bytes are identical to the v19 run of
+  1361→> record except the stamp-class fields (top-level seal_v and the chain
+  1362→> row_hashes that witness them — verified in-run before commit). The
+  1363→> e_a10/e_a11 receipts of record and summaries were restored
+  1364→> byte-for-byte by the runner itself after the in-run predecessor
+  1365→> regressions (restored=true receipted in row 1).
+  1366→

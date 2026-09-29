@@ -1,0 +1,559 @@
+     1→// experiments/e_a13_budget_cap.mjs — P-A13 (Addendum A13, seal v21): the
+     2→// escalation organ under a pre-registered budget cap — the M10+M4 budget-cap
+     3→// header experiment (the wave-60 queue item 4 adoption hook; nearest_prior
+     4→// M4 with the governance-vs-executed delta). Registered law: opt-in
+     5→// hyper.serve.budget.escalate_max_per_walk = 32 — the cap value is the
+     6→// shipped v1 default's OWN real-lane escalate load of record (A12 receipt:
+     7→// escalate_default = 32/1418 = 2.3%, micro 22567): the A12 fallback-aware
+     8→// mode may not AUTHORIZE more teacher spend per production walk than the
+     9→// shipped default already justifies. The cap gates the ESCALATION ORGAN's
+    10→// spend authority — NEVER the served expression: judge() is untouched, the
+    11→// wire's escalate field stays the honest local signal (top.p(served) <
+    12→// ESCALATE_BELOW, 0.55 sealed, reused), and the grant/refuse decision rides
+    13→// OUTSIDE the response bytes. Grant law: ARRIVAL ORDER (a live lane cannot
+    14→// reorder its own future; a value-ordered grant law would be a different
+    15→// registration). Teacher channel OUT OF SCOPE (recorded not executed); the
+    16→// gain-side leg is priced, not pre-approved. M10 cost rule need-side
+    17→// (P-A13c): the 32 granted slots must buy at-least-as-much uncertainty
+    18→// coverage as the 96 refused signals they displace.
+    19→//
+    20→// (a) P-A13a: the cap binds + spend exactness — exactly 32 granted, exactly
+    21→//     96 refused (A12 pins: fallback-aware signals 128, default load 32);
+    22→//     every refusal carries the honest signal (escalate=true on the wire)
+    23→//     with reason budget_exhausted; the granted set is EXACTLY the first 32
+    24→//     signals in arrival order (a prefix of the signal stream); final
+    25→//     counters {spent: 32, refused: 96}.
+    26→// (b) P-A13b: the budget-cap law — capping does not degrade the gate metric,
+    27→//     stated threshold ZERO: capped responses byte-identical to uncapped on
+    28→//     ALL 1418 steps; capped == the A12 fallback-aware reference expression
+    29→//     and default == the v1 reference expression (the serve.mjs edit changed
+    30→//     no served byte); hit degradation exactly 0 (capped == uncapped ==
+    31→//     1378/1418, the registered pin); escalate SIGNAL cap-independent (0
+    32→//     violations); default arm untouched (flag absent, cap loads undefined);
+    33→//     escalate law 0 violations; leakage 0; opt-in path equality; judged-
+    34→//     carrying wire sample byte-identical C-vs-U.
+    35→// (c) P-A13c: the M10 cost rule, need-side — mean top.p of the 32 GRANTED
+    36→//     signals <= mean top.p of the 96 REFUSED signals (micro-rounded);
+    37→//     honest-FAIL branch registered: anti-concentration prices a value-
+    38→//     ordered grant law as a NEW registration (no threshold surgery).
+    39→// (d) P-A13d: house bindings — weave-core-v2 twin JS==Python byte-identical;
+    40→//     Python --fresh H1 midpoint twins on the REAL ledgers 16/16; smoke 9/9;
+    41→//     selftest green; e_a12 predecessor regression (which re-runs e_a11,
+    42→//     which re-runs e_a10, which re-checks e_a9 — one spawn binds the whole
+    43→//     predecessor chain) with every MEASURED byte reproducing after the
+    44→//     STAMP-CLASS strip (top-level seal_v + chain row_hashes + nested
+    45→//     *_regression.seal_stamps, carved BEFORE the run); receipts of record
+    46→//     restored byte-for-byte.
+    47→// Contrast receipts (no gates): the per-signal table (the honest per-row
+    48→// receipt), per-ledger grant/refuse table, granted-set ledger distribution,
+    49→// mean/median top.p granted vs refused vs all-128, the organ-spend fraction
+    50→// (32/1418 = 2.3% == the default's own load — the M4 header law as a
+    51→// measured number), the granted/refused class decomposition, and a pointer
+    52→// that A12's second priced candidate (the shift-soil composition default
+    53→// question) remains OPEN and needs its own registration.
+    54→// Fail-closed seal gate (A4: sha+size bind).
+    55→
+    56→import { readFileSync, writeFileSync, statSync, mkdirSync } from 'node:fs';
+    57→import { spawnSync } from 'node:child_process';
+    58→import { canonicalJSON, sha256Hex } from '../src/canon.mjs';
+    59→import { Rhizome, OPS } from '../src/field.mjs';
+    60→import { trainHash, judgeHash, judgeQthe, ensemble, argmax } from '../src/heads.mjs';
+    61→import { grow, compileWeaveV2 } from '../src/weaver.mjs';
+    62→import { loadWeave, judge as serveJudge, makeEscalationBudget, ESCALATE_BELOW } from '../src/serve.mjs';
+    63→import { SenseTablePrior } from '../src/sensetable.mjs';
+    64→import { contextTokens, contextStr, K } from '../src/features.mjs';
+    65→import { splitLedgers, loadLedger, makeSamples } from '../adapters/qcells.mjs';
+    66→
+    67→// seal gate (v21)
+    68→const reg = JSON.parse(readFileSync('registration.json', 'utf8'));
+    69→const sha = sha256Hex(readFileSync('docs/PREDICTIONS.md'));
+    70→const stB = statSync('docs/PREDICTIONS.md', { bigint: true });
+    71→if (sha !== reg.predictions.sha256 || stB.size !== BigInt(reg.predictions.size)) {
+    72→  console.error('SEAL MISMATCH — refusing to run (fail-closed)');
+    73→  process.exit(2);
+    74→}
+    75→if (reg.predictions.v < 21) { console.error('P-A13 requires seal v21+'); process.exit(2); }
+    76→console.log('seal verified (v' + reg.predictions.v + '):', sha.slice(0, 16));
+    77→
+    78→const micro = (x) => Math.round(x * 1e6);
+    79→
+    80→// ---------- soil: the REAL lane (the registered A11/A12 soil, unchanged) ----------
+    81→const QCELLS = new URL('../../quilt-qcells/receipts/ledgers/', import.meta.url).pathname;
+    82→const sp = splitLedgers(QCELLS);
+    83→const trainSamples = sp.train.flatMap((f) => makeSamples(loadLedger(QCELLS, f))); // pipeline v2: per-ledger
+    84→const realLedgers = sp.all.map((f) => ({ name: f, rows: loadLedger(QCELLS, f) }));
+    85→
+    86→// samples WITH row index (identical to makeSamples by construction — guard)
+    87→function samplesWithIdx(rows) {
+    88→  const out = [];
+    89→  for (let i = 0; i < rows.length; i++) {
+    90→    if (!OPS.includes(rows[i].op)) continue;
+    91→    out.push({ tokens: contextTokens(rows, i), ctx: contextStr(rows, i), label: rows[i].op, i, prevOp: rows[i - 1]?.op ?? null });
+    92→  }
+    93→  return out;
+    94→}
+    95→for (const l of realLedgers) {
+    96→  const a = samplesWithIdx(l.rows), b = makeSamples(l.rows);
+    97→  if (a.length !== b.length || a.some((s, j) => s.ctx !== b[j].ctx || s.label !== b[j].label ||
+    98→    JSON.stringify(s.tokens) !== JSON.stringify(b[j].tokens))) {
+    99→    console.error('samplesWithIdx diverges from makeSamples on ' + l.name); process.exit(2);
+   100→  }
+   101→}
+   102→const N_REAL = realLedgers.reduce((a, l) => a + makeSamples(l.rows).length, 0);
+   103→console.log('soil: real ledgers=16 samples=' + N_REAL + ' (samplesWithIdx == makeSamples on ALL real soils)');
+   104→if (N_REAL !== 1418) { console.error('real-lane soil moved: expected 1418 registered samples'); process.exit(2); }
+   105→
+   106→// ---------- compile weave-v2 (mirror e_w2/e_a8..e_a12 exactly; artifact pinned) ----------
+   107→const rhizome = new Rhizome();
+   108→grow(rhizome, trainSamples);
+   109→const evalSamples = sp.eval.flatMap((f) => makeSamples(loadLedger(QCELLS, f)));
+   110→const { artifact } = compileWeaveV2({
+   111→  rhizome, trainSamples, evalSamples, weaveIndex: 2,
+   112→  notes: 'weave-2 (A7): first weave carrying the rhizome sense table',
+   113→});
+   114→mkdirSync('experiments/outputs', { recursive: true });
+   115→writeFileSync('experiments/outputs/weave_v2_js.json', canonicalJSON(artifact));
+   116→const eW2 = JSON.parse(readFileSync('receipts/e_w2.jsonl', 'utf8').split('\n')[0]);
+   117→const eA12 = JSON.parse(readFileSync('receipts/e_a12.jsonl', 'utf8').split('\n')[0]);
+   118→const artifactPinned = artifact.artifact_sha256 === eW2.artifact_sha256;
+   119→console.log('weave-v2 compiled: artifact_sha256=' + artifact.artifact_sha256.slice(0, 16) +
+   120→  ' pinned-to-e_w2-receipt=' + artifactPinned);
+   121→if (!artifactPinned) { console.error('artifact not pinned to e_w2 receipt — refusing'); process.exit(2); }
+   122→
+   123→// ---------- the registered cap (the M4 header, executed) ----------
+   124→const CAP = 32; // hyper.serve.budget.escalate_max_per_walk — the shipped default's own real-lane escalate load of record (A12 receipt)
+   125→const A12_SIGNALS = 128, A12_DEFAULT_LOAD = 32; // the A12 receipts of record
+   126→const A12_HITS = 1378; // the registered A11/A12 default pin
+   127→// fail-closed derivation check: the A13 constants are DERIVED from the A12
+   128→// receipt of record — if the pins moved, the derivation is void.
+   129→if (eA12.walk.escalate_fallback_aware !== A12_SIGNALS || eA12.walk.escalate_default !== A12_DEFAULT_LOAD ||
+   130→  eA12.walk.default_hits !== A12_HITS) {
+   131→  console.error('A12 pins of record moved — the A13 cap derivation is void, refusing (fail-closed)');
+   132→  process.exit(2);
+   133→}
+   134→console.log('cap derivation (from the A12 receipt of record): signals=' + eA12.walk.escalate_fallback_aware +
+   135→  ' default_load=' + eA12.walk.escalate_default + ' default_hits=' + eA12.walk.default_hits + ' -> cap B=' + CAP);
+   136→
+   137→// ---------- serve setup (modes; flags exactly as committed) ----------
+   138→const reloaded = JSON.parse(readFileSync('experiments/outputs/weave_v2_js.json', 'utf8'));
+   139→const loadedDefault = loadWeave(reloaded); // v1 law, flags ABSENT
+   140→if (loadedDefault.fresh !== false || loadedDefault.freshEverywhere !== false || loadedDefault.freshAware !== false) {
+   141→  console.error('default must carry fresh=false freshEverywhere=false freshAware=false (flags absent)'); process.exit(2);
+   142→}
+   143→if (loadedDefault.escalateBudgetCap !== undefined) {
+   144→  console.error('default must load escalateBudgetCap undefined (flag absent)'); process.exit(2);
+   145→}
+   146→const QUESTIONS = { q1: { type: 'choice', criteria: { opcode: true } }, q2: { type: 'noul' } };
+   147→const altOp = (op) => OPS[(OPS.indexOf(op) + 1) % OPS.length]; // leakage-probe mutation
+   148→
+   149→// references: the exact expressions of record, rebuilt from the RE-PARSED
+   150→// SERIALIZED table (the serialization round-trip is the registered carrier).
+   151→// kind 'fallback_aware': the A12 law; kind 'v1': the default law.
+   152→function refResponse(handle, tokens, judgedOp, kind, fieldTable) {
+   153→  const ph = judgeHash(handle.hash, tokens).probs;
+   154→  const pq = judgeQthe(handle.qthe, tokens).probs;
+   155→  let probs;
+   156→  if (kind === 'fallback_aware') {
+   157→    const refField = new SenseTablePrior(JSON.parse(canonicalJSON(fieldTable)));
+   158→    probs = refField.observed.has(tokens.join('|'))
+   159→      ? refField.priorCounted(tokens.join('|'))
+   160→      : ensemble(ph, pq, 0.5); // the v1 law on unseen contexts
+   161→  } else {
+   162→    probs = ensemble(ph, pq, 0.5);
+   163→  }
+   164→  const top = argmax(probs);
+   165→  const claimed = judgedOp ?? top.op;
+   166→  const answers = {
+   167→    q1: { type: 'choice', choice: top.op, confidence: top.p, probabilities: probs },
+   168→    q2: { type: 'noul', noul: probs[claimed] ?? 0, confidence: top.p, probabilities: probs },
+   169→  };
+   170→  return {
+   171→    model: `jev-garden/${handle.artifact.schema}@w${handle.artifact.index}`,
+   172→    answers, escalate: top.p < ESCALATE_BELOW,
+   173→    usage: { model: 'garden-local', tokens: 0 },
+   174→  };
+   175→}
+   176→
+   177→function loadHandleWithTable(fieldTable, mode) {
+   178→  const h = loadWeave(JSON.parse(canonicalJSON({ ...artifact, arms: { ...artifact.arms, field: fieldTable } })));
+   179→  if (mode === 'a12_budget') {
+   180→    h.freshAware = true;        // the A12 opt-in (loaded-handle path)
+   181→    h.escalateBudgetCap = CAP;  // the A13 opt-in (loaded-handle path)
+   182→  } else if (mode === 'a12') {
+   183→    h.freshAware = true;        // the uncapped A12 reference arm
+   184→    if (h.escalateBudgetCap !== undefined) { console.error('uncapped arm must load cap undefined'); process.exit(2); }
+   185→  } else if (mode !== 'default') throw new Error('unknown mode ' + mode);
+   186→  return h;
+   187→}
+   188→
+   189→// ---------- P-A13 walk: the real-lane production trial (the A11/A12 machinery) ----------
+   190→let batCalls = 0, byteMismatch = { c_vs_u: 0, c_vs_ref: 0, u_vs_ref: 0, d_vs_ref: 0, leakage: 0, wire_c_vs_u: 0, wire_c_vs_ref: 0 };
+   191→let signalIndependenceBad = 0, escLawBad = 0, serDetBad = 0, regrowChecked = 0, regrowBad = 0, finalContBad = 0;
+   192→let cHit = 0, uHit = 0, dHit = 0;
+   193→let exactCtxSteps = 0, fallbackSteps = 0;
+   194→let wireChecked = 0;
+   195→const organ = makeEscalationBudget(CAP); // ONE organ per production walk (the registered scope)
+   196→const signalSeq = [];   // every escalate signal of the trial arm, in arrival order (the honest per-row receipt)
+   197→const perLedger = [];
+   198→const eA12tipCheck = eA12.walk; // the A12 pins of record used below
+   199→
+   200→for (const { name, rows } of realLedgers) {
+   201→  const samples = samplesWithIdx(rows);
+   202→  const walkRz = new Rhizome(); // the lane's own watched stream (grows from receipts)
+   203→  let lC = 0, lU = 0, lD = 0, lExact = 0, lFallback = 0, lSignals = 0, lGranted = 0, lRefused = 0;
+   204→  for (let k = 0; k < samples.length; k++) {
+   205→    const s = samples[k], i = s.i;
+   206→    // (1) the lane re-serializes arms.field from its own receipted prefix [0..k)
+   207→    const liveTable1 = walkRz.senseTable();
+   208→    const liveBytesA = canonicalJSON(liveTable1);
+   209→    const liveBytesB = canonicalJSON(walkRz.senseTable());
+   210→    if (liveBytesA !== liveBytesB) serDetBad++;
+   211→    // (2) serve: judged-free, the registered protocol — three arms + leakage probe
+   212→    const handleC = loadHandleWithTable(JSON.parse(liveBytesA), 'a12_budget');
+   213→    const handleU = loadHandleWithTable(JSON.parse(liveBytesA), 'a12');
+   214→    const ctxSlice = rows.slice(Math.max(0, i - K), i);
+   215→    const outC = serveJudge(handleC, { context: ctxSlice }, QUESTIONS);
+   216→    const outU = serveJudge(handleU, { context: ctxSlice }, QUESTIONS);
+   217→    const outD = serveJudge(loadedDefault, { context: ctxSlice }, QUESTIONS);
+   218→    // (3) the A13 organ: consumes ONLY the honest signal of the production call
+   219→    const granted = organ.grant(outC.escalate);
+   220→    // (4) leakage probe on the TRIAL arm: the judgment must never read the row under judgment
+   221→    const rowsMut = rows.slice();
+   222→    rowsMut[i] = { ...rowsMut[i], op: altOp(rowsMut[i].op) };
+   223→    const outMut = serveJudge(handleC, { context: rowsMut.slice(Math.max(0, i - K), i) }, QUESTIONS);
+   224→    // (5) references (rebuilt from the re-parsed serialized table / independent v1)
+   225→    const batTokens = contextTokens(rows, i); // == what the judged-free serve computes
+   226→    const refC = refResponse(handleC, batTokens, undefined, 'fallback_aware', liveTable1);
+   227→    const refU = refResponse(handleU, batTokens, undefined, 'fallback_aware', liveTable1);
+   228→    const refD = refResponse(loadedDefault, batTokens, undefined, 'v1', liveTable1);
+   229→    if (JSON.stringify(outC) !== JSON.stringify(outU)) byteMismatch.c_vs_u++;
+   230→    if (JSON.stringify(outC) !== JSON.stringify(refC)) byteMismatch.c_vs_ref++;
+   231→    if (JSON.stringify(outU) !== JSON.stringify(refU)) byteMismatch.u_vs_ref++;
+   232→    if (JSON.stringify(outD) !== JSON.stringify(refD)) byteMismatch.d_vs_ref++;
+   233→    if (JSON.stringify(outMut) !== JSON.stringify(outC)) byteMismatch.leakage++;
+   234→    if (outC.escalate !== outU.escalate) signalIndependenceBad++;
+   235→    batCalls++;
+   236→    // (6) signal receipt (arrival order; the organ's decision rides OUTSIDE the bytes)
+   237→    const exactCtx = handleU.field.observed.has(s.ctx); // the registered A11 classification
+   238→    if (outC.escalate) {
+   239→      const row = { ledger: name, k, i, exactCtx, fallback: !exactCtx, top_p_micro: micro(outC.answers.q1.confidence), escalate: true, granted };
+   240→      signalSeq.push(row); lSignals++;
+   241→      if (granted) lGranted++; else lRefused++;
+   242→    }
+   243→    // (7) judged-carrying wire sample: the endpoint shape over the SAME step's table
+   244→    if (k < 10) {
+   245→      const outCW = serveJudge(handleC, { context: ctxSlice }, QUESTIONS, rows[i]);
+   246→      const outUW = serveJudge(handleU, { context: ctxSlice }, QUESTIONS, rows[i]);
+   247→      const tokensW = contextTokens(rows.slice(0, i + 1), i + 1); // exactly what serve.judge() computes
+   248→      const refCW = refResponse(handleC, tokensW, rows[i].op, 'fallback_aware', liveTable1);
+   249→      if (JSON.stringify(outCW) !== JSON.stringify(outUW)) byteMismatch.wire_c_vs_u++;
+   250→      if (JSON.stringify(outCW) !== JSON.stringify(refCW)) byteMismatch.wire_c_vs_ref++;
+   251→      wireChecked++;
+   252→    }
+   253→    // (8) walk bookkeeping
+   254→    const tc = outC.answers.q1.choice === s.label ? 1 : 0;
+   255→    const tu = outU.answers.q1.choice === s.label ? 1 : 0;
+   256→    const td = outD.answers.q1.choice === s.label ? 1 : 0;
+   257→    if (outC.escalate !== (argmax(refC.answers.q1.probabilities).p < ESCALATE_BELOW)) escLawBad++;
+   258→    if (outU.escalate !== (argmax(refU.answers.q1.probabilities).p < ESCALATE_BELOW)) escLawBad++;
+   259→    if (outD.escalate !== (argmax(refD.answers.q1.probabilities).p < ESCALATE_BELOW)) escLawBad++;
+   260→    cHit += tc; uHit += tu; dHit += td; lC += tc; lU += tu; lD += td;
+   261→    if (exactCtx) { exactCtxSteps++; lExact++; } else { fallbackSteps++; lFallback++; }
+   262→    // (9) incremental walk == prefix re-grow (sampled: every 16th step)
+   263→    if (k % 16 === 0) {
+   264→      const rz2 = new Rhizome();
+   265→      grow(rz2, samples.slice(0, k));
+   266→      regrowChecked++;
+   267→      if (canonicalJSON(rz2.senseTable()) !== liveBytesA) regrowBad++;
+   268→    }
+   269→    // (10) the receipt is observed — the walk grows (the only collapse)
+   270→    walkRz.deform(s.ctx, { gamma: 0, tag: 'stream' });
+   271→    walkRz.observe(s.ctx, s.label, { source: 'receipt' });
+   272→  }
+   273→  // (11) walk continuity: final table == full-ledger grow
+   274→  const rzFull = new Rhizome();
+   275→  grow(rzFull, samples);
+   276→  if (canonicalJSON(rzFull.senseTable()) !== canonicalJSON(walkRz.senseTable())) finalContBad++;
+   277→  perLedger.push({ ledger: name, samples: samples.length, capped_hits: lC, uncapped_hits: lU, default_hits: lD, exact_ctx: lExact, fallback: lFallback, escalate_signals: lSignals, granted: lGranted, refused: lRefused });
+   278→  console.log(`  walk ${name}: n=${samples.length}  capped ${lC}  uncapped ${lU}  default ${lD}  (exact-ctx ${lExact}, fallback ${lFallback}, signals ${lSignals} granted ${lGranted} refused ${lRefused})`);
+   279→}
+   280→
+   281→// ---------- P-A13a gates: the cap binds; spend exactness ----------
+   282→const grantedRows = signalSeq.filter((r) => r.granted);
+   283→const refusedRows = signalSeq.filter((r) => !r.granted);
+   284→const prefixLaw = grantedRows.length === CAP &&
+   285→  grantedRows.every((r, idx) => r === signalSeq[idx]); // the granted set IS the first 32 signals in arrival order
+   286→const countersExact = organ.cap === CAP && organ.spent === A12_DEFAULT_LOAD && organ.refused === signalSeq.length - A12_DEFAULT_LOAD;
+   287→const refusalsHonest = refusedRows.every((r) => r.escalate === true);
+   288→const capBinds = signalSeq.length === A12_SIGNALS && grantedRows.length === A12_DEFAULT_LOAD && refusedRows.length === A12_SIGNALS - A12_DEFAULT_LOAD;
+   289→const pA13a = capBinds && refusalsHonest && prefixLaw && countersExact && organ.reason === 'budget_exhausted';
+   290→console.log(`P-A13a: signals ${signalSeq.length} (A12 pin ${A12_SIGNALS}: ${signalSeq.length === A12_SIGNALS})  granted ${grantedRows.length} (pin ${A12_DEFAULT_LOAD})  refused ${refusedRows.length} (pin ${A12_SIGNALS - A12_DEFAULT_LOAD})  cap-binds=${capBinds} refusals-honest=${refusalsHonest} prefix-law=${prefixLaw} counters={cap:${organ.cap},spent:${organ.spent},refused:${organ.refused},reason:${organ.reason}} exact=${countersExact}`);
+   291→
+   292→// ---------- P-A13b gates: the budget-cap law (no degradation, threshold ZERO) ----------
+   293→const hitsZeroDegradation = cHit === uHit && cHit === A12_HITS;
+   294→const pA13b = byteMismatch.c_vs_u === 0 && byteMismatch.c_vs_ref === 0 && byteMismatch.u_vs_ref === 0 &&
+   295→  byteMismatch.d_vs_ref === 0 && byteMismatch.leakage === 0 && byteMismatch.wire_c_vs_u === 0 &&
+   296→  byteMismatch.wire_c_vs_ref === 0 &&
+   297→  hitsZeroDegradation && signalIndependenceBad === 0 && escLawBad === 0 && serDetBad === 0 &&
+   298→  regrowBad === 0 && finalContBad === 0;
+   299→console.log(`P-A13b: hits capped ${cHit}/${N_REAL} uncapped ${uHit}/${N_REAL} default ${dHit}/${N_REAL} (pin ${A12_HITS}; zero-degradation ${hitsZeroDegradation})  byte mismatches c_vs_u/c_ref/u_ref/d_ref/leak/wire_cu/wire_cref ${byteMismatch.c_vs_u}/${byteMismatch.c_vs_ref}/${byteMismatch.u_vs_ref}/${byteMismatch.d_vs_ref}/${byteMismatch.leakage}/${byteMismatch.wire_c_vs_u}/${byteMismatch.wire_c_vs_ref}  signalIndependenceBad ${signalIndependenceBad}  escLawBad ${escLawBad}  serDetBad ${serDetBad}  regrow ${regrowBad}/${regrowChecked}  continuityBad ${finalContBad}  wire sample ${wireChecked}`);
+   300→
+   301→// ---------- P-A13c: the M10 cost rule (need-side): granted uncertainty >= refused uncertainty ----------
+   302→const mean = (rows) => rows.reduce((a, r) => a + r.top_p_micro, 0) / rows.length;
+   303→const median = (rows) => { const v = rows.map((r) => r.top_p_micro).sort((a, b) => a - b); const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+   304→const meanGranted = mean(grantedRows), meanRefused = mean(refusedRows), meanAll = mean(signalSeq);
+   305→const costRuleHolds = micro(meanGranted) <= micro(meanRefused);
+   306→const pA13c = costRuleHolds;
+   307→console.log(`P-A13c (M10 need-side): mean top.p granted ${micro(meanGranted)} vs refused ${micro(meanRefused)} (all-128 ${micro(meanAll)}); medians ${median(grantedRows)}/${median(refusedRows)}; cost-rule holds=${costRuleHolds}`);
+   308→
+   309→// ---------- P-A13b(viii) opt-in path equality: artifact-hyper A13 flag == loaded-handle A13 flag ----------
+   310→const artifactOpt = JSON.parse(JSON.stringify(artifact)); // ship path: artifact-hyper opt-in
+   311→artifactOpt.hyper.serve = { budget: { escalate_max_per_walk: CAP } };
+   312→artifactOpt.hyper.fresh = { fresh_everywhere_fallback_aware: true };
+   313→let pathEqChecked = 0, pathEqBad = 0;
+   314→for (const { name, rows } of realLedgers) {
+   315→  const samples = samplesWithIdx(rows);
+   316→  const half = Math.floor(samples.length / 2);
+   317→  const rz = new Rhizome();
+   318→  grow(rz, samples.slice(0, half)); // midpoint table (same convention as the A12 path-equality sampling)
+   319→  const midTable = JSON.parse(canonicalJSON(rz.senseTable()));
+   320→  const hyperWithTable = loadWeave(JSON.parse(canonicalJSON({ ...artifactOpt, arms: { ...artifactOpt.arms, field: midTable } })));
+   321→  if (hyperWithTable.freshAware !== true || hyperWithTable.escalateBudgetCap !== CAP) {
+   322→    console.error('artifact-hyper A13 opt-in failed to load'); process.exit(2);
+   323→  }
+   324→  const handleCm = loadHandleWithTable(midTable, 'a12_budget');
+   325→  for (const s of [samples[0], samples[samples.length - 1]]) {
+   326→    const outHandle = serveJudge(handleCm, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   327→    const outHyper = serveJudge(hyperWithTable, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   328→    pathEqChecked++;
+   329→    if (JSON.stringify(outHandle) !== JSON.stringify(outHyper)) pathEqBad++;
+   330→  }
+   331→}
+   332→console.log(`opt-in path equality (artifact-hyper == loaded-handle, A12+A13 flags): ${pathEqChecked} checked, ${pathEqBad} bad`);
+   333→
+   334→// ---------- P-A13d twin: Python --fresh H1 tables on the REAL ledgers (16/16) ----------
+   335→let twinMidpointBad = 0;
+   336→const midTables = {};
+   337→for (const { name, rows } of realLedgers) {
+   338→  const samples = samplesWithIdx(rows);
+   339→  const half = Math.floor(samples.length / 2);
+   340→  const rz = new Rhizome();
+   341→  grow(rz, samples.slice(0, half)); // the JS midpoint walk table
+   342→  const midBytes = canonicalJSON(rz.senseTable());
+   343→  midTables[name] = JSON.parse(midBytes);
+   344→  const outF = 'experiments/outputs/fresh_table_real_' + name.replace('.jsonl', '') + '_py.json';
+   345→  const r = spawnSync('python3', ['ref/garden_ref.py', QCELLS, 'experiments/outputs/_seal_core_unused.json', '--fresh', QCELLS + name, outF], { encoding: 'utf8', timeout: 300000 });
+   346→  if (r.status !== 0) { console.error('twin fresh failed for ' + name + ':', r.stderr); process.exit(1); }
+   347→  const ok = readFileSync(outF, 'utf8') === midBytes;
+   348→  if (!ok) twinMidpointBad++;
+   349→  perLedger.find((p) => p.ledger === name).twin_midpoint_fresh_bytes_equal = ok;
+   350→}
+   351→const twinMidpointAll = twinMidpointBad === 0;
+   352→console.log('midpoint fresh twins on the real ledgers: ' + (twinMidpointAll ? '16/16 byte-identical' : 'FAIL ' + twinMidpointBad));
+   353→
+   354→// ---------- P-A13d twin core ----------
+   355→const hashM = trainHash(trainSamples);
+   356→const Wm = hashM.W.map((w) => {
+   357→  const sparse = {};
+   358→  for (let i = 0; i < w.length; i++) if (w[i] !== 0) sparse[String(i)] = Math.round(w[i] * 1e6);
+   359→  return sparse;
+   360→});
+   361→const core = {
+   362→  schema: 'jev-garden/weave-core-v2',
+   363→  index: 1,
+   364→  journal_tip: rhizome.journalTip(),
+   365→  journal_len: rhizome.journal.length,
+   366→  hyper: { lr: 0.5, epochs: 12, wd: 0.0001, clip: 5, K: 3, HB: 2048, ens_lambda: 0.5, wormhole_weight: 0.3, ens3: { wh: 0.4, wq: 0.4, wf: 0.2 } },
+   367→  arms: { hash: { W: Wm, b: Array.from(hashM.b, (x) => Math.round(x * 1e6)) }, field: rhizome.senseTable() },
+   368→};
+   369→writeFileSync('experiments/outputs/weave_core_v2_js.json', canonicalJSON(core));
+   370→const py = spawnSync('python3', ['ref/garden_ref.py', QCELLS, 'experiments/outputs/weave_core_v2_py.json'], { encoding: 'utf8', timeout: 300000 });
+   371→if (py.status !== 0) { console.error('twin failed:', py.stderr); process.exit(1); }
+   372→const jsCore = readFileSync('experiments/outputs/weave_core_v2_js.json', 'utf8');
+   373→const pyCoreStr = readFileSync('experiments/outputs/weave_core_v2_py.json', 'utf8');
+   374→const twinIdentical = jsCore === pyCoreStr;
+   375→console.log('twin core-v2: ' + (twinIdentical ? 'IDENTICAL ' + jsCore.length + 'B' : 'DIVERGED') + ` — js=${jsCore.length}B py=${pyCoreStr.length}B`);
+   376→
+   377→// ---------- P-A13d predecessor regression: e_a12 re-runs under the A13 seal ----------
+   378→// (it re-runs e_a11, which re-runs e_a10, which re-checks e_a9 — one spawn
+   379→// binds the whole predecessor chain). Registered strip: top-level seal_v +
+   380→// chain row_hashes + nested *_regression.seal_stamps (the stamp class the
+   381→// A11 P-A11d audit enumerated, carved BEFORE the run).
+   382→const originals = {
+   383→  a12: readFileSync('receipts/e_a12.jsonl', 'utf8'),
+   384→  a11: readFileSync('receipts/e_a11.jsonl', 'utf8'),
+   385→  a10: readFileSync('receipts/e_a10.jsonl', 'utf8'),
+   386→  a10Summary: readFileSync('experiments/outputs/e_a10_summary.json', 'utf8'),
+   387→  a11Summary: readFileSync('experiments/outputs/e_a11_summary.json', 'utf8'),
+   388→  a12Summary: readFileSync('experiments/outputs/e_a12_summary.json', 'utf8'),
+   389→};
+   390→const a12Run = spawnSync('node', ['experiments/e_a12_fallback_aware.mjs'], { encoding: 'utf8', timeout: 600000 });
+   391→const stripStampsDeep = (rows) => canonicalJSON(rows.map((r) => {
+   392→  const del = (o) => {
+   393→    if (o && typeof o === 'object' && !Array.isArray(o)) {
+   394→      for (const k of Object.keys(o)) {
+   395→        if (k === 'seal_stamps') delete o[k];
+   396→        else del(o[k]);
+   397→      }
+   398→    }
+   399→    return o;
+   400→  };
+   401→  const { seal_v, row_hash, ...rest } = r;
+   402→  return del(rest);
+   403→}));
+   404→const rowsOf = (txt) => txt.trim().split('\n').map((l) => JSON.parse(l));
+   405→const a12Regression = {
+   406→  ran: a12Run.status === 0,
+   407→  p_a12_verdict_of_record_stands: /P-A12 overall: PASS/.test(a12Run.stdout),
+   408→  p_a12a_d_pass_reproduce: /P-A12a \(real-lane hit-identity\): PASS/.test(a12Run.stdout) &&
+   409→    /P-A12b \(shift-H2 class preservation\): PASS/.test(a12Run.stdout) &&
+   410→    /P-A12c \(byte-safety\): PASS/.test(a12Run.stdout) &&
+   411→    /P-A12d \(house bindings\): PASS/.test(a12Run.stdout),
+   412→  measured_bytes_identical: { a12_receipt: false, a11_receipt_restored: false, a10_receipt_restored: false, a10_summary: false, a11_summary: false, a12_summary: false },
+   413→  seal_stamps: { a12: [] },
+   414→};
+   415→try {
+   416→  const o12 = rowsOf(originals.a12), n12 = rowsOf(readFileSync('receipts/e_a12.jsonl', 'utf8'));
+   417→  a12Regression.measured_bytes_identical.a12_receipt = stripStampsDeep(o12) === stripStampsDeep(n12) && o12.length === n12.length;
+   418→  a12Regression.seal_stamps.a12 = [o12[0].seal_v, n12[0].seal_v];
+   419→  // e_a11/e_a10 are captured-and-restored inside e_a12's own registered
+   420→  // regression; the byte-for-byte restoration is verified HERE against the
+   421→  // originals captured before the spawn.
+   422→  a12Regression.measured_bytes_identical.a11_receipt_restored = readFileSync('receipts/e_a11.jsonl', 'utf8') === originals.a11;
+   423→  a12Regression.measured_bytes_identical.a10_receipt_restored = readFileSync('receipts/e_a10.jsonl', 'utf8') === originals.a10;
+   424→  a12Regression.measured_bytes_identical.a10_summary =
+   425→    stripStampsDeep([JSON.parse(originals.a10Summary)]).replace(/\n$/, '') ===
+   426→    stripStampsDeep([JSON.parse(readFileSync('experiments/outputs/e_a10_summary.json', 'utf8'))]).replace(/\n$/, '');
+   427→  a12Regression.measured_bytes_identical.a11_summary = originals.a11Summary === readFileSync('experiments/outputs/e_a11_summary.json', 'utf8');
+   428→  a12Regression.measured_bytes_identical.a12_summary = originals.a12Summary === readFileSync('experiments/outputs/e_a12_summary.json', 'utf8');
+   429→} catch (e) { a12Regression.error = String(e); }
+   430→// receipts of record restored byte-for-byte (append-only)
+   431→writeFileSync('receipts/e_a12.jsonl', originals.a12);
+   432→writeFileSync('receipts/e_a11.jsonl', originals.a11);
+   433→writeFileSync('receipts/e_a10.jsonl', originals.a10);
+   434→writeFileSync('experiments/outputs/e_a10_summary.json', originals.a10Summary);
+   435→writeFileSync('experiments/outputs/e_a11_summary.json', originals.a11Summary);
+   436→writeFileSync('experiments/outputs/e_a12_summary.json', originals.a12Summary);
+   437→const restoredOk = readFileSync('receipts/e_a12.jsonl', 'utf8') === originals.a12 &&
+   438→  readFileSync('receipts/e_a11.jsonl', 'utf8') === originals.a11 &&
+   439→  readFileSync('receipts/e_a10.jsonl', 'utf8') === originals.a10 &&
+   440→  readFileSync('experiments/outputs/e_a10_summary.json', 'utf8') === originals.a10Summary &&
+   441→  readFileSync('experiments/outputs/e_a11_summary.json', 'utf8') === originals.a11Summary &&
+   442→  readFileSync('experiments/outputs/e_a12_summary.json', 'utf8') === originals.a12Summary;
+   443→console.log(`e_a12 regression under the A13 law: ran=${a12Regression.ran} P-A12-verdict-of-record-stands=${a12Regression.p_a12_verdict_of_record_stands} (P-A12a-d PASS reproduced: ${a12Regression.p_a12a_d_pass_reproduce}); measured bytes identical a12/a11restored/a10restored/a10sum/a11sum/a12sum ${a12Regression.measured_bytes_identical.a12_receipt}/${a12Regression.measured_bytes_identical.a11_receipt_restored}/${a12Regression.measured_bytes_identical.a10_receipt_restored}/${a12Regression.measured_bytes_identical.a10_summary}/${a12Regression.measured_bytes_identical.a11_summary}/${a12Regression.measured_bytes_identical.a12_summary} (seal stamps a12 ${a12Regression.seal_stamps.a12?.join('->')}); receipts of record restored=${restoredOk}`);
+   444→
+   445→const smoke = spawnSync('node', ['smoke.mjs'], { encoding: 'utf8' });
+   446→const smokeOk = smoke.status === 0 && /9 passed, 0 failed/.test(smoke.stdout);
+   447→const selftest = spawnSync('node', ['tests/selftest.mjs'], { encoding: 'utf8' });
+   448→const selftestOk = selftest.status === 0;
+   449→console.log('smoke: ' + (smokeOk ? '9/9' : 'FAIL') + '; selftest: ' + (selftestOk ? 'green' : 'FAIL'));
+   450→
+   451→// ---------- verdicts (registered gates; honest either way) ----------
+   452→const pA13b_full = pA13b && pathEqBad === 0;
+   453→const pA13d = twinIdentical && twinMidpointAll && smokeOk && selftestOk && a12Regression.ran &&
+   454→  a12Regression.p_a12_verdict_of_record_stands && a12Regression.p_a12a_d_pass_reproduce &&
+   455→  a12Regression.measured_bytes_identical.a12_receipt && a12Regression.measured_bytes_identical.a11_receipt_restored &&
+   456→  a12Regression.measured_bytes_identical.a10_receipt_restored && a12Regression.measured_bytes_identical.a10_summary &&
+   457→  a12Regression.measured_bytes_identical.a11_summary && a12Regression.measured_bytes_identical.a12_summary &&
+   458→  restoredOk;
+   459→const verdict = pA13a && pA13b_full && pA13c && pA13d ? 'PASS' : 'FAIL';
+   460→console.log('\nP-A13a (the cap binds; spend exactness): ' + (pA13a ? 'PASS' : 'FAIL') +
+   461→  ` — signals ${signalSeq.length} (pin 128), granted ${grantedRows.length} (pin 32), refused ${refusedRows.length} (pin 96); refusals honest ${refusalsHonest}; prefix law ${prefixLaw}; counters {cap:${organ.cap}, spent:${organ.spent}, refused:${organ.refused}, reason:${organ.reason}}`);
+   462→console.log('P-A13b (the budget-cap law: zero degradation): ' + (pA13b_full ? 'PASS' : 'FAIL') +
+   463→  ` — hits capped/uncapped/default ${cHit}/${uHit}/${dHit} of ${N_REAL} (pin ${A12_HITS}); byte mismatches c_vs_u ${byteMismatch.c_vs_u}, c_vs_ref ${byteMismatch.c_vs_ref}, u_vs_ref ${byteMismatch.u_vs_ref}, d_vs_ref ${byteMismatch.d_vs_ref}, leak ${byteMismatch.leakage}, wire_cu ${byteMismatch.wire_c_vs_u}, wire_cref ${byteMismatch.wire_c_vs_ref}; signal independence ${signalIndependenceBad}; escLaw ${escLawBad}; serDet ${serDetBad}; regrow ${regrowBad}/${regrowChecked}; continuity ${finalContBad}; path-eq ${pathEqChecked}/${pathEqBad}; wire sample ${wireChecked}`);
+   464→console.log('P-A13c (M10 cost rule, need-side): ' + (pA13c ? 'PASS' : 'FAIL') +
+   465→  ` — mean top.p granted ${micro(meanGranted)} <= refused ${micro(meanRefused)}: ${costRuleHolds}; medians ${median(grantedRows)} vs ${median(refusedRows)}; all-128 mean ${micro(meanAll)}`);
+   466→console.log('P-A13d (house bindings): ' + (pA13d ? 'PASS' : 'FAIL') +
+   467→  ` — twin=${twinIdentical ? 'IDENTICAL ' + jsCore.length + 'B' : 'DIVERGED'}; midpoint twins ${twinMidpointAll ? '16/16' : 'FAIL'}; smoke=${smokeOk} selftest=${selftestOk}; e_a12=${a12Regression.ran}/${a12Regression.p_a12_verdict_of_record_stands}/measured ${a12Regression.measured_bytes_identical.a12_receipt}/restored=${restoredOk}`);
+   468→console.log('\nP-A13 overall: ' + verdict);
+   469→
+   470→// ---------- receipts ----------
+   471→mkdirSync('receipts', { recursive: true });
+   472→const chainRows = [];
+   473→let prev = 'JEVG-EXP-GENESIS-F';
+   474→const chain = (row) => { row.row_hash = sha256Hex(canonicalJSON([prev, row])); chainRows.push(row); prev = row.row_hash; };
+   475→chain({
+   476→  n: 1, claim: 'P-A13', verdict,
+   477→  pA13a, pA13b: pA13b_full, pA13c, pA13d,
+   478→  law: {
+   479→    trial: 'the escalation organ under a pre-registered budget cap (the M10+M4 budget-cap header, the wave-60 queue item 4 adoption hook): the 16 git-pinned qcells ledgers (1418 rows) walked in arrival order through the SHIPPED serve path with the A12 opt-in + the A13 organ; arms.field re-serialized from the lane\'s own receipted prefix [0..k) before every judged-free serve call (the registered A11 walk machinery)',
+   480→    mine_citations: { M10: 'Regularized RSI (github.com/google-research/rrsi, arXiv:2609.24972): constrain HOW the search moves, not WHAT the harness may contain; cost rule = added inference cost must be paid for by measured gain', M4: 'budget/cost caps as selection pressure (weco AIDE-squared): per-lane budget caps become pre-registered constraints in every registration header' },
+   481→    nearest_prior: 'M4 (governance-level: registration hygiene across lanes); delta: A13 is the EXECUTED mechanism on the live garden serve path — organ-level spend authority with refusal semantics, byte-safety bindings, and a measured verdict; second prior M10 (the same cost rule at paper strength), delta: garden-strength instance (ONE organ, ONE production walk, deterministic need-side measurement)',
+   482→    opt_in: 'hyper.serve.budget.escalate_max_per_walk = 32 (the A13 flag, the priced new constant WITH its registered pricing note)',
+   483→    cap_derivation: '32 = the shipped v1 default\'s own real-lane escalate load of record (the A12 receipt, walk.escalate_default = 32/1418 = 2.3%, micro 22567): the A12 mode may not AUTHORIZE more teacher spend per production walk than the shipped default already justifies',
+   484→    organ_law: 'the organ consumes ONLY the honest escalate signal of the production call; grant = arrival order (the first 32 signals); a refusal is COUNTED with reason budget_exhausted and never swallowed; the decision rides OUTSIDE the response bytes — judge() untouched, served expression unchanged by construction',
+   485→    teacher: 'OUT OF SCOPE (recorded not executed, the A11/A12 convention); the gain-side leg (executing granted calls, measuring hit gain) requires the live channel and its own registration — priced, not pre-approved',
+   486→    own_spend: '$0.00 external API, 0 teacher calls, 0 tokens — deterministic local execution (the M4 header spend cap of this registration, stated against the verdict)',
+   487→    source_change_scope: 'src/serve.mjs: ONE one-line flag load (escalateBudgetCap) + ONE new export (makeEscalationBudget); judge() untouched; nothing else',
+   488→  },
+   489→  walk: {
+   490→    steps: N_REAL, capped_hits: cHit, uncapped_hits: uHit, default_hits: dHit, pin: A12_HITS,
+   491→    hit_degradation: cHit - uHit, zero_degradation: hitsZeroDegradation,
+   492→    exact_ctx_steps: exactCtxSteps, fallback_steps: fallbackSteps,
+   493→    escalate_signals: signalSeq.length, escalate_signals_pin: A12_SIGNALS,
+   494→    wire_sample_calls: wireChecked,
+   495→  },
+   496→  organ: {
+   497→    cap: organ.cap, spent: organ.spent, refused: organ.refused, final_reason: organ.reason,
+   498→    spend_fraction_micro: micro(organ.spent / N_REAL),
+   499→    default_load_of_record_micro: micro(A12_DEFAULT_LOAD / N_REAL),
+   500→    law: 'the capped arm\'s teacher spend authority == the shipped default\'s own real-lane load (32/1418 = 2.3%) — the M4 header law stated as a measured number',
+   501→  },
+   502→  byte_safety: {
+   503→    battery_arms: { capped_vs_uncapped: { mismatch: byteMismatch.c_vs_u }, capped_vs_reference: { mismatch: byteMismatch.c_vs_ref }, uncapped_vs_reference: { mismatch: byteMismatch.u_vs_ref }, default_vs_reference: { mismatch: byteMismatch.d_vs_ref }, leakage_probe: { mismatch: byteMismatch.leakage } },
+   504→    judged_carrying_wire_sample: { calls: wireChecked, capped_vs_uncapped_mismatch: byteMismatch.wire_c_vs_u, capped_vs_reference_mismatch: byteMismatch.wire_c_vs_ref },
+   505→    optin_path_equality: { checked: pathEqChecked, bad: pathEqBad },
+   506→    escalate_signal_independence_violations: signalIndependenceBad,
+   507→  },
+   508→  cost_rule: {
+   509→    claim: 'M10 need-side: granted spend buys at-least-as-much uncertainty coverage as the refused set it displaces',
+   510→    mean_top_p_micro: { granted: micro(meanGranted), refused: micro(meanRefused), all_signals: micro(meanAll) },
+   511→    median_top_p: { granted: median(grantedRows), refused: median(refusedRows) },
+   512→    holds: costRuleHolds,
+   513→    honest_fail_branch: 'anti-concentration prices a value-ordered grant law as a NEW registration (no threshold surgery)',
+   514→  },
+   515→  semantics: {
+   516→    serialization_determinism_bad: serDetBad,
+   517→    incremental_vs_regrow: { checked: regrowChecked, bad: regrowBad },
+   518→    final_continuity_bad: finalContBad,
+   519→    leakage_violations: byteMismatch.leakage,
+   520→    escalate_law_violations: escLawBad,
+   521→  },
+   522→  twin: { identical: twinIdentical, js_bytes: jsCore.length, py_bytes: pyCoreStr.length, real_ledger_midpoint_16: twinMidpointAll },
+   523→  e_a12_regression: { ...a12Regression, stamp_strip: 'top-level seal_v + chain row_hashes + nested *_regression.seal_stamps (the stamp class the A11 P-A11d audit enumerated, carved before the run)', receipt_of_record_restored: restoredOk },
+   524→  smoke_9of9: smokeOk, selftest_green: selftestOk,
+   525→  artifact_sha256: artifact.artifact_sha256, artifact_pinned: artifactPinned,
+   526→  seal_v: reg.predictions.v,
+   527→});
+   528→chain({
+   529→  n: 2, claim: 'contrast-per-signal-receipt (no gates)',
+   530→  signal_count: signalSeq.length,
+   531→  per_signal: signalSeq,
+   532→  per_ledger: perLedger,
+   533→  class_decomposition: {
+   534→    granted: { exact_ctx: grantedRows.filter((r) => r.exactCtx).length, fallback: grantedRows.filter((r) => !r.exactCtx).length },
+   535→    refused: { exact_ctx: refusedRows.filter((r) => r.exactCtx).length, fallback: refusedRows.filter((r) => !r.exactCtx).length },
+   536→  },
+   537→  granted_ledger_distribution: grantedRows.reduce((a, r) => { a[r.ledger] = (a[r.ledger] ?? 0) + 1; return a; }, {}),
+   538→  signal_ledger_distribution: signalSeq.reduce((a, r) => { a[r.ledger] = (a[r.ledger] ?? 0) + 1; return a; }, {}),
+   539→  open_question_pointer: 'A12\'s second priced candidate (the shift-soil composition default question: should a hardness-registered shift-soil lane default its opt-in to fallback-aware rather than plain everywhere) remains OPEN and needs its own registration — not measured here',
+   540→});
+   541→chain({
+   542→  n: 3, claim: 'contrast-walk-anatomy (no gates)',
+   543→  per_ledger_anatomy: perLedger,
+   544→  walk_coverage: { steps: N_REAL, exact_ctx: exactCtxSteps, fallback: fallbackSteps, exact_ctx_fraction: micro(exactCtxSteps / N_REAL) },
+   545→  signal_top_p_anatomy: { granted: grantedRows.map((r) => r.top_p_micro), refused_first_16: refusedRows.slice(0, 16).map((r) => r.top_p_micro), note: 'full refused list is row 2 per_signal; this row samples the refused tail for eyeball contrast' },
+   546→});
+   547→writeFileSync('receipts/e_a13.jsonl', chainRows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+   548→writeFileSync('experiments/outputs/e_a13_summary.json', JSON.stringify({
+   549→  run: 'e_a13_budget_cap', verdict, pA13a, pA13b: pA13b_full, pA13c, pA13d,
+   550→  law: { trial: 'the escalation organ under a pre-registered budget cap: cap 32 = the shipped default\'s own real-lane escalate load of record; organ gates spend AUTHORITY never the served expression; grant law arrival order; teacher channel out of scope', mine_citations: 'M10 + M4 (header); nearest_prior M4 + delta (M1 novelty gate)', opt_in: 'hyper.serve.budget.escalate_max_per_walk' },
+   551→  walkQuestion: { rows: N_REAL, capped_hits: cHit, uncapped_hits: uHit, default_hits: dHit, hit_degradation: cHit - uHit },
+   552→  organ: { cap: organ.cap, spent: organ.spent, refused: organ.refused, signals: signalSeq.length },
+   553→  costRule: { mean_top_p_micro: { granted: micro(meanGranted), refused: micro(meanRefused) }, holds: costRuleHolds },
+   554→  byteSafety: { c_vs_u: byteMismatch.c_vs_u, c_vs_ref: byteMismatch.c_vs_ref, d_vs_ref: byteMismatch.d_vs_ref, leakage: byteMismatch.leakage, wire: byteMismatch.wire_c_vs_u, path_eq: pathEqBad },
+   555→  perLedger,
+   556→}, null, 2));
+   557→console.log('receipts: receipts/e_a13.jsonl (tip ' + prev.slice(0, 16) + ')');
+   558→process.exit(0); // verdict printed; honest either way
+   559→

@@ -1,0 +1,594 @@
+     1→// experiments/e_a12_fallback_aware.mjs — P-A12 (Addendum A12, seal v19): the
+     2→// fallback-aware everywhere trial mode — the mechanism A11 priced from its
+     3→// honest FAIL. Registered law: opt-in
+     4→// hyper.fresh.fresh_everywhere_fallback_aware = true — serve the walk memory
+     5→// ONLY on exact-ctx steps (A11: EXACT-CTX NEUTRALITY, zero hit-outcome flips
+     6→// on all 1216 exact-ctx steps), and the EXACT v1 law on unseen contexts (A11:
+     7→// 100% of the everywhere damage sat on the 202 fallback steps). The
+     8→// exact-ctx test is the registered A11 classification — observed.has(token
+     9→// key), a MEMBERSHIP test, NOT a threshold: zero new constants. Both served
+    10→// expressions are existing registered pieces (the A10 payload priorCounted
+    11→// and the v1 ensemble). Branch order A7 > A12 > A10 > A9 > A8 > v1.
+    12→//
+    13→// (a) P-A12a: real-lane hit-identity — fallback-aware == default over the
+    14→//     1418 paired walk steps (0 hit mismatches); default reproduces the A11
+    15→//     pin 1378/1418; wire byte-exactness vs the A12 reference; channel
+    16→//     byte-identity (fallback steps == default bytes, exact-ctx steps ==
+    17→//     everywhere bytes); judged-carrying wire sample byte-identical.
+    18→// (b) P-A12b: shift-H2 class preservation — grow-as-used battery, pooled
+    19→//     fallback-aware >= 298/343 (the A10 pin held or improved; class bound)
+    20→//     AND ens2 == 242/343 (pinned). Contrast: class decomposition of the
+    21→//     everywhere-vs-default shift flips (closes where the 4 A10 protection
+    22→//     losses sit).
+    23→// (c) P-A12c: byte-safety — default byte-identical with the flag ABSENT
+    24→//     (walk + 602 battery calls); A10-only mode byte-identical (602);
+    25→//     precedence A12 > A10 and A12 > A9 (602 each); opt-in path equality
+    26→//     (sampled); eval pins 938224 / 953668 / flips -6/+2; escalate law on
+    27→//     every call; leakage probe 0 violations; walk semantics exact
+    28→//     (serialization determinism, regrow sample, continuity).
+    29→// (d) P-A12d: house bindings — core-v2 twin 9960B==9960B; artifact pinned to
+    30→//     the e_w2 receipt; real-ledger midpoint fresh twins 16/16; smoke 9/9;
+    31→//     selftest green; e_a11 predecessor regression (which re-runs e_a10,
+    32→//     which re-checks e_a9) with every MEASURED byte reproducing after the
+    33→//     STAMP-CLASS strip (top-level seal_v + chain row_hashes + nested
+    34→//     *_regression.seal_stamps — the exact stamp class the A11 P-A11d audit
+    35→//     enumerated, carved BEFORE the run); receipts of record restored
+    36→//     byte-for-byte.
+    37→// Contrast receipts (no gates): per-ledger walk table, hit-flip list
+    38→// (predicted EMPTY), A12 escalate load vs everywhere 20.9% / default 2.3%,
+    39→// cold-start receipts, eval-slice fallback-aware decomposition.
+    40→// Fail-closed seal gate (A4: sha+size bind).
+    41→
+    42→import { readFileSync, writeFileSync, statSync, mkdirSync } from 'node:fs';
+    43→import { spawnSync } from 'node:child_process';
+    44→import { canonicalJSON, sha256Hex } from '../src/canon.mjs';
+    45→import { Rhizome, OPS } from '../src/field.mjs';
+    46→import { trainHash, judgeHash, judgeQthe, ensemble, argmax, top1 } from '../src/heads.mjs';
+    47→import { grow, compileWeaveV2 } from '../src/weaver.mjs';
+    48→import { loadWeave, judge as serveJudge, ESCALATE_BELOW } from '../src/serve.mjs';
+    49→import { SenseTablePrior } from '../src/sensetable.mjs';
+    50→import { contextTokens, contextStr, K } from '../src/features.mjs';
+    51→import { splitLedgers, loadLedger, makeSamples } from '../adapters/qcells.mjs';
+    52→
+    53→// seal gate (v19)
+    54→const reg = JSON.parse(readFileSync('registration.json', 'utf8'));
+    55→const sha = sha256Hex(readFileSync('docs/PREDICTIONS.md'));
+    56→const stB = statSync('docs/PREDICTIONS.md', { bigint: true });
+    57→if (sha !== reg.predictions.sha256 || stB.size !== BigInt(reg.predictions.size)) {
+    58→  console.error('SEAL MISMATCH — refusing to run (fail-closed)');
+    59→  process.exit(2);
+    60→}
+    61→if (reg.predictions.v < 19) { console.error('P-A12 requires seal v19+'); process.exit(2); }
+    62→console.log('seal verified (v' + reg.predictions.v + '):', sha.slice(0, 16));
+    63→
+    64→const micro = (x) => Math.round(x * 1e6);
+    65→const SHIFT_DIR = new URL('./outputs/shift_family/', import.meta.url).pathname;
+    66→const LEDGERS = ['ladder7_echo3', 'ladder8_echo4', 'ladder9_echo4', 'ladder8_echo6'];
+    67→
+    68→// ---------- soil: the REAL lane (the registered A11 soil, unchanged) ----------
+    69→const QCELLS = new URL('../../quilt-qcells/receipts/ledgers/', import.meta.url).pathname;
+    70→const sp = splitLedgers(QCELLS);
+    71→const trainSamples = sp.train.flatMap((f) => makeSamples(loadLedger(QCELLS, f))); // pipeline v2: per-ledger
+    72→const evalLedgers = sp.eval.map((f) => ({ name: f, rows: loadLedger(QCELLS, f) }));
+    73→const evalSamples = evalLedgers.flatMap((l) => makeSamples(l.rows));
+    74→const realLedgers = sp.all.map((f) => ({ name: f, rows: loadLedger(QCELLS, f) }));
+    75→
+    76→// samples WITH row index (identical to makeSamples by construction — guard)
+    77→function samplesWithIdx(rows) {
+    78→  const out = [];
+    79→  for (let i = 0; i < rows.length; i++) {
+    80→    if (!OPS.includes(rows[i].op)) continue;
+    81→    out.push({ tokens: contextTokens(rows, i), ctx: contextStr(rows, i), label: rows[i].op, i, prevOp: rows[i - 1]?.op ?? null });
+    82→  }
+    83→  return out;
+    84→}
+    85→for (const l of [...realLedgers, ...LEDGERS.map((n) => ({ name: n, rows: loadLedger(SHIFT_DIR, n + '.jsonl') }))]) {
+    86→  const a = samplesWithIdx(l.rows), b = makeSamples(l.rows);
+    87→  if (a.length !== b.length || a.some((s, j) => s.ctx !== b[j].ctx || s.label !== b[j].label ||
+    88→    JSON.stringify(s.tokens) !== JSON.stringify(b[j].tokens))) {
+    89→    console.error('samplesWithIdx diverges from makeSamples on ' + l.name); process.exit(2);
+    90→  }
+    91→}
+    92→const N_REAL = realLedgers.reduce((a, l) => a + makeSamples(l.rows).length, 0);
+    93→console.log('soil: real ledgers=16 samples=' + N_REAL + ' (train ' + trainSamples.length + ' / eval ' + evalSamples.length + '; samplesWithIdx == makeSamples on ALL real + shift soils)');
+    94→if (N_REAL !== 1418) { console.error('real-lane soil moved: expected 1418 registered samples'); process.exit(2); }
+    95→
+    96→// ---------- compile weave-v2 (mirror e_w2/e_a8/e_a9/e_a10/e_a11 exactly; artifact pinned) ----------
+    97→const rhizome = new Rhizome();
+    98→grow(rhizome, trainSamples);
+    99→const { artifact } = compileWeaveV2({
+   100→  rhizome, trainSamples, evalSamples, weaveIndex: 2,
+   101→  notes: 'weave-2 (A7): first weave carrying the rhizome sense table',
+   102→});
+   103→mkdirSync('experiments/outputs', { recursive: true });
+   104→writeFileSync('experiments/outputs/weave_v2_js.json', canonicalJSON(artifact));
+   105→const eW2 = JSON.parse(readFileSync('receipts/e_w2.jsonl', 'utf8').split('\n')[0]);
+   106→const eA9 = JSON.parse(readFileSync('receipts/e_a9.jsonl', 'utf8').split('\n')[0]);
+   107→const eA10 = JSON.parse(readFileSync('receipts/e_a10.jsonl', 'utf8').split('\n')[0]);
+   108→const eA11 = JSON.parse(readFileSync('receipts/e_a11.jsonl', 'utf8').split('\n')[0]);
+   109→const artifactPinned = artifact.artifact_sha256 === eW2.artifact_sha256;
+   110→console.log('weave-v2 compiled: artifact_sha256=' + artifact.artifact_sha256.slice(0, 16) +
+   111→  ' pinned-to-e_w2-receipt=' + artifactPinned);
+   112→if (!artifactPinned) { console.error('artifact not pinned to e_w2 receipt — refusing'); process.exit(2); }
+   113→
+   114→// ---------- serve setup (modes; flags exactly as committed) ----------
+   115→const reloaded = JSON.parse(readFileSync('experiments/outputs/weave_v2_js.json', 'utf8'));
+   116→const loadedDefault = loadWeave(reloaded); // v1 law, flags ABSENT
+   117→if (loadedDefault.fresh !== false || loadedDefault.freshEverywhere !== false || loadedDefault.freshAware !== false) {
+   118→  console.error('default must carry fresh=false freshEverywhere=false freshAware=false (flags absent)'); process.exit(2);
+   119→}
+   120→const QUESTIONS = { q1: { type: 'choice', criteria: { opcode: true } }, q2: { type: 'noul' } };
+   121→const altOp = (op) => OPS[(OPS.indexOf(op) + 1) % OPS.length]; // leakage-probe mutation
+   122→
+   123→// references: the exact expressions of record, rebuilt from the RE-PARSED
+   124→// SERIALIZED table (the serialization round-trip is the registered carrier).
+   125→// kind 'fallback_aware': the A12 law — the classification uses the SAME
+   126→// re-parsed table the serve path holds (observed.has on the serve token key).
+   127→function refResponse(handle, tokens, judgedOp, kind, fieldTable) {
+   128→  const ph = judgeHash(handle.hash, tokens).probs;
+   129→  const pq = judgeQthe(handle.qthe, tokens).probs;
+   130→  let probs;
+   131→  if (kind === 'everywhere') {
+   132→    const refField = new SenseTablePrior(JSON.parse(canonicalJSON(fieldTable))); // re-parsed serialized aggregate
+   133→    probs = refField.priorCounted(tokens.join('|'));
+   134→  } else if (kind === 'fallback_aware') {
+   135→    const refField = new SenseTablePrior(JSON.parse(canonicalJSON(fieldTable)));
+   136→    probs = refField.observed.has(tokens.join('|'))
+   137→      ? refField.priorCounted(tokens.join('|'))
+   138→      : ensemble(ph, pq, 0.5); // the v1 law on unseen contexts
+   139→  } else {
+   140→    probs = ensemble(ph, pq, 0.5);
+   141→  }
+   142→  const top = argmax(probs);
+   143→  const claimed = judgedOp ?? top.op;
+   144→  const answers = {
+   145→    q1: { type: 'choice', choice: top.op, confidence: top.p, probabilities: probs },
+   146→    q2: { type: 'noul', noul: probs[claimed] ?? 0, confidence: top.p, probabilities: probs },
+   147→  };
+   148→  return {
+   149→    model: `jev-garden/${handle.artifact.schema}@w${handle.artifact.index}`,
+   150→    answers, escalate: top.p < ESCALATE_BELOW,
+   151→    usage: { model: 'garden-local', tokens: 0 },
+   152→  };
+   153→}
+   154→
+   155→function loadHandleWithTable(fieldTable, mode) {
+   156→  const h = loadWeave(JSON.parse(canonicalJSON({ ...artifact, arms: { ...artifact.arms, field: fieldTable } })));
+   157→  if (mode === 'a12') h.freshAware = true;      // the A12 opt-in, loaded-handle path
+   158→  else if (mode === 'everywhere') h.freshEverywhere = true; // the A10 opt-in (byte-safety reference)
+   159→  else if (mode !== 'default') throw new Error('unknown mode ' + mode);
+   160→  return h;
+   161→}
+   162→
+   163→// ---------- P-A12 walk: the real-lane production trial (the A11 machinery) ----------
+   164→let batCalls = 0, batMismatch = { a12: 0, default: 0, everywhere: 0, leakage: 0 };
+   165→let channelViolations = { fallback_vs_default: 0, exact_vs_everywhere: 0 };
+   166→let escalateAw = 0, escalateDef = 0, escalateEv = 0;
+   167→let awHit = 0, defHit = 0, evHit = 0;
+   168→let exactCtxSteps = 0, fallbackSteps = 0;
+   169→let serDetBad = 0, regrowChecked = 0, regrowBad = 0, finalContBad = 0;
+   170→let escLawBad = 0;
+   171→let wireChecked = 0, wireBadAw = 0, wireBadDef = 0; // judged-carrying sample, the SAME step's table
+   172→const flips = []; // fallback-aware vs default disagreements (predicted EMPTY — the honest per-row receipt)
+   173→const coldStart = [];
+   174→const perLedger = [];
+   175→const fallbackArgmaxUnused = null; // the prefix-marginal argmax receipt belongs to A11's everywhere arm; A12 never serves it
+   176→
+   177→for (const { name, rows } of realLedgers) {
+   178→  const samples = samplesWithIdx(rows);
+   179→  const walkRz = new Rhizome(); // the lane's own watched stream (grows from receipts)
+   180→  let lAw = 0, lDef = 0, lEv = 0, lExact = 0, lFallback = 0, lEscAw = 0, lEscDef = 0, lEscEv = 0;
+   181→  for (let k = 0; k < samples.length; k++) {
+   182→    const s = samples[k], i = s.i;
+   183→    // (1) the lane re-serializes arms.field from its own receipted prefix [0..k)
+   184→    const liveTable1 = walkRz.senseTable();
+   185→    const liveBytesA = canonicalJSON(liveTable1);
+   186→    const liveBytesB = canonicalJSON(walkRz.senseTable());
+   187→    if (liveBytesA !== liveBytesB) serDetBad++;
+   188→    // (2) serve: judged-free, the P-G2d/P-A9c battery convention — three arms + leakage probe
+   189→    const handleAw = loadHandleWithTable(JSON.parse(liveBytesA), 'a12');
+   190→    const handleEv = loadHandleWithTable(JSON.parse(liveBytesA), 'everywhere');
+   191→    const ctxSlice = rows.slice(Math.max(0, i - K), i);
+   192→    const outAw = serveJudge(handleAw, { context: ctxSlice }, QUESTIONS);
+   193→    const outDef = serveJudge(loadedDefault, { context: ctxSlice }, QUESTIONS);
+   194→    const outEv = serveJudge(handleEv, { context: ctxSlice }, QUESTIONS);
+   195→    // (3) leakage probe on the TRIAL arm: the judgment must never read the row under judgment
+   196→    const rowsMut = rows.slice();
+   197→    rowsMut[i] = { ...rowsMut[i], op: altOp(rowsMut[i].op) };
+   198→    const outMut = serveJudge(handleAw, { context: rowsMut.slice(Math.max(0, i - K), i) }, QUESTIONS);
+   199→    // (4) references (rebuilt from the re-parsed serialized table / independent v1)
+   200→    const batTokens = contextTokens(rows, i); // == what the judged-free serve computes
+   201→    const refAw = refResponse(handleAw, batTokens, undefined, 'fallback_aware', liveTable1);
+   202→    const refDef = refResponse(loadedDefault, batTokens, undefined, 'v1', liveTable1);
+   203→    const refEv = refResponse(handleEv, batTokens, undefined, 'everywhere', liveTable1);
+   204→    if (JSON.stringify(outAw) !== JSON.stringify(refAw)) batMismatch.a12++;
+   205→    if (JSON.stringify(outDef) !== JSON.stringify(refDef)) batMismatch.default++;
+   206→    if (JSON.stringify(outEv) !== JSON.stringify(refEv)) batMismatch.everywhere++;
+   207→    if (JSON.stringify(outMut) !== JSON.stringify(outAw)) batMismatch.leakage++;
+   208→    batCalls++;
+   209→    // (5) channel byte-identity: the branch IS the selector between the two shipped expressions
+   210→    const exactCtx = handleAw.field.observed.has(s.ctx); // the registered A11 classification
+   211→    if (exactCtx) {
+   212→      if (JSON.stringify(outAw) !== JSON.stringify(outEv)) channelViolations.exact_vs_everywhere++;
+   213→      exactCtxSteps++; lExact++;
+   214→    } else {
+   215→      if (JSON.stringify(outAw) !== JSON.stringify(outDef)) channelViolations.fallback_vs_default++;
+   216→      fallbackSteps++; lFallback++;
+   217→    }
+   218→    // (6) judged-carrying wire sample: the endpoint shape over the SAME step's table
+   219→    if (k < 10) {
+   220→      const outAwW = serveJudge(handleAw, { context: ctxSlice }, QUESTIONS, rows[i]);
+   221→      const outDefW = serveJudge(loadedDefault, { context: ctxSlice }, QUESTIONS, rows[i]);
+   222→      const tokensW = contextTokens(rows.slice(0, i + 1), i + 1); // exactly what serve.judge() computes
+   223→      const refAwW = refResponse(handleAw, tokensW, rows[i].op, 'fallback_aware', liveTable1);
+   224→      const refDefW = refResponse(loadedDefault, tokensW, rows[i].op, 'v1', liveTable1);
+   225→      if (JSON.stringify(outAwW) !== JSON.stringify(refAwW)) wireBadAw++;
+   226→      if (JSON.stringify(outDefW) !== JSON.stringify(refDefW)) wireBadDef++;
+   227→      wireChecked++;
+   228→    }
+   229→    // (7) walk bookkeeping
+   230→    const e2 = ensemble(judgeHash(loadedDefault.hash, batTokens).probs, judgeQthe(loadedDefault.qthe, batTokens).probs, 0.5);
+   231→    const ta = outAw.answers.q1.choice === s.label ? 1 : 0;
+   232→    const td = outDef.answers.q1.choice === s.label ? 1 : 0;
+   233→    const te = outEv.answers.q1.choice === s.label ? 1 : 0;
+   234→    if (outAw.escalate !== (argmax(refAw.answers.q1.probabilities).p < ESCALATE_BELOW)) escLawBad++;
+   235→    if (outDef.escalate !== (argmax(refDef.answers.q1.probabilities).p < ESCALATE_BELOW)) escLawBad++;
+   236→    if (outEv.escalate !== (argmax(refEv.answers.q1.probabilities).p < ESCALATE_BELOW)) escLawBad++;
+   237→    if (outAw.escalate) { escalateAw++; lEscAw++; }
+   238→    if (outDef.escalate) { escalateDef++; lEscDef++; }
+   239→    if (outEv.escalate) { escalateEv++; lEscEv++; }
+   240→    awHit += ta; defHit += td; evHit += te; lAw += ta; lDef += td; lEv += te;
+   241→    if (ta !== td) flips.push({ ledger: name, k, i, label: s.label, prevOp: s.prevOp, exactCtx, fallback: !exactCtx, defaultHit: td, fallbackAwareHit: ta });
+   242→    if (k === 0) coldStart.push({ ledger: name, fallback_aware_choice: outAw.answers.q1.choice, default_choice: outDef.answers.q1.choice, everywhere_choice: outEv.answers.q1.choice, note: 'empty aggregate = fallback class: A12 serves the v1 law at k=0; everywhere served uniform (argmax LINK)' });
+   243→    // (8) incremental walk == prefix re-grow (sampled: every 16th step)
+   244→    if (k % 16 === 0) {
+   245→      const rz2 = new Rhizome();
+   246→      grow(rz2, samples.slice(0, k));
+   247→      regrowChecked++;
+   248→      if (canonicalJSON(rz2.senseTable()) !== liveBytesA) regrowBad++;
+   249→    }
+   250→    // (9) the receipt is observed — the walk grows (the only collapse)
+   251→    walkRz.deform(s.ctx, { gamma: 0, tag: 'stream' });
+   252→    walkRz.observe(s.ctx, s.label, { source: 'receipt' });
+   253→  }
+   254→  // (10) walk continuity: final table == full-ledger grow
+   255→  const rzFull = new Rhizome();
+   256→  grow(rzFull, samples);
+   257→  if (canonicalJSON(rzFull.senseTable()) !== canonicalJSON(walkRz.senseTable())) finalContBad++;
+   258→  perLedger.push({ ledger: name, samples: samples.length, ens2_hits: lDef, fallback_aware_hits: lAw, everywhere_hits: lEv, exact_ctx: lExact, fallback: lFallback, escalate_fallback_aware: lEscAw, escalate_default: lEscDef, escalate_everywhere: lEscEv });
+   259→  console.log(`  walk ${name}: n=${samples.length}  ens2 ${lDef}  fallback-aware ${lAw}  everywhere ${lEv}  (exact-ctx ${lExact}, fallback ${lFallback}, esc aw/def/ev ${lEscAw}/${lEscDef}/${lEscEv})`);
+   260→}
+   261→const awDelta = awHit - defHit;
+   262→console.log(`P-A12a walk: fallback-aware ${awHit}/${N_REAL}  ens2(default) ${defHit}/${N_REAL}  everywhere ${evHit}/${N_REAL}  hit-mismatches aw-vs-def ${flips.length} (delta ${awDelta >= 0 ? '+' : ''}${awDelta})`);
+   263→console.log(`walk anatomy: exact-ctx ${exactCtxSteps} fallback ${fallbackSteps}; escalate aw/def/ev ${escalateAw}/${escalateDef}/${escalateEv}; mismatches aw/def/ev/leak ${batMismatch.a12}/${batMismatch.default}/${batMismatch.everywhere}/${batMismatch.leakage}; channelViolations ${JSON.stringify(channelViolations)}; serDetBad ${serDetBad} regrow ${regrowBad}/${regrowChecked} continuityBad ${finalContBad} escLawBad ${escLawBad}`);
+   264→console.log(`wire sample (first 10 steps/ledger, judged-carrying, same-step table): ${wireChecked} calls — fallback-aware mismatch ${wireBadAw}, default mismatch ${wireBadDef}`);
+   265→
+   266→// ---------- P-A12d twin: Python --fresh H1 tables on the REAL ledgers (16/16) ----------
+   267→let twinMidpointBad = 0;
+   268→const midTables = {};
+   269→for (const { name, rows } of realLedgers) {
+   270→  const samples = samplesWithIdx(rows);
+   271→  const half = Math.floor(samples.length / 2);
+   272→  const rz = new Rhizome();
+   273→  grow(rz, samples.slice(0, half)); // the JS midpoint walk table
+   274→  const midBytes = canonicalJSON(rz.senseTable());
+   275→  midTables[name] = JSON.parse(midBytes);
+   276→  const outF = 'experiments/outputs/fresh_table_real_' + name.replace('.jsonl', '') + '_py.json';
+   277→  const r = spawnSync('python3', ['ref/garden_ref.py', QCELLS, 'experiments/outputs/_seal_core_unused.json', '--fresh', QCELLS + name, outF], { encoding: 'utf8', timeout: 300000 });
+   278→  if (r.status !== 0) { console.error('twin fresh failed for ' + name + ':', r.stderr); process.exit(1); }
+   279→  const ok = readFileSync(outF, 'utf8') === midBytes;
+   280→  if (!ok) twinMidpointBad++;
+   281→  perLedger.find((p) => p.ledger === name).twin_midpoint_fresh_bytes_equal = ok;
+   282→}
+   283→const twinMidpointAll = twinMidpointBad === 0;
+   284→console.log('midpoint fresh twins on the real ledgers: ' + (twinMidpointAll ? '16/16 byte-identical' : 'FAIL ' + twinMidpointBad));
+   285→
+   286→// opt-in path equality (P-A12c iv): artifact-hyper A12 flag == loaded-handle A12 flag, sampled (midpoint tables)
+   287→const artifactOpt = JSON.parse(JSON.stringify(artifact)); // ship path: artifact-hyper opt-in
+   288→artifactOpt.hyper.fresh = { fresh_everywhere_fallback_aware: true };
+   289→let pathEqChecked = 0, pathEqBad = 0;
+   290→for (const { name, rows } of realLedgers) {
+   291→  const samples = samplesWithIdx(rows);
+   292→  const hyperWithTable = loadWeave(JSON.parse(canonicalJSON({ ...artifactOpt, arms: { ...artifactOpt.arms, field: midTables[name] } })));
+   293→  if (hyperWithTable.freshAware !== true) { console.error('artifact-hyper A12 opt-in failed to load'); process.exit(2); }
+   294→  const handleAw = loadHandleWithTable(JSON.parse(canonicalJSON(midTables[name])), 'a12');
+   295→  for (const s of [samples[0], samples[samples.length - 1]]) {
+   296→    const outHandle = serveJudge(handleAw, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   297→    const outHyper = serveJudge(hyperWithTable, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   298→    pathEqChecked++;
+   299→    if (JSON.stringify(outHandle) !== JSON.stringify(outHyper)) pathEqBad++;
+   300→  }
+   301→}
+   302→console.log(`opt-in path equality (artifact-hyper == loaded-handle, A12 flag): ${pathEqChecked} checked, ${pathEqBad} bad`);
+   303→
+   304→// ---------- P-A12c(v): eval slice pins (compile-time train aggregate) + A12 contrast ----------
+   305→const loadedEverywhere = loadWeave(reloaded);
+   306→loadedEverywhere.freshEverywhere = true;
+   307→const loadedAwEval = loadWeave(reloaded);
+   308→loadedAwEval.freshAware = true;
+   309→let evalEns2 = 0, evalEverywhere = 0, evalAw = 0;
+   310→let evalAwExact = 0, evalAwExactHit = 0, evalAwFallback = 0, evalAwFallbackHit = 0;
+   311→const flipsEval = { ens2right_everywherewrong: 0, ens2wrong_everywhereright: 0 };
+   312→for (const l of evalLedgers) {
+   313→  for (const s of samplesWithIdx(l.rows)) {
+   314→    const batTokens = contextTokens(l.rows, s.i);
+   315→    const e2 = ensemble(judgeHash(loadedDefault.hash, batTokens).probs, judgeQthe(loadedDefault.qthe, batTokens).probs, 0.5);
+   316→    const t2 = top1(e2, s.label);
+   317→    const out = serveJudge(loadedEverywhere, { context: l.rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   318→    const outA = serveJudge(loadedAwEval, { context: l.rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   319→    const tf = out.answers.q1.choice === s.label ? 1 : 0;
+   320→    const ta = outA.answers.q1.choice === s.label ? 1 : 0;
+   321→    const exact = loadedAwEval.field.observed.has(batTokens.join('|'));
+   322→    if (exact) { evalAwExact++; evalAwExactHit += ta; } else { evalAwFallback++; evalAwFallbackHit += ta; }
+   323→    evalEns2 += t2; evalEverywhere += tf; evalAw += ta;
+   324→    if (t2 === 1 && tf === 0) flipsEval.ens2right_everywherewrong++;
+   325→    if (t2 === 0 && tf === 1) flipsEval.ens2wrong_everywhereright++;
+   326→  }
+   327→}
+   328→const evalEns2Micro = micro(evalEns2 / evalSamples.length);
+   329→const evalEveryMicro = micro(evalEverywhere / evalSamples.length);
+   330→const pinEvalEvery = evalEveryMicro === eA9.eval_optin_contrast.fresh_micro;
+   331→const pinEvalEns2 = evalEns2Micro === eW2.serve.ens2;
+   332→const pinEvalFlips = flipsEval.ens2right_everywherewrong === 6 && flipsEval.ens2wrong_everywhereright === 2;
+   333→console.log(`P-A12c(v) eval pins: everywhere micro ${evalEveryMicro} (A9 pin 938224: ${pinEvalEvery})  ens2 micro ${evalEns2Micro} (P-W2b pin 953668: ${pinEvalEns2})  flips -${flipsEval.ens2right_everywherewrong}/+${flipsEval.ens2wrong_everywhereright} (pin -6/+2: ${pinEvalFlips})`);
+   334→console.log(`eval fallback-aware contrast: ${evalAw}/${evalSamples.length} (exact-ctx ${evalAwExactHit}/${evalAwExact}, fallback ${evalAwFallbackHit}/${evalAwFallback})`);
+   335→
+   336→// ---------- P-A12b: shift-H2 battery (grow-as-used, the A10 protocol) ----------
+   337→const shiftTables = {};
+   338→let shiftEns2 = 0, shiftEverywhere = 0, shiftAw = 0, shiftN = 0;
+   339→const shiftClass = { gains: { exact_ctx: 0, fallback: 0 }, losses: { exact_ctx: 0, fallback: 0 } };
+   340→const shiftAwFlips = [];
+   341→for (const name of LEDGERS) {
+   342→  const rows = loadLedger(SHIFT_DIR, name + '.jsonl');
+   343→  const samples = samplesWithIdx(rows);
+   344→  const half = Math.floor(samples.length / 2);
+   345→  const H1 = samples.slice(0, half), H2 = samples.slice(half);
+   346→  const rz = new Rhizome();
+   347→  grow(rz, H1); // grow-as-used: watch H1, re-serialize arms.field (P-G2d protocol)
+   348→  const table = JSON.parse(canonicalJSON(rz.senseTable()));
+   349→  shiftTables[name] = table;
+   350→  const handleAw = loadHandleWithTable(table, 'a12');
+   351→  const handleEv = loadHandleWithTable(table, 'everywhere');
+   352→  let h2e2 = 0, h2ev = 0, h2aw = 0;
+   353→  for (const s of H2) {
+   354→    const batTokens = contextTokens(rows, s.i);
+   355→    const e2 = ensemble(judgeHash(loadedDefault.hash, batTokens).probs, judgeQthe(loadedDefault.qthe, batTokens).probs, 0.5);
+   356→    const t2 = top1(e2, s.label);
+   357→    const outEv = serveJudge(handleEv, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   358→    const outAw = serveJudge(handleAw, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   359→    const te = outEv.answers.q1.choice === s.label ? 1 : 0;
+   360→    const ta = outAw.answers.q1.choice === s.label ? 1 : 0;
+   361→    const exact = handleAw.field.observed.has(batTokens.join('|'));
+   362→    if (t2 === 0 && te === 1) shiftClass.gains[exact ? 'exact_ctx' : 'fallback']++;
+   363→    if (t2 === 1 && te === 0) shiftClass.losses[exact ? 'exact_ctx' : 'fallback']++;
+   364→    if (ta !== t2) shiftAwFlips.push({ ledger: name, i: s.i, label: s.label, exactCtx: exact, defaultHit: t2, fallbackAwareHit: ta });
+   365→    h2e2 += t2; h2ev += te; h2aw += ta;
+   366→  }
+   367→  shiftEns2 += h2e2; shiftEverywhere += h2ev; shiftAw += h2aw; shiftN += H2.length;
+   368→  console.log(`  shift ${name}: H2=${H2.length} ens2 ${h2e2} everywhere ${h2ev} fallback-aware ${h2aw}`);
+   369→}
+   370→const pinShiftEv = shiftEverywhere === 298;
+   371→const pinShiftEns2 = shiftEns2 === eA10.shift_h2_battery.ens2_hits; // the committed receipt pin (242)
+   372→const shiftAwBound = shiftAw >= 298;
+   373→console.log(`P-A12b shift: fallback-aware ${shiftAw}/${shiftN} (>= 298 class bound: ${shiftAwBound})  everywhere ${shiftEverywhere}/${shiftN} (pin 298: ${pinShiftEv})  ens2 ${shiftEns2}/${shiftN} (pin ${eA10.shift_h2_battery.ens2_hits}: ${pinShiftEns2})`);
+   374→console.log(`shift class decomposition (everywhere-vs-default flips): gains ${JSON.stringify(shiftClass.gains)} losses ${JSON.stringify(shiftClass.losses)}`);
+   375→
+   376→// ---------- P-A12c(iii): precedence — A12 > A10 and A12 > A9 on all 602 battery calls ----------
+   377→const artifactAwA10 = JSON.parse(JSON.stringify(artifact));
+   378→artifactAwA10.hyper.fresh = { fresh_everywhere_fallback_aware: true, fresh_everywhere: true };
+   379→const artifactAwA9 = JSON.parse(JSON.stringify(artifact));
+   380→artifactAwA9.hyper.fresh = { fresh_everywhere_fallback_aware: true, serve_with_fresh: true };
+   381→let precChecked = 0, precBad = 0;
+   382→// eval slice (compile-time table already in the artifact)
+   383→for (const l of evalLedgers) {
+   384→  const hA10 = loadWeave(JSON.parse(canonicalJSON(artifactAwA10)));
+   385→  const hA9 = loadWeave(JSON.parse(canonicalJSON(artifactAwA9)));
+   386→  for (const s of samplesWithIdx(l.rows)) {
+   387→    const outA = serveJudge(loadedAwEval, { context: l.rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   388→    if (JSON.stringify(serveJudge(hA10, { context: l.rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS)) !== JSON.stringify(outA)) precBad++;
+   389→    if (JSON.stringify(serveJudge(hA9, { context: l.rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS)) !== JSON.stringify(outA)) precBad++;
+   390→    precChecked += 2;
+   391→  }
+   392→}
+   393→// shift battery (grow-as-used tables swapped into the artifact hyper)
+   394→for (const name of LEDGERS) {
+   395→  const rows = loadLedger(SHIFT_DIR, name + '.jsonl');
+   396→  const samples = samplesWithIdx(rows);
+   397→  const half = Math.floor(samples.length / 2);
+   398→  const H2 = samples.slice(half);
+   399→  const hA10 = loadWeave(JSON.parse(canonicalJSON({ ...artifactAwA10, arms: { ...artifactAwA10.arms, field: shiftTables[name] } })));
+   400→  const hA9 = loadWeave(JSON.parse(canonicalJSON({ ...artifactAwA9, arms: { ...artifactAwA9.arms, field: shiftTables[name] } })));
+   401→  const handleAw = loadHandleWithTable(shiftTables[name], 'a12');
+   402→  for (const s of H2) {
+   403→    const outA = serveJudge(handleAw, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS);
+   404→    if (JSON.stringify(serveJudge(hA10, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS)) !== JSON.stringify(outA)) precBad++;
+   405→    if (JSON.stringify(serveJudge(hA9, { context: rows.slice(Math.max(0, s.i - K), s.i) }, QUESTIONS)) !== JSON.stringify(outA)) precBad++;
+   406→    precChecked += 2;
+   407→  }
+   408→}
+   409→console.log(`precedence (A12+A10 and A12+A9 artifacts serve the A12 law): ${precChecked} checked, ${precBad} bad`);
+   410→
+   411→// ---------- P-A12d: twin core + battery green + predecessor regressions ----------
+   412→const hashM = trainHash(trainSamples);
+   413→const Wm = hashM.W.map((w) => {
+   414→  const sparse = {};
+   415→  for (let i = 0; i < w.length; i++) if (w[i] !== 0) sparse[String(i)] = Math.round(w[i] * 1e6);
+   416→  return sparse;
+   417→});
+   418→const core = {
+   419→  schema: 'jev-garden/weave-core-v2',
+   420→  index: 1,
+   421→  journal_tip: rhizome.journalTip(),
+   422→  journal_len: rhizome.journal.length,
+   423→  hyper: { lr: 0.5, epochs: 12, wd: 0.0001, clip: 5, K: 3, HB: 2048, ens_lambda: 0.5, wormhole_weight: 0.3, ens3: { wh: 0.4, wq: 0.4, wf: 0.2 } },
+   424→  arms: { hash: { W: Wm, b: Array.from(hashM.b, (x) => Math.round(x * 1e6)) }, field: rhizome.senseTable() },
+   425→};
+   426→writeFileSync('experiments/outputs/weave_core_v2_js.json', canonicalJSON(core));
+   427→const py = spawnSync('python3', ['ref/garden_ref.py', QCELLS, 'experiments/outputs/weave_core_v2_py.json'], { encoding: 'utf8', timeout: 300000 });
+   428→if (py.status !== 0) { console.error('twin failed:', py.stderr); process.exit(1); }
+   429→const jsCore = readFileSync('experiments/outputs/weave_core_v2_js.json', 'utf8');
+   430→const pyCoreStr = readFileSync('experiments/outputs/weave_core_v2_py.json', 'utf8');
+   431→const twinIdentical = jsCore === pyCoreStr;
+   432→console.log('twin core-v2: ' + (twinIdentical ? 'IDENTICAL ' + jsCore.length + 'B' : 'DIVERGED') + ` — js=${jsCore.length}B py=${pyCoreStr.length}B`);
+   433→
+   434→// predecessor regression: e_a11 re-runs under the A12 seal (it re-runs e_a10,
+   435→// which re-checks e_a9 — one spawn binds the whole predecessor chain).
+   436→// Registered strip: top-level seal_v + chain row_hashes + nested
+   437→// *_regression.seal_stamps (the stamp class the A11 P-A11d audit enumerated).
+   438→const originals = {
+   439→  a11: readFileSync('receipts/e_a11.jsonl', 'utf8'),
+   440→  a10: readFileSync('receipts/e_a10.jsonl', 'utf8'),
+   441→  a10Summary: readFileSync('experiments/outputs/e_a10_summary.json', 'utf8'),
+   442→  a11Summary: readFileSync('experiments/outputs/e_a11_summary.json', 'utf8'),
+   443→};
+   444→const a11Run = spawnSync('node', ['experiments/e_a11_real_lane.mjs'], { encoding: 'utf8', timeout: 600000 });
+   445→const stripStampsDeep = (rows) => canonicalJSON(rows.map((r) => {
+   446→  const del = (o) => {
+   447→    if (o && typeof o === 'object' && !Array.isArray(o)) {
+   448→      for (const k of Object.keys(o)) {
+   449→        if (k === 'seal_stamps') delete o[k];
+   450→        else del(o[k]);
+   451→      }
+   452→    }
+   453→    return o;
+   454→  };
+   455→  const { seal_v, row_hash, ...rest } = r;
+   456→  return del(rest);
+   457→}));
+   458→const rowsOf = (txt) => txt.trim().split('\n').map((l) => JSON.parse(l));
+   459→const a11Regression = {
+   460→  ran: a11Run.status === 0,
+   461→  p_a11_verdict_of_record_stands: /P-A11 overall: FAIL/.test(a11Run.stdout),
+   462→  p_a11a_c_pass_reproduce: /P-A11a \(wire byte-exactness on the real-lane walk\): PASS/.test(a11Run.stdout) &&
+   463→    /P-A11b \(A9\/A10 pins through the A11 driver\): PASS/.test(a11Run.stdout) &&
+   464→    /P-A11c \(walk semantics exact \+ no leakage\): PASS/.test(a11Run.stdout),
+   465→  measured_bytes_identical: { a11_receipt: false, a10_receipt: false, a10_summary: false, a11_summary: false },
+   466→  seal_stamps: { a11: [], a10: [] },
+   467→};
+   468→try {
+   469→  const o11 = rowsOf(originals.a11), n11 = rowsOf(readFileSync('receipts/e_a11.jsonl', 'utf8'));
+   470→  a11Regression.measured_bytes_identical.a11_receipt = stripStampsDeep(o11) === stripStampsDeep(n11) && o11.length === n11.length;
+   471→  a11Regression.seal_stamps.a11 = [o11[0].seal_v, n11[0].seal_v];
+   472→  const o10 = rowsOf(originals.a10), n10 = rowsOf(readFileSync('receipts/e_a10.jsonl', 'utf8'));
+   473→  a11Regression.measured_bytes_identical.a10_receipt = stripStampsDeep(o10) === stripStampsDeep(n10) && o10.length === n10.length;
+   474→  a11Regression.seal_stamps.a10 = [o10[0].seal_v, n10[0].seal_v];
+   475→  a11Regression.measured_bytes_identical.a10_summary =
+   476→    stripStampsDeep([JSON.parse(originals.a10Summary)]).replace(/\n$/, '') ===
+   477→    stripStampsDeep([JSON.parse(readFileSync('experiments/outputs/e_a10_summary.json', 'utf8'))]).replace(/\n$/, '');
+   478→  a11Regression.measured_bytes_identical.a11_summary =
+   479→    originals.a11Summary === readFileSync('experiments/outputs/e_a11_summary.json', 'utf8');
+   480→} catch (e) { a11Regression.error = String(e); }
+   481→// receipts of record restored byte-for-byte (append-only)
+   482→writeFileSync('receipts/e_a11.jsonl', originals.a11);
+   483→writeFileSync('receipts/e_a10.jsonl', originals.a10);
+   484→writeFileSync('experiments/outputs/e_a10_summary.json', originals.a10Summary);
+   485→writeFileSync('experiments/outputs/e_a11_summary.json', originals.a11Summary);
+   486→const restoredOk = readFileSync('receipts/e_a11.jsonl', 'utf8') === originals.a11 &&
+   487→  readFileSync('receipts/e_a10.jsonl', 'utf8') === originals.a10 &&
+   488→  readFileSync('experiments/outputs/e_a10_summary.json', 'utf8') === originals.a10Summary &&
+   489→  readFileSync('experiments/outputs/e_a11_summary.json', 'utf8') === originals.a11Summary;
+   490→console.log(`e_a11 regression under the A12 law: ran=${a11Regression.ran} P-A11-verdict-of-record-stands=${a11Regression.p_a11_verdict_of_record_stands} (P-A11a/b/c PASS reproduced: ${a11Regression.p_a11a_c_pass_reproduce}); measured bytes identical a11/a10/a10sum/a11sum ${a11Regression.measured_bytes_identical.a11_receipt}/${a11Regression.measured_bytes_identical.a10_receipt}/${a11Regression.measured_bytes_identical.a10_summary}/${a11Regression.measured_bytes_identical.a11_summary} (seal stamps a11 ${a11Regression.seal_stamps.a11?.join('->')} a10 ${a11Regression.seal_stamps.a10?.join('->')}); receipts of record restored=${restoredOk}`);
+   491→
+   492→const smoke = spawnSync('node', ['smoke.mjs'], { encoding: 'utf8' });
+   493→const smokeOk = smoke.status === 0 && /9 passed, 0 failed/.test(smoke.stdout);
+   494→const selftest = spawnSync('node', ['tests/selftest.mjs'], { encoding: 'utf8' });
+   495→const selftestOk = selftest.status === 0;
+   496→console.log('smoke: ' + (smokeOk ? '9/9' : 'FAIL') + '; selftest: ' + (selftestOk ? 'green' : 'FAIL'));
+   497→
+   498→// ---------- verdicts (registered gates; honest either way) ----------
+   499→const pA12a = flips.length === 0 && defHit === 1378 &&
+   500→  batMismatch.a12 === 0 && channelViolations.fallback_vs_default === 0 && channelViolations.exact_vs_everywhere === 0 &&
+   501→  wireBadAw === 0;
+   502→const pA12b = shiftAwBound && pinShiftEns2;
+   503→const pA12c = batMismatch.default === 0 && batMismatch.everywhere === 0 && batMismatch.leakage === 0 &&
+   504→  precBad === 0 && pathEqBad === 0 && pinEvalEvery && pinEvalEns2 && pinEvalFlips &&
+   505→  escLawBad === 0 && serDetBad === 0 && regrowBad === 0 && finalContBad === 0;
+   506→const pA12d = twinIdentical && twinMidpointAll && smokeOk && selftestOk && a11Regression.ran &&
+   507→  a11Regression.p_a11_verdict_of_record_stands && a11Regression.p_a11a_c_pass_reproduce &&
+   508→  a11Regression.measured_bytes_identical.a11_receipt && a11Regression.measured_bytes_identical.a10_receipt &&
+   509→  a11Regression.measured_bytes_identical.a10_summary && a11Regression.measured_bytes_identical.a11_summary &&
+   510→  restoredOk;
+   511→const verdict = pA12a && pA12b && pA12c && pA12d ? 'PASS' : 'FAIL';
+   512→console.log('\nP-A12a (real-lane hit-identity): ' + (pA12a ? 'PASS' : 'FAIL') +
+   513→  ` — fallback-aware ${awHit}/${N_REAL} == default ${defHit}/${N_REAL} (pin 1378: ${defHit === 1378}); hit mismatches ${flips.length}; battery mismatch aw/leak ${batMismatch.a12}/${batMismatch.leakage}; channel violations ${JSON.stringify(channelViolations)}; wire sample ${wireChecked} (aw mismatch ${wireBadAw}, default contrast ${wireBadDef})`);
+   514→console.log('P-A12b (shift-H2 class preservation): ' + (pA12b ? 'PASS' : 'FAIL') +
+   515→  ` — fallback-aware ${shiftAw}/${shiftN} (>= 298 class bound: ${shiftAwBound}); ens2 ${shiftEns2}/${shiftN} (pin ${pinShiftEns2}); everywhere ${shiftEverywhere} (pin ${pinShiftEv}); flip classes ${JSON.stringify(shiftClass)}`);
+   516→console.log('P-A12c (byte-safety): ' + (pA12c ? 'PASS' : 'FAIL') +
+   517→  ` — default+everywhere battery mismatches ${batMismatch.default}/${batMismatch.everywhere}; leakage ${batMismatch.leakage}; precedence ${precChecked}/${precBad}; path-eq ${pathEqChecked}/${pathEqBad}; eval pins ${evalEveryMicro}/${evalEns2Micro}/${pinEvalFlips}; escLawBad ${escLawBad}; serDetBad ${serDetBad}; regrow ${regrowBad}/${regrowChecked}; continuityBad ${finalContBad}`);
+   518→console.log('P-A12d (house bindings): ' + (pA12d ? 'PASS' : 'FAIL') +
+   519→  ` — twin=${twinIdentical ? 'IDENTICAL ' + jsCore.length + 'B' : 'DIVERGED'}; midpoint twins ${twinMidpointAll ? '16/16' : 'FAIL'}; smoke=${smokeOk} selftest=${selftestOk}; e_a11=${a11Regression.ran}/${a11Regression.p_a11_verdict_of_record_stands}/measured ${a11Regression.measured_bytes_identical.a11_receipt}/${a11Regression.measured_bytes_identical.a10_receipt}/restored=${restoredOk}`);
+   520→console.log('\nP-A12 overall: ' + verdict);
+   521→
+   522→// ---------- receipts ----------
+   523→mkdirSync('receipts', { recursive: true });
+   524→const chainRows = [];
+   525→let prev = 'JEVG-EXP-GENESIS-F';
+   526→const chain = (row) => { row.row_hash = sha256Hex(canonicalJSON([prev, row])); chainRows.push(row); prev = row.row_hash; };
+   527→chain({
+   528→  n: 1, claim: 'P-A12', verdict,
+   529→  pA12a, pA12b, pA12c, pA12d,
+   530→  law: {
+   531→    trial: 'fallback-aware everywhere (the A11-priced mechanism): the 16 git-pinned qcells ledgers (1418 rows) walked in arrival order through the SHIPPED serve path with the A12 opt-in; arms.field re-serialized from the lane\'s own receipted prefix [0..k) before every judged-free serve call (the registered A11 walk machinery)',
+   532→    opt_in: 'hyper.fresh.fresh_everywhere_fallback_aware = true (the A12 flag, the priced new branch)',
+   533→    selection_law: 'exact-ctx (observed.has(token key) — the registered A11 classification, a MEMBERSHIP test not a threshold) -> priorCounted (the EXACT A10 payload); fallback (unseen context) -> ensemble(ph, pq, 0.5) (the EXACT v1 law, NOT the prefix marginal)',
+   534→    growth: 'walk rhizome deform+observe per receipt, source receipt (field.mjs: observations are the only collapse); per-ledger chains; cold start = fallback class (the v1 law at k=0; everywhere served uniform — contrast receipted)',
+   535→    escalate: 'RECORDED not executed: top.p(served) < ESCALATE_BELOW (0.55 sealed, reused, mode-independent); teacher channel out of scope',
+   536→    precedence: 'A7 serve_with_field -> A12 fresh_everywhere_fallback_aware -> A10 fresh_everywhere -> A9 serve_with_fresh -> A8 hardness_gate -> default v1',
+   537→    zero_new_constants: true, source_change_scope: 'src/serve.mjs: ONE else-if branch + the one-line flag load (the priced mechanism); nothing else',
+   538→  },
+   539→  walk: {
+   540→    steps: N_REAL, fallback_aware_hits: awHit, default_hits: defHit, everywhere_hits: evHit,
+   541→    hit_mismatches_aw_vs_default: flips.length, delta_hits: awDelta, delta_micro: micro(awDelta / N_REAL),
+   542→    default_pinned_1378: defHit === 1378,
+   543→    exact_ctx_steps: exactCtxSteps, fallback_steps: fallbackSteps,
+   544→    escalate_fallback_aware: escalateAw, escalate_default: escalateDef, escalate_everywhere: escalateEv,
+   545→    cold_start: coldStart,
+   546→  },
+   547→  wire: {
+   548→    battery_arms: { fallback_aware: { mismatch: batMismatch.a12 }, default: { mismatch: batMismatch.default }, everywhere: { mismatch: batMismatch.everywhere }, leakage_probe: { mismatch: batMismatch.leakage } },
+   549→    channel_byte_identity: { fallback_vs_default_violations: channelViolations.fallback_vs_default, exact_vs_everywhere_violations: channelViolations.exact_vs_everywhere },
+   550→    judged_carrying_sample: { calls: wireChecked, fallback_aware_mismatch: wireBadAw, default_mismatch_contrast: wireBadDef },
+   551→    optin_path_equality: { checked: pathEqChecked, bad: pathEqBad },
+   552→    precedence: { checked: precChecked, bad: precBad, order: 'A12 > A10 and A12 > A9 on all 602 battery calls' },
+   553→  },
+   554→  pins: {
+   555→    eval_slice: { rows: evalSamples.length, everywhere_micro: evalEveryMicro, everywhere_pinned_938224: pinEvalEvery, ens2_micro: evalEns2Micro, ens2_pinned_953668: pinEvalEns2, flips: flipsEval, flips_pinned: pinEvalFlips,
+   556→      fallback_aware_contrast: { hits: evalAw, exact_ctx: { hit: evalAwExactHit, of: evalAwExact }, fallback: { hit: evalAwFallbackHit, of: evalAwFallback } } },
+   557→    shift_h2: { rows: shiftN, fallback_aware_hits: shiftAw, class_bound_ge_298: shiftAwBound, everywhere_hits: shiftEverywhere, everywhere_pinned_298: pinShiftEv, ens2_hits: shiftEns2, ens2_pinned_242: pinShiftEns2,
+   558→      everywhere_vs_default_flip_classes: shiftClass },
+   559→  },
+   560→  semantics: {
+   561→    serialization_determinism_bad: serDetBad,
+   562→    incremental_vs_regrow: { checked: regrowChecked, bad: regrowBad },
+   563→    final_continuity_bad: finalContBad,
+   564→    leakage_violations: batMismatch.leakage,
+   565→    escalate_law_violations: escLawBad,
+   566→  },
+   567→  twin: { identical: twinIdentical, js_bytes: jsCore.length, py_bytes: pyCoreStr.length, real_ledger_midpoint_16: twinMidpointAll },
+   568→  e_a11_regression: { ...a11Regression, stamp_strip: 'top-level seal_v + chain row_hashes + nested *_regression.seal_stamps (the stamp class the A11 P-A11d audit enumerated, carved before the run)', receipt_of_record_restored: restoredOk },
+   569→  smoke_9of9: smokeOk, selftest_green: selftestOk,
+   570→  artifact_sha256: artifact.artifact_sha256, artifact_pinned: artifactPinned,
+   571→  seal_v: reg.predictions.v,
+   572→});
+   573→chain({
+   574→  n: 2, claim: 'contrast-walk-anatomy (no gates)',
+   575→  per_ledger: perLedger,
+   576→  flips_fallback_aware_vs_default: flips,
+   577→  walk_coverage: { steps: N_REAL, exact_ctx: exactCtxSteps, fallback: fallbackSteps, exact_ctx_fraction: micro(exactCtxSteps / N_REAL) },
+   578→  escalate_load: { fallback_aware: escalateAw, fallback_aware_fraction: micro(escalateAw / N_REAL), default: escalateDef, default_fraction: micro(escalateDef / N_REAL), everywhere_of_record: eA11.walk.escalate_everywhere, everywhere_fraction_of_record: micro(eA11.walk.escalate_everywhere / N_REAL), law: 'A12 escalates exactly as the default does on fallback steps and exactly as everywhere does on exact-ctx steps (channel byte-identity)' },
+   579→  cold_start_law: 'k=0 steps serve the v1 law (empty aggregate = fallback class); A11 everywhere served uniform there (argmax LINK) — receipted in row 1 walk.cold_start',
+   580→  a11_damage_channel_removed: { everywhere_hits_of_record: eA11.walk.everywhere_hits, everywhere_loss_vs_default_of_record: (eA11.walk.default_hits - eA11.walk.everywhere_hits), fallback_aware_loss_vs_default: defHit - awHit },
+   581→});
+   582→chain({ n: 3, claim: 'shift-class-decomposition (no gates)', detail: { everywhere_vs_default_flip_classes: shiftClass, fallback_aware_vs_default_flips: shiftAwFlips, note: 'closes where the 4 A10 protection losses sit (exact-ctx vs fallback); the P-A12b class bound (>= 298) was derived from the A10 receipt that all 50 gains are exact-ctx' } });
+   583→writeFileSync('receipts/e_a12.jsonl', chainRows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+   584→writeFileSync('experiments/outputs/e_a12_summary.json', JSON.stringify({
+   585→  run: 'e_a12_fallback_aware', verdict, pA12a, pA12b, pA12c, pA12d,
+   586→  law: { trial: 'fallback-aware everywhere: exact-ctx -> the A10 fresh payload (observed.has membership test), fallback -> the exact v1 law', opt_in: 'hyper.fresh.fresh_everywhere_fallback_aware', precedence: 'A7 > A12 > A10 > A9 > A8 > v1' },
+   587→  walkQuestion: { rows: N_REAL, fallback_aware: awHit, ens2_default: defHit, everywhere: evHit, hit_mismatches: flips.length },
+   588→  pins: { eval_everywhere_micro: evalEveryMicro, eval_ens2_micro: evalEns2Micro, shift_fallback_aware: shiftAw, shift_everywhere: shiftEverywhere, shift_ens2: shiftEns2, eval_fallback_aware_contrast: evalAw },
+   589→  coverage: { exact_ctx: exactCtxSteps, fallback: fallbackSteps, escalate_fallback_aware: escalateAw, escalate_default: escalateDef, escalate_everywhere: escalateEv },
+   590→  perLedger,
+   591→}, null, 2));
+   592→console.log('receipts: receipts/e_a12.jsonl (tip ' + prev.slice(0, 16) + ')');
+   593→process.exit(0); // verdict printed; honest either way
+   594→
