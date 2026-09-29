@@ -1,0 +1,382 @@
+  1088→function collectDepthAmp(seedU32, depth, wLen, atOffsets, preTicks, amp) {
+  1089→  const world = new World2(seedU32);
+  1090→  const jepa = new Jepa3(seedU32);
+  1091→  jepa.lr = LR3; jepa.tau = TAU4;
+  1092→  const jInit = new Jepa3(seedU32);
+  1093→  let obs = world.observe();
+  1094→  for (let t = 0; t < depth; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(obs, o1); obs = o1; }
+  1095→  const wStart = depth + 1;
+  1096→  const AT = atOffsets.map((o) => wStart + o);
+  1097→  const S = []; const Spre = []; const T = []; const T0 = [];
+  1098→  const tFrom = wStart - preTicks;
+  1099→  let obsPrev = obs;
+  1100→  for (let t = tFrom; t <= wStart + wLen - 1; t++) {
+  1101→    world.step();
+  1102→    const obsNew = world.observe();
+  1103→    if (AT.includes(t)) {
+  1104→      const px = (world.bx + 8) % (GRID - 2), py = (world.by + 8) % (GRID - 2);
+  1105→      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+  1106→        obsNew[(py + dy) * GRID + px + dx] = Math.min(1, obsNew[(py + dy) * GRID + px + dx] + amp);
+  1107→      }
+  1108→    }
+  1109→    const zCtx = jepa.encode(obsPrev);
+  1110→    const zPred = jepa.predict(zCtx);
+  1111→    const zTgt = jepa.encodeTarget(obsNew);
+  1112→    const zTgt0 = jInit.encodeTarget(obsNew);
+  1113→    const pc = Array.from(perCellSurprise(zPred, zTgt));
+  1114→    if (t < wStart) Spre.push(pc); else S.push(pc);
+  1115→    if (t >= wStart) { T.push(Array.from(zTgt)); T0.push(Array.from(zTgt0)); }
+  1116→    obsPrev = obsNew;
+  1117→  }
+  1118→  return { S, Spre, T, T0, AT, wStart };
+  1119→}
+  1120→// trivialSwitchProbe: the PLAST readout — a 400-step continuation on the TRIVIAL world from a
+  1121→// WARM weight state (fresh World from its own t=0; weights bit-copied from the snapshot).
+  1122→function trivialSwitchProbe(seedU32, lr, tau, wd, snap, steps) {
+  1123→  const world = new World(seedU32);
+  1124→  const jepa = new Jepa4(seedU32, wd);
+  1125→  jepa.lr = lr; jepa.tau = tau;
+  1126→  jepa.Wc.set(snap.Wc); jepa.Wp.set(snap.Wp); jepa.Wt.set(snap.Wt);
+  1127→  const losses = [];
+  1128→  let obs = world.observe();
+  1129→  for (let t = 0; t < steps; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+  1130→  return { ratio: mean(losses.slice(-10)) / mean(losses.slice(0, 10)), first10: mean(losses.slice(0, 10)), last10: mean(losses.slice(-10)) };
+  1131→}
+  1132→
+  1133→function coreRun7(seedU32) {
+  1134→  const out6 = {};
+  1135→
+  1136→  // identity (i) re-verified fail-closed BEFORE scoring: Jepa4(seed, wd=0) == Jepa3(seed) bit-exact
+  1137→  {
+  1138→    const world = new World2(seedU32);
+  1139→    const a = new Jepa3(seedU32); a.lr = LR3; a.tau = TAU4;
+  1140→    const b = new Jepa4(seedU32, 0); b.lr = LR3; b.tau = TAU4;
+  1141→    const la = [], lb = [];
+  1142→    let obs = world.observe();
+  1143→    for (let t = 0; t < 400; t++) { world.step(); const o1 = world.observe(); la.push(a.trainStep(obs, o1)); lb.push(b.trainStep(obs, o1)); obs = o1; }
+  1144→    const buf = (je) => sha(Buffer.concat([Buffer.from(je.Wc.buffer, je.Wc.byteOffset, je.Wc.byteLength),
+  1145→                                           Buffer.from(je.Wp.buffer, je.Wp.byteOffset, je.Wp.byteLength),
+  1146→                                           Buffer.from(je.Wt.buffer, je.Wt.byteOffset, je.Wt.byteLength)]));
+  1147→    let lossesExact = true;
+  1148→    for (let i = 0; i < la.length; i++) if (la[i] !== lb[i]) { lossesExact = false; break; }
+  1149→    out6.identity = { steps: 400, losses_bit_exact: lossesExact, weights_bit_exact: buf(a) === buf(b), weights_sha: buf(a) };
+  1150→  }
+  1151→
+  1152→  // ---- RLONG part A: the four decayed-optimizer arms (probe6 verbatim) ----
+  1153→  const arms = {};
+  1154→  {
+  1155→    const a0 = horizonRun5(World2, seedU32, LR3, TAU4, 0, T_HORIZON, 'contrast', RLONG_CKPTS, [20000]);
+  1156→    console.error('[progress]   rlong arm wd0 done at', Date.now() - T0, 'ms, D=' + a0.D);
+  1157→    arms['wd0_anchor'] = a0;
+  1158→    a0.slow_inflation_rate = Math.log(a0.checkpoints['20000'].wc_norm / a0.checkpoints['400'].wc_norm) / 19600;
+  1159→    const am = horizonRun5(World2, seedU32, LR3, TAU4, WD_MAIN, T_HORIZON, 'registered', RLONG_CKPTS, PLAST_MAIN_CAPTURE);
+  1160→    console.error('[progress]   rlong arm wd3e-4 (5e5 steps) done at', Date.now() - T0, 'ms, D=' + am.D);
+  1161→    arms['wd3e-4_main'] = am;
+  1162→    am.slow_inflation_rate = am.checkpoints['20000'] ? Math.log(am.checkpoints['20000'].wc_norm / am.checkpoints['400'].wc_norm) / 19600 : null;
+  1163→    if (am.checkpoints['100000']) {
+  1164→      am.slow_inflation_rate_100k = Math.log(am.checkpoints['100000'].wc_norm / am.checkpoints['400'].wc_norm) / 99600;
+  1165→    }
+  1166→    am.rate_ratio_runaway_over_slow = (am.blowup_rate_last200 != null && am.slow_inflation_rate != null) ? am.blowup_rate_last200 / am.slow_inflation_rate : null;
+  1167→    const ah = horizonRun5(World2, seedU32, LR3, TAU4, 1e-4, T_HORIZON, 'registered', RLONG_CKPTS, [20000]);
+  1168→    console.error('[progress]   rlong arm wd1e-4 done at', Date.now() - T0, 'ms, D=' + ah.D);
+  1169→    arms['wd1e-4'] = ah;
+  1170→    ah.slow_inflation_rate = ah.checkpoints['20000'] ? Math.log(ah.checkpoints['20000'].wc_norm / ah.checkpoints['400'].wc_norm) / 19600 : null;
+  1171→    ah.rate_ratio_runaway_over_slow = (ah.blowup_rate_last200 != null && ah.slow_inflation_rate != null) ? ah.blowup_rate_last200 / ah.slow_inflation_rate : null;
+  1172→    const ac = horizonRun5(World2, seedU32, LR3, TAU4, 1e-3, T_HORIZON, 'contrast', RLONG_CKPTS, []);
+  1173→    console.error('[progress]   rlong arm wd1e-3 done at', Date.now() - T0, 'ms, D=' + ac.D);
+  1174→    arms['wd0.001'] = ac;
+  1175→    ac.slow_inflation_rate = ac.checkpoints['20000'] ? Math.log(ac.checkpoints['20000'].wc_norm / ac.checkpoints['400'].wc_norm) / 19600 : null;
+  1176→    // learning guards in the decayed arms (plasticity UNRELAXED — registered gates)
+  1177→    arms.guards_wd3e4 = {
+  1178→      g_gate_trivial_100: gGateFlex(seedU32, LR3, TAU4, WD_MAIN, 100),
+  1179→      r1_world2_400: r1Flex(seedU32, LR3, TAU4, WD_MAIN, 400),
+  1180→      r2_drift_200_400: r2Flex(seedU32, LR3, TAU4, WD_MAIN)
+  1181→    };
+  1182→    arms.guards_wd1e4 = {
+  1183→      g_gate_trivial_100: gGateFlex(seedU32, LR3, TAU4, 1e-4, 100),
+  1184→      r1_world2_400: r1Flex(seedU32, LR3, TAU4, 1e-4, 400),
+  1185→      r2_drift_200_400: r2Flex(seedU32, LR3, TAU4, 1e-4)
+  1186→    };
+  1187→    arms.guards_wd0 = {
+  1188→      g_gate_trivial_100: gGateFlex(seedU32, LR3, TAU4, 0, 100),
+  1189→      r1_world2_400: r1Flex(seedU32, LR3, TAU4, 0, 400),
+  1190→      r2_drift_200_400: r2Flex(seedU32, LR3, TAU4, 0)
+  1191→    };
+  1192→  }
+  1193→  out6.arms = arms;
+  1194→  console.error('[progress]   rlong guards done at', Date.now() - T0, 'ms');
+  1195→
+  1196→  // ---- R3D part B: depth/window study (probe6 verbatim) ----
+  1197→  const partB = { depths: {}, mechanism_law: {}, assertions: {}, candS: {} };
+  1198→  {
+  1199→    let carried_z_2200 = null;
+  1200→    for (const depth of DEPTHS6) {
+  1201→      const k = depth / 400;
+  1202→      const wStart = depth + 1;
+  1203→      const AT_depth = [wStart + 29, wStart + 64, wStart + 99];
+  1204→      const carried = evalWindowDump(seedU32, LR3, TAU4, depth, wStart, AT_depth, AMP0);
+  1205→      const carriedFlex = normalizerStudyFlex(collectDepth(seedU32, depth, 130, [29, 64, 99], 0).S, AT_depth, wStart, 130, []);
+  1206→      if (depth === 2200) carried_z_2200 = carried.study.v1_z_ratio;
+  1207→      const offF = [Math.floor(29 * k), Math.floor(64 * k), Math.floor(99 * k)];
+  1208→      const cd = collectDepth(seedU32, depth, 130 * k, offF, 0);
+  1209→      const studyD = normalizerStudyFlex(cd.S, cd.AT, wStart, 130 * k, []);
+  1210→      const varD = varRatio(cd.T, cd.T0);
+  1211→      const offR = [Math.round(29 * k), Math.round(64 * k), Math.round(99 * k)];
+  1212→      let studyDr = null;
+  1213→      if (offR.some((o, i) => o !== offF[i])) {
+  1214→        const cdr = collectDepth(seedU32, depth, 130 * k, offR, 0);
+  1215→        studyDr = normalizerStudyFlex(cdr.S, cdr.AT, wStart, 130 * k, []);
+  1216→      }
+  1217→      const ca = collectDepth(seedU32, depth, 130, [29, 64, 99], 124 * (k - 1));
+  1218→      const studyA = normalizerStudyFlex(ca.S, ca.AT, wStart, 130, ca.Spre);
+  1219→      const varA = varRatio(ca.T, ca.T0);
+  1220→      if (depth === 400) {
+  1221→        partB.assertions.candD_400_bit_exact_vs_carried =
+  1222→          studyD.v1_z_ratio === carried.study.v1_z_ratio &&
+  1223→          studyD.v0_raw_ratio === carried.study.v0_raw_ratio &&
+  1224→          studyD.v3_mad_ratio === carried.study.v3_mad_ratio &&
+  1225→          studyD.baseline_n === carried.study.baseline_n;
+  1226→      }
+  1227→      const zA = carried.study.anomaly_vs_sample.z.anomaly_mean, zS = carried.study.anomaly_vs_sample.z.sample_mean;
+  1228→      const rA = carried.study.anomaly_vs_sample.raw.anomaly_mean, rS = carried.study.anomaly_vs_sample.raw.sample_mean;
+  1229→      partB.depths[String(depth)] = {
+  1230→        k, w_start: wStart, offsets_floor: offF, offsets_round: offR,
+  1231→        carried: { z_ratio: carried.study.v1_z_ratio, sd_sum: carriedFlex.sd_sum, baseline_n: 124,
+  1232→                   z_anom_mean: zA, z_sample_mean: zS, raw_anom_mean: rA, raw_sample_mean: rS,
+  1233→                   raw_gap: rA - rS, var_ratio: carried.var_ratio },
+  1234→        candD: { wlen: 130 * k, at_offsets: offF, z_ratio: studyD.v1_z_ratio,
+  1235→                 sd_sum: studyD.sd_sum, baseline_n: studyD.baseline_n,
+  1236→                 z_anom_mean: studyD.anomaly_vs_sample.z.anomaly_mean, z_sample_mean: studyD.anomaly_vs_sample.z.sample_mean,
+  1237→                 raw_gap: studyD.anomaly_vs_sample.raw.anomaly_mean - studyD.anomaly_vs_sample.raw.sample_mean,
+  1238→                 var_ratio: varD, study: studyD },
+  1239→        candD_round_rule: studyDr ? { at_offsets: offR, z_ratio: studyDr.v1_z_ratio } : null,
+  1240→        candA: { pre_baseline_n: studyA.pre_baseline_n, z_ratio: studyA.v1_z_ratio,
+  1241→                 sd_sum: studyA.sd_sum, baseline_n: studyA.baseline_n,
+  1242→                 z_anom_mean: studyA.anomaly_vs_sample.z.anomaly_mean, z_sample_mean: studyA.anomaly_vs_sample.z.sample_mean,
+  1243→                 raw_gap: studyA.anomaly_vs_sample.raw.anomaly_mean - studyA.anomaly_vs_sample.raw.sample_mean,
+  1244→                 var_ratio: varA, study: studyA }
+  1245→      };
+  1246→    }
+  1247→    const s4 = partB.depths['400'].carried.sd_sum;
+  1248→    for (const depth of DEPTHS6) {
+  1249→      const c = partB.depths[String(depth)].carried;
+  1250→      partB.candS[String(depth)] = { sd_sum: c.sd_sum, multiplier: s4 / c.sd_sum, z_ratio_corrected: c.z_ratio * (s4 / c.sd_sum) };
+  1251→    }
+  1252→    const base = partB.depths['400'].carried;
+  1253→    partB.mechanism_law = { deficit_factor: {}, sd_collapse_factor: {}, raw_gap_collapse_factor: {} };
+  1254→    for (const depth of DEPTHS6) {
+  1255→      const c = partB.depths[String(depth)].carried;
+  1256→      partB.mechanism_law.deficit_factor[String(depth)] = c.z_ratio / base.z_ratio;
+  1257→      partB.mechanism_law.sd_collapse_factor[String(depth)] = c.sd_sum / base.sd_sum;
+  1258→      partB.mechanism_law.raw_gap_collapse_factor[String(depth)] = c.raw_gap / base.raw_gap;
+  1259→    }
+  1260→    partB.carried_z_2200 = carried_z_2200;
+  1261→  }
+  1262→  out6.partB = partB;
+  1263→  console.error('[progress]   r3d depth sweep done at', Date.now() - T0, 'ms');
+  1264→
+  1265→  // ---- GWIN part C: the window law at the two second pace points (probe6 verbatim) ----
+  1266→  const partC = {
+  1267→    law: 'W(lr) = round(30/lr) steps (G window proportional to 1/pace, anchored at lr 0.3 -> 100)',
+  1268→    anchor_lr0_3_w100: gGateFlex(seedU32, LR3, TAU4, 0, 100),
+  1269→    lr0_15_w200: gGateFlex(seedU32, 0.15, 1 - K4 * LAT / 0.15, 0, 200),
+  1270→    lr0_5_w60: gGateFlex(seedU32, 0.5, 1 - K4 * LAT / 0.5, 0, 60),
+  1271→    pace_lock_reference: { lr: 0.15, window: 100, g_ratio: 0.5692660186806099, source: 'registration-v5 P-R2x finding of record' }
+  1272→  };
+  1273→  out6.partC = partC;
+  1274→
+  1275→  const m0 = arms['wd0_anchor'], mm = arms['wd3e-4_main'], m1 = arms['wd1e-4'], m3 = arms['wd0.001'];
+  1276→  const g3 = arms.guards_wd3e4, g1 = arms.guards_wd1e4, g0 = arms.guards_wd0;
+  1277→
+  1278→  // ---- ROUND 7 part D: the three new dose-response arms (RLONG7) ----
+  1279→  const arms7 = {};
+  1280→  for (const wd of WD_ARMS7) {
+  1281→    const key = String(wd);
+  1282→    const arm = horizonRun5(World2, seedU32, LR3, TAU4, wd, T_HORIZON, 'contrast', RLONG_CKPTS, []);
+  1283→    arm.slow_inflation_rate = arm.checkpoints['20000'] ? Math.log(arm.checkpoints['20000'].wc_norm / arm.checkpoints['400'].wc_norm) / 19600 : null;
+  1284→    arm.rate_ratio_runaway_over_slow = (arm.blowup_rate_last200 != null && arm.slow_inflation_rate != null && arm.slow_inflation_rate !== 0) ? arm.blowup_rate_last200 / arm.slow_inflation_rate : null;
+  1285→    arms7[key] = arm;
+  1286→    console.error('[progress]   rlong7 arm wd' + key + ' done at', Date.now() - T0, 'ms, D=' + arm.D);
+  1287→  }
+  1288→  arms7.guards_wd1_5e4 = {
+  1289→    g_gate_trivial_100: gGateFlex(seedU32, LR3, TAU4, 1.5e-4, 100),
+  1290→    r1_world2_400: r1Flex(seedU32, LR3, TAU4, 1.5e-4, 400),
+  1291→    r2_drift_200_400: r2Flex(seedU32, LR3, TAU4, 1.5e-4)
+  1292→  };
+  1293→  out6.arms7 = arms7;
+  1294→  console.error('[progress]   rlong7 dose arms done at', Date.now() - T0, 'ms');
+  1295→
+  1296→  // ---- ROUND 7 part E: PLAST — the plasticity-cost probes (warm-state switch continuations) --
+  1297→  const plast = { steps: PLAST_STEPS, readout: 'trivial-world switch continuation, last10/first10 of the 400-step window' };
+  1298→  plast.main = {};
+  1299→  for (const t of PLAST_MAIN_CAPTURE.map(String)) {
+  1300→    plast.main[t] = trivialSwitchProbe(seedU32, LR3, TAU4, WD_MAIN, mm.snapshots[t], PLAST_STEPS);
+  1301→  }
+  1302→  plast.control_20000 = trivialSwitchProbe(seedU32, LR3, TAU4, 0, m0.snapshots['20000'], PLAST_STEPS);
+  1303→  plast.wd1e4_20000 = trivialSwitchProbe(seedU32, LR3, TAU4, 1e-4, m1.snapshots['20000'], PLAST_STEPS);
+  1304→  plast.rho20 = plast.main['20000'].ratio / plast.control_20000.ratio;
+  1305→  plast.snapshot_wc_norms = {
+  1306→    main_20000: norm64(mm.snapshots['20000'].Wc), main_100000: norm64(mm.snapshots['100000'].Wc), main_500000: norm64(mm.snapshots['500000'].Wc)
+  1307→  };
+  1308→  out6.plast = plast;
+  1309→  console.error('[progress]   plast probes done at', Date.now() - T0, 'ms');
+  1310→
+  1311→  // ---- ROUND 7 part F: R3DxR3L — the plateau extension to depth (amp 1.2 studies) ----------
+  1312→  // amp-0.9 values come from partB above (already bit-bound to design6); part F measures the
+  1313→  // amp-1.2 side and asserts cross-amp bit-equality.
+  1314→  const plateau = { depths: {} };
+  1315→  for (const depth of DEPTHS6) {
+  1316→    const k = depth / 400;
+  1317→    const wStart = depth + 1;
+  1318→    const AT_depth = [wStart + 29, wStart + 64, wStart + 99];
+  1319→    const c12 = evalWindowDump(seedU32, LR3, TAU4, depth, wStart, AT_depth, 1.2);
+  1320→    const f12 = normalizerStudyFlex(collectDepthAmp(seedU32, depth, 130, [29, 64, 99], 0, 1.2).S, AT_depth, wStart, 130, []);
+  1321→    plateau.depths[String(depth)] = {
+  1322→      carried_z_12: c12.study.v1_z_ratio, sd_sum_12: f12.sd_sum, var_12: c12.var_ratio,
+  1323→      raw_gap_12: c12.study.anomaly_vs_sample.raw.anomaly_mean - c12.study.anomaly_vs_sample.raw.sample_mean
+  1324→    };
+  1325→  }
+  1326→  console.error('[progress]   plateau depth studies done at', Date.now() - T0, 'ms');
+  1327→  const s4 = partB.depths['400'].carried.sd_sum; // amp-0.9 anchor sd_sum (design6-bound)
+  1328→  for (const depth of DEPTHS6) {
+  1329→    const d = plateau.depths[String(depth)];
+  1330→    d.carried_z_09 = partB.depths[String(depth)].carried.z_ratio;
+  1331→    d.sd_sum_09 = partB.depths[String(depth)].carried.sd_sum;
+  1332→    d.var_09 = partB.depths[String(depth)].carried.var_ratio;
+  1333→    d.multiplier_12 = s4 / d.sd_sum_12;
+  1334→    d.anchored_12 = d.carried_z_12 * d.multiplier_12;
+  1335→    d.anchored_09 = partB.candS[String(depth)].z_ratio_corrected;
+  1336→    d.multiplier_09 = partB.candS[String(depth)].multiplier;
+  1337→    d.sd_equal = d.sd_sum_12 === d.sd_sum_09;
+  1338→    d.z_equal = d.carried_z_12 === d.carried_z_09;
+  1339→    d.anchored_equal = d.anchored_12 === d.anchored_09;
+  1340→    d.var_equal = d.var_12 === d.var_09;
+  1341→    d.raw_gap_equal = d.raw_gap_12 === partB.depths[String(depth)].carried.raw_gap;
+  1342→  }
+  1343→  out6.plateau = plateau;
+  1344→
+  1345→  // ---- ROUND 7 part G: GWIN7 — the full pace grid -------------------------------------------
+  1346→  const grid7 = {};
+  1347→  for (const [lr, W] of [[0.2, 150], [0.25, 120], [0.4, 75], [0.6, 50]]) {
+  1348→    grid7['lr' + String(lr) + '_w' + W] = gGateFlex(seedU32, lr, 1 - K4 * LAT / lr, 0, W);
+  1349→  }
+  1350→  out6.grid7 = grid7;
+  1351→  console.error('[progress]   gwin7 grid done at', Date.now() - T0, 'ms');
+  1352→
+  1353→  const metrics6 = {
+  1354→    // identity
+  1355→    id_losses_bit_exact: out6.identity.losses_bit_exact, id_weights_bit_exact: out6.identity.weights_bit_exact,
+  1356→    id_weights_sha: out6.identity.weights_sha,
+  1357→    // RLONG — arms
+  1358→    rlong_D_wd0: m0.D, rlong_exec_wd0: m0.executed_to, rlong_slow_wd0: m0.slow_inflation_rate,
+  1359→    rlong_runaway_wd0: m0.blowup_rate_last200, rlong_drift_last200_wd0: m0.drift_last200, rlong_first10_wd0: m0.first10,
+  1360→    rlong_D_main: mm.D, rlong_exec_main: mm.executed_to, rlong_slow_main: mm.slow_inflation_rate,
+  1361→    rlong_slow_main_100k: mm.slow_inflation_rate_100k, rlong_first10_main: mm.first10,
+  1362→    rlong_main_wc_400: mm.checkpoints['400'].wc_norm, rlong_main_wc_20000: mm.checkpoints['20000'].wc_norm,
+  1363→    rlong_main_wc_100000: mm.checkpoints['100000'].wc_norm, rlong_main_wc_500000: mm.checkpoints['500000'].wc_norm,
+  1364→    rlong_main_wp_400: mm.checkpoints['400'].wp_norm, rlong_main_wp_20000: mm.checkpoints['20000'].wp_norm,
+  1365→    rlong_main_wc_last: mm.wc_norm_at_last_finite,
+  1366→    rlong_D_wd1e4: m1.D, rlong_exec_wd1e4: m1.executed_to, rlong_slow_wd1e4: m1.slow_inflation_rate,
+  1367→    rlong_runaway_wd1e4: m1.blowup_rate_last200, rlong_rr_wd1e4: m1.rate_ratio_runaway_over_slow,
+  1368→    rlong_D_wd1e3: m3.D, rlong_exec_wd1e3: m3.executed_to, rlong_slow_wd1e3: m3.slow_inflation_rate,
+  1369→    // RLONG — guards (wd 3e-4 main dose + receipts at 1e-4 and 0)
+  1370→    rlong_g_wd: g3.g_gate_trivial_100.g_ratio, rlong_r1_wd: g3.r1_world2_400.r1_ratio,
+  1371→    rlong_drift_wd: g3.r2_drift_200_400.r2_drift_ratio,
+  1372→    rlong_g_wd1e4: g1.g_gate_trivial_100.g_ratio, rlong_r1_wd1e4: g1.r1_world2_400.r1_ratio,
+  1373→    rlong_drift_wd1e4: g1.r2_drift_200_400.r2_drift_ratio,
+  1374→    rlong_g_wd0: g0.g_gate_trivial_100.g_ratio, rlong_r1_wd0: g0.r1_world2_400.r1_ratio,
+  1375→    rlong_drift_wd0: g0.r2_drift_200_400.r2_drift_ratio,
+  1376→    // R3D — per-depth carried statistic + sd_sum + raw gap
+  1377→    r3d_z_carried_400: partB.depths['400'].carried.z_ratio, r3d_z_carried_1200: partB.depths['1200'].carried.z_ratio,
+  1378→    r3d_z_carried_2000: partB.depths['2000'].carried.z_ratio, r3d_z_carried_2200: partB.depths['2200'].carried.z_ratio,
+  1379→    r3d_sd_sum_400: partB.depths['400'].carried.sd_sum, r3d_sd_sum_1200: partB.depths['1200'].carried.sd_sum,
+  1380→    r3d_sd_sum_2000: partB.depths['2000'].carried.sd_sum, r3d_sd_sum_2200: partB.depths['2200'].carried.sd_sum,
+  1381→    r3d_raw_gap_400: partB.depths['400'].carried.raw_gap, r3d_raw_gap_1200: partB.depths['1200'].carried.raw_gap,
+  1382→    r3d_raw_gap_2000: partB.depths['2000'].carried.raw_gap, r3d_raw_gap_2200: partB.depths['2200'].carried.raw_gap,
+  1383→    r3d_var_carried_400: partB.depths['400'].carried.var_ratio, r3d_var_carried_1200: partB.depths['1200'].carried.var_ratio,
+  1384→    r3d_var_carried_2000: partB.depths['2000'].carried.var_ratio, r3d_var_carried_2200: partB.depths['2200'].carried.var_ratio,
+  1385→    // R3D — candidates + anchored law
+  1386→    r3d_candD_z_400: partB.depths['400'].candD.z_ratio, r3d_candD_z_1200: partB.depths['1200'].candD.z_ratio,
+  1387→    r3d_candD_z_2000: partB.depths['2000'].candD.z_ratio, r3d_candD_z_2200: partB.depths['2200'].candD.z_ratio,
+  1388→    r3d_candD_n_400: partB.depths['400'].candD.baseline_n, r3d_candD_n_1200: partB.depths['1200'].candD.baseline_n,
+  1389→    r3d_candD_n_2000: partB.depths['2000'].candD.baseline_n, r3d_candD_n_2200: partB.depths['2200'].candD.baseline_n,
+  1390→    r3d_candD_var_400: partB.depths['400'].candD.var_ratio, r3d_candD_var_1200: partB.depths['1200'].candD.var_ratio,
+  1391→    r3d_candD_var_2000: partB.depths['2000'].candD.var_ratio, r3d_candD_var_2200: partB.depths['2200'].candD.var_ratio,
+  1392→    r3d_candA_z_400: partB.depths['400'].candA.z_ratio, r3d_candA_z_1200: partB.depths['1200'].candA.z_ratio,
+  1393→    r3d_candA_z_2000: partB.depths['2000'].candA.z_ratio, r3d_candA_z_2200: partB.depths['2200'].candA.z_ratio,
+  1394→    r3d_candA_var_400: partB.depths['400'].candA.var_ratio, r3d_candA_var_1200: partB.depths['1200'].candA.var_ratio,
+  1395→    r3d_candA_var_2000: partB.depths['2000'].candA.var_ratio, r3d_candA_var_2200: partB.depths['2200'].candA.var_ratio,
+  1396→    r3d_candD_round_z_2200: partB.depths['2200'].candD_round_rule ? partB.depths['2200'].candD_round_rule.z_ratio : null,
+  1397→    r3d_assert_candD400_bitexact: partB.assertions.candD_400_bit_exact_vs_carried,
+  1398→    r3d_multiplier_400: partB.candS['400'].multiplier, r3d_multiplier_1200: partB.candS['1200'].multiplier,
+  1399→    r3d_multiplier_2000: partB.candS['2000'].multiplier, r3d_multiplier_2200: partB.candS['2200'].multiplier,
+  1400→    r3d_z_anchored_400: partB.candS['400'].z_ratio_corrected, r3d_z_anchored_1200: partB.candS['1200'].z_ratio_corrected,
+  1401→    r3d_z_anchored_2000: partB.candS['2000'].z_ratio_corrected, r3d_z_anchored_2200: partB.candS['2200'].z_ratio_corrected,
+  1402→    r3d_deficit_400: partB.mechanism_law.deficit_factor['400'], r3d_deficit_1200: partB.mechanism_law.deficit_factor['1200'], r3d_deficit_2000: partB.mechanism_law.deficit_factor['2000'],
+  1403→    r3d_deficit_2200: partB.mechanism_law.deficit_factor['2200'],
+  1404→    r3d_sdcollapse_400: partB.mechanism_law.sd_collapse_factor['400'], r3d_sdcollapse_1200: partB.mechanism_law.sd_collapse_factor['1200'], r3d_sdcollapse_2000: partB.mechanism_law.sd_collapse_factor['2000'],
+  1405→    r3d_sdcollapse_2200: partB.mechanism_law.sd_collapse_factor['2200'],
+  1406→    r3d_gapcollapse_400: partB.mechanism_law.raw_gap_collapse_factor['400'], r3d_gapcollapse_1200: partB.mechanism_law.raw_gap_collapse_factor['1200'], r3d_gapcollapse_2000: partB.mechanism_law.raw_gap_collapse_factor['2000'],
+  1407→    r3d_gapcollapse_2200: partB.mechanism_law.raw_gap_collapse_factor['2200'],
+  1408→    // GWIN
+  1409→    gwin_g_anchor: partC.anchor_lr0_3_w100.g_ratio, gwin_g_anchor_first10: partC.anchor_lr0_3_w100.g_first10,
+  1410→    gwin_g_anchor_last10: partC.anchor_lr0_3_w100.g_last10,
+  1411→    gwin_g_015: partC.lr0_15_w200.g_ratio, gwin_g_015_first10: partC.lr0_15_w200.g_first10,
+  1412→    gwin_g_015_last10: partC.lr0_15_w200.g_last10,
+  1413→    gwin_g_05: partC.lr0_5_w60.g_ratio, gwin_g_05_first10: partC.lr0_5_w60.g_first10,
+  1414→    gwin_g_05_last10: partC.lr0_5_w60.g_last10
+  1415→  };
+  1416→  out6.metrics = metrics6;
+  1417→  out6.metricsSha = sha(JSON.stringify(metrics6));
+  1418→  const metrics7 = {
+  1419→    // RLONG7 — new dose arms
+  1420→    r7_rate_wd1_5e4: arms7['0.00015'].slow_inflation_rate, r7_rate_wd2e4: arms7['0.0002'].slow_inflation_rate, r7_rate_wd2_5e4: arms7['0.00025'].slow_inflation_rate,
+  1421→    r7_D_wd1_5e4: arms7['0.00015'].D, r7_D_wd2e4: arms7['0.0002'].D, r7_D_wd2_5e4: arms7['0.00025'].D,
+  1422→    r7_exec_wd1_5e4: arms7['0.00015'].executed_to, r7_exec_wd2e4: arms7['0.0002'].executed_to, r7_exec_wd2_5e4: arms7['0.00025'].executed_to,
+  1423→    r7_runaway_wd1_5e4: arms7['0.00015'].blowup_rate_last200, r7_runaway_wd2e4: arms7['0.0002'].blowup_rate_last200, r7_runaway_wd2_5e4: arms7['0.00025'].blowup_rate_last200,
+  1424→    r7_monotone_seven: m0.slow_inflation_rate > m1.slow_inflation_rate && m1.slow_inflation_rate > arms7['0.00015'].slow_inflation_rate && arms7['0.00015'].slow_inflation_rate > arms7['0.0002'].slow_inflation_rate && arms7['0.0002'].slow_inflation_rate > arms7['0.00025'].slow_inflation_rate && arms7['0.00025'].slow_inflation_rate > mm.slow_inflation_rate && mm.slow_inflation_rate > m3.slow_inflation_rate,
+  1425→    r7_bracket: arms7['0.00015'].slow_inflation_rate > 0 && arms7['0.00025'].slow_inflation_rate < 0,
+  1426→    r7_g_wd1_5e4: arms7.guards_wd1_5e4.g_gate_trivial_100.g_ratio, r7_r1_wd1_5e4: arms7.guards_wd1_5e4.r1_world2_400.r1_ratio, r7_drift_wd1_5e4: arms7.guards_wd1_5e4.r2_drift_200_400.r2_drift_ratio,
+  1427→    // PLAST
+  1428→    plast_ratio_20k: plast.main['20000'].ratio, plast_ratio_100k: plast.main['100000'].ratio, plast_ratio_500k: plast.main['500000'].ratio,
+  1429→    plast_ratio_ctrl20k: plast.control_20000.ratio, plast_ratio_wd1e4_20k: plast.wd1e4_20000.ratio,
+  1430→    plast_first10_20k: plast.main['20000'].first10, plast_first10_100k: plast.main['100000'].first10, plast_first10_500k: plast.main['500000'].first10,
+  1431→    plast_first10_ctrl20k: plast.control_20000.first10, plast_first10_wd1e4_20k: plast.wd1e4_20000.first10,
+  1432→    plast_last10_20k: plast.main['20000'].last10, plast_last10_100k: plast.main['100000'].last10, plast_last10_500k: plast.main['500000'].last10,
+  1433→    plast_last10_ctrl20k: plast.control_20000.last10, plast_last10_wd1e4_20k: plast.wd1e4_20000.last10,
+  1434→    plast_rho20: plast.rho20,
+  1435→    plast_snapshot_wc_20000: plast.snapshot_wc_norms.main_20000, plast_snapshot_wc_100000: plast.snapshot_wc_norms.main_100000, plast_snapshot_wc_500000: plast.snapshot_wc_norms.main_500000,
+  1436→    plast_all_finite: Number.isFinite(plast.main['20000'].first10) && Number.isFinite(plast.main['100000'].first10) && Number.isFinite(plast.main['500000'].first10) && Number.isFinite(plast.control_20000.first10) && Number.isFinite(plast.wd1e4_20000.first10) && Number.isFinite(plast.main['20000'].last10) && Number.isFinite(plast.main['100000'].last10) && Number.isFinite(plast.main['500000'].last10) && Number.isFinite(plast.control_20000.last10) && Number.isFinite(plast.wd1e4_20000.last10),
+  1437→    // R3DxR3L — per-depth plateau
+  1438→    plat_sd_eq_400: plateau.depths['400'].sd_equal, plat_sd_eq_1200: plateau.depths['1200'].sd_equal, plat_sd_eq_2000: plateau.depths['2000'].sd_equal, plat_sd_eq_2200: plateau.depths['2200'].sd_equal,
+  1439→    plat_z_eq_400: plateau.depths['400'].z_equal, plat_z_eq_1200: plateau.depths['1200'].z_equal, plat_z_eq_2000: plateau.depths['2000'].z_equal, plat_z_eq_2200: plateau.depths['2200'].z_equal,
+  1440→    plat_anch_eq_400: plateau.depths['400'].anchored_equal, plat_anch_eq_1200: plateau.depths['1200'].anchored_equal, plat_anch_eq_2000: plateau.depths['2000'].anchored_equal, plat_anch_eq_2200: plateau.depths['2200'].anchored_equal,
+  1441→    plat_var_eq_400: plateau.depths['400'].var_equal, plat_var_eq_1200: plateau.depths['1200'].var_equal, plat_var_eq_2000: plateau.depths['2000'].var_equal, plat_var_eq_2200: plateau.depths['2200'].var_equal,
+  1442→    plat_rawgap_eq_400: plateau.depths['400'].raw_gap_equal, plat_rawgap_eq_1200: plateau.depths['1200'].raw_gap_equal, plat_rawgap_eq_2000: plateau.depths['2000'].raw_gap_equal, plat_rawgap_eq_2200: plateau.depths['2200'].raw_gap_equal,
+  1443→    plat_mult400_12: plateau.depths['400'].multiplier_12, plat_mult400_09: plateau.depths['400'].multiplier_09,
+  1444→    plat_anch12_400: plateau.depths['400'].anchored_12, plat_anch12_1200: plateau.depths['1200'].anchored_12, plat_anch12_2000: plateau.depths['2000'].anchored_12, plat_anch12_2200: plateau.depths['2200'].anchored_12,
+  1445→    plat_sd12_400: plateau.depths['400'].sd_sum_12, plat_sd12_1200: plateau.depths['1200'].sd_sum_12, plat_sd12_2000: plateau.depths['2000'].sd_sum_12, plat_sd12_2200: plateau.depths['2200'].sd_sum_12,
+  1446→    plat_z12_400: plateau.depths['400'].carried_z_12, plat_z12_1200: plateau.depths['1200'].carried_z_12, plat_z12_2000: plateau.depths['2000'].carried_z_12, plat_z12_2200: plateau.depths['2200'].carried_z_12,
+  1447→    plat_var12_400: plateau.depths['400'].var_12, plat_var12_1200: plateau.depths['1200'].var_12, plat_var12_2000: plateau.depths['2000'].var_12, plat_var12_2200: plateau.depths['2200'].var_12,
+  1448→    // GWIN7 — grid points
+  1449→    gwin7_g_02: grid7['lr0.2_w150'].g_ratio, gwin7_g_025: grid7['lr0.25_w120'].g_ratio, gwin7_g_04: grid7['lr0.4_w75'].g_ratio, gwin7_g_06: grid7['lr0.6_w50'].g_ratio,
+  1450→    gwin7_g_02_first10: grid7['lr0.2_w150'].g_first10, gwin7_g_025_first10: grid7['lr0.25_w120'].g_first10, gwin7_g_04_first10: grid7['lr0.4_w75'].g_first10, gwin7_g_06_first10: grid7['lr0.6_w50'].g_first10,
+  1451→    gwin7_g_02_last10: grid7['lr0.2_w150'].g_last10, gwin7_g_025_last10: grid7['lr0.25_w120'].g_last10, gwin7_g_04_last10: grid7['lr0.4_w75'].g_last10, gwin7_g_06_last10: grid7['lr0.6_w50'].g_last10
+  1452→  };
+  1453→  out6.metrics7 = metrics7;
+  1454→  out6.metrics7Sha = sha(JSON.stringify(metrics7));
+  1455→  return out6;
+  1456→}
+  1457→
+  1458→// ---------- staging infrastructure (wave-57 infra receipt) ----------
+  1459→// The sandbox silently reaps long detached processes (observed: run7 launched detached died
+  1460→// mid-coreRun5 with zero stderr ~2min in; 4GB cgroup cap with 3.4GB available makes OOM
+  1461→// unlikely — kill, not crash). Infra fix ONLY: each of the four full executions (coreRun5 x2,
+  1462→// coreRun7 x2) is staged to disk the moment it completes and resumed across relaunches; the
+  1463→// receipt assembly and ALL bit-exact cross-checks then run from the staged objects exactly as
+  1464→// they would in-process (JSON round-trip of IEEE doubles is exact; key insertion order is
+  1465→// preserved; the only dropped key is the consumed warm-state `snapshots`). No claim
+  1466→// arithmetic, gate, or execution count is changed by this — the twin executions still both
+  1467→// run to completion, and the R4 shas still bind them.
+
+[showing lines 1088-1467 of 2095; use offset=1468 with limit to continue reading]

@@ -1,0 +1,2002 @@
+     1→// run7.mjs — quilt-jepa ROUND 7 (wave 57-e, keeper). Executes the sealed registration-v7.json:
+     2→// the round-4/5/6 operating point is UNCHANGED (lr 0.3, tau 0.99998, K4 = 1.5e-6, amp = 0.9,
+     3→// same seed) — every round-4 metric must reproduce receipts/run4.json BIT-EXACTLY (29/29),
+     4→// every round-5 metric receipts/run5.json BIT-EXACTLY (92/92), every round-6 metric BOTH
+     5→// receipts/design6.json AND receipts/run6.json; four new claims are scored (the round-6-priced
+     6→// agenda):
+     7→//   RLONG7 — DOSE-RESPONSE LAW: three new wd arms (1.5e-4, 2e-4, 2.5e-4) pin the cure
+     8→//           zero-crossing wd* of the slow-phase |Wc| inflation rate; registered bracket
+     9→//           wd* in (1.5e-4, 2.5e-4); monotone across the seven-dose grid; the four receipted
+    10→//           doses bind design6/run6 bit-exactly
+    11→//   PLAST  — PLASTICITY COST LAW: 400-step trivial-world switch continuations from warm
+    12→//           checkpoint states (main arm 20k/100k/500k; wd0 control 20k; 1e-4 arm 20k);
+    13→//           engage gates < 1.0, cost gate rho20 < 2.0, probe==run bit-exact on the DISCLOSED
+    14→//           design7 I1 pipeline value 0.6644108562180416
+    15→//   R3DxR3L — COMPOSITION CLOSURE: the R3L clamp plateau extends to ALL registered depth
+    16→//           sites (sd_sum / z_carried / z_anchored all bit-exact across amps) and the
+    17→//           anchored 3.0 restoration SURVIVES at the plateau
+    18→//   GWIN7  — FULL-GRID G-WINDOW LAW: W(lr) = round(30/lr) holds g < 0.5 across the core grid
+    19→//           {0.15, 0.2, 0.25, 0.3, 0.4, 0.5}; the lr 0.6/W50 boundary probe receipts
+    20→//           gate-nothing (prices the law's domain for round 8)
+    21→// FAIL-CLOSED: the run re-verifies the registration seal (masked sha + mtime) at startup and
+    22→// refuses otherwise. Deterministic core executed twice (R4) and cross-checked bit-for-bit
+    23→// against receipts/run4.json, receipts/run5.json, receipts/design6.json, receipts/run6.json
+    24→// AND the disclosed design7.json pipeline values — probe==run==run-twin==prior-round-runs.
+    25→// Runner-level additions only: horizonRun5 (horizonRun4 + weight-snapshot capture),
+    26→// collectDepthAmp (collectDepth with the amplitude parameterized), trivialSwitchProbe (the
+    27→// warm-state continuation readout) — identity to the carried machinery proven in probe7.
+    28→'use strict';
+    29→import fs from 'node:fs';
+    30→import path from 'node:path';
+    31→import crypto from 'node:crypto';
+    32→import { createRequire } from 'node:module';
+    33→const require = createRequire(import.meta.url);
+    34→const { GRID, xorshift32 } = require('./core/world2.js');
+    35→const { World } = require('./core/world.js');
+    36→const { World2 } = require('./core/world2.js');
+    37→const { CELLS, LAT } = require('./core/jepa.js');
+    38→const { Jepa3 } = require('./core/jepa3.js');
+    39→const { Jepa4 } = require('./core/jepa4.js');
+    40→const { Mesh } = require('./core/mesh.js');
+    41→
+    42→const HERE = path.dirname(new URL(import.meta.url).pathname);
+    43→const RECEIPTS = path.join(HERE, 'receipts');
+    44→fs.mkdirSync(RECEIPTS, { recursive: true });
+    45→
+    46→const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
+    47→const GENESIS = 'JEPA-GENESIS-1';
+    48→class Chain {
+    49→  constructor() { this.rows = []; this.prev = GENESIS; }
+    50→  add(type, payload) {
+    51→    const id = `${type}#${this.rows.length}`;
+    52→    const body = JSON.stringify({ i: this.rows.length, id, type, payload });
+    53→    const h = sha(`${this.prev}:${body}:${id}`);
+    54→    this.rows.push({ i: this.rows.length, id, type, payload, prev: this.prev, sha: h });
+    55→    this.prev = h;
+    56→    return h;
+    57→  }
+    58→  tip() { return this.prev; }
+    59→}
+    60→function mean(a) { return a.reduce((x, y) => x + y, 0) / a.length; }
+    61→const LR3 = 0.3;      // registered lr (carried)
+    62→const TAU4 = 0.99998; // registered round-4 tau (carried)
+    63→const K4 = 1.5e-6;    // registered pace-law constant (carried)
+    64→const LADDER = [0.0, 0.1, 0.2, 0.3, 0.45, 0.6, 0.75, 0.9, 1.2];
+    65→const XPACES = [0.15, 0.5]; // 0.3 is the anchor, carried in R2v4/R3v4
+    66→const T_HORIZON = 500000;
+    67→const HORIZON_CKPTS = [400, 1000, 5000, 10000, 20000, 30000];
+    68→const CONTRAST_CAP = 100000;
+    69→const ANOMALY_TICKS = [430, 465, 500];
+    70→const AMP0 = 0.9; // registered anchor amplitude
+    71→// round-6 registered constants
+    72→const WD_MAIN = 3e-4;  // registered longevity main dose
+    73→const RLONG_CKPTS = [400, 1000, 5000, 10000, 20000, 30000, 40000, 50000, 75000, 100000, 150000, 200000, 300000, 400000, 500000];
+    74→const DEPTHS6 = [400, 1200, 2000, 2200]; // 2200 = the round-5 finding site (wStart 2201)
+    75→// round-7 registered constants
+    76→const WD_ARMS7 = [1.5e-4, 2e-4, 2.5e-4]; // new dose-response arms (stop rule 'contrast', cap 1e5)
+    77→const PLAST_MAIN_CAPTURE = [20000, 100000, 500000]; // main-arm weight-snapshot steps
+    78→const PLAST_STEPS = 400; // continuation window (the switch readout)
+    79→const PLAST_PROBE_VALUE_DISCLOSED = 0.6644108562180416; // design7 I1 pipeline value (disclosed in registration-v7)
+    80→
+    81→// ---------- fail-closed seal verification ----------
+    82→const REG = path.join(HERE, 'registration-v7.json');
+    83→const raw = fs.readFileSync(REG, 'utf8');
+    84→const reg = JSON.parse(raw);
+    85→const storedMasked = reg.registration.seal.self_sha256_masked;
+    86→const storedMtime = reg.registration.seal.mtime_local_ms;
+    87→const maskedBody = raw.replace(`"self_sha256_masked": "${storedMasked}"`, `"self_sha256_masked": "${'0'.repeat(64)}"`);
+    88→const recomputed = sha(maskedBody);
+    89→const st = fs.statSync(REG);
+    90→if (recomputed !== storedMasked) {
+    91→  console.error('SEAL VERIFICATION FAILED: masked sha mismatch — run REFUSED (fail-closed). stored=' + storedMasked.slice(0, 12) + ' recomputed=' + recomputed.slice(0, 12));
+    92→  process.exit(2);
+    93→}
+    94→if (st.mtimeMs !== storedMtime) {
+    95→  console.error('SEAL VERIFICATION FAILED: mtime ' + st.mtimeMs + ' != sealed ' + storedMtime + ' — run REFUSED (fail-closed).');
+    96→  process.exit(2);
+    97→}
+    98→console.log('seal verified: masked sha ' + storedMasked.slice(0, 12) + '… mtime ' + storedMtime);
+    99→
+   100→// pre-seal probe receipts (loaded once; used for the probe-identity verdict rules)
+   101→const design5 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'design5.json'), 'utf8'));
+   102→const design6 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'design6.json'), 'utf8'));
+   103→const design7 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'design7.json'), 'utf8'));
+   104→
+   105→// ---------- shared helpers (carried blocks verbatim from run4.mjs; new blocks verbatim
+   106→// from probe5.mjs — arithmetic identity proven by the probe's 13/13 pipeline check) ----------
+   107→function perCellSurprise(zPred, zTgt) {
+   108→  const out = new Float32Array(CELLS);
+   109→  for (let c = 0; c < CELLS; c++) {
+   110→    let s = 0;
+   111→    for (let k = 0; k < LAT; k++) { const d = zPred[c * LAT + k] - zTgt[c * LAT + k]; s += d * d; }
+   112→    out[c] = s;
+   113→  }
+   114→  return out;
+   115→}
+   116→function concentrated(perCell, k) { return mean(Array.from(perCell).sort((a, b) => b - a).slice(0, k)); }
+   117→function cellFeatures(o, c) {
+   118→  const x = c % GRID, y = (c / GRID) | 0;
+   119→  const l = o[c];
+   120→  const r = o[y * GRID + Math.min(GRID - 1, x + 1)] - l;
+   121→  const d = o[Math.min(GRID - 1, y + 1) * GRID + x] - l;
+   122→  return [l, r, d, l - 0.5];
+   123→}
+   124→function solve4(A, B) { // Gauss-Jordan 4x4: A M = B
+   125→  const n = 4;
+   126→  const Aug = A.map((row, i) => [...row, ...B[i]]);
+   127→  for (let col = 0; col < n; col++) {
+   128→    let piv = col;
+   129→    for (let r = col + 1; r < n; r++) if (Math.abs(Aug[r][col]) > Math.abs(Aug[piv][col])) piv = r;
+   130→    [Aug[col], Aug[piv]] = [Aug[piv], Aug[col]];
+   131→    const p = Aug[col][col];
+   132→    for (let j = 0; j < 2 * n; j++) Aug[col][j] /= p;
+   133→    for (let r = 0; r < n; r++) {
+   134→      if (r === col) continue;
+   135→      const f = Aug[r][col];
+   136→      if (f !== 0) for (let j = 0; j < 2 * n; j++) Aug[r][j] -= f * Aug[col][j];
+   137→    }
+   138→  }
+   139→  return Aug.map((row) => row.slice(n));
+   140→}
+   141→function linearFloor(WorldCls, jepaSeed, windowTicks) {
+   142→  const world = new WorldCls(jepaSeed);
+   143→  const jepa = new Jepa3(jepaSeed);
+   144→  const xs = [], ys = [];
+   145→  let obs = world.observe();
+   146→  for (let t = 0; t < windowTicks; t++) {
+   147→    world.step();
+   148→    const o1 = world.observe();
+   149→    const zCtx = jepa.encode(obs);
+   150→    for (let c = 0; c < CELLS; c++) {
+   151→      const f1 = cellFeatures(o1, c);
+   152→      const zt = new Float32Array(LAT);
+   153→      for (let k = 0; k < LAT; k++) { let z = 0; for (let j = 0; j < LAT; j++) z += jepa.Wt[c * LAT * LAT + k * LAT + j] * f1[j]; zt[k] = z; }
+   154→      xs.push(Float32Array.from(zCtx.subarray(c * LAT, c * LAT + LAT)));
+   155→      ys.push(zt);
+   156→    }
+   157→    obs = o1;
+   158→  }
+   159→  const WpInit = Float32Array.from(jepa.Wp);
+   160→  let initS = 0;
+   161→  for (let i = 0; i < xs.length; i++) {
+   162→    const cell = i % CELLS;
+   163→    for (let k = 0; k < LAT; k++) {
+   164→      let z = 0;
+   165→      for (let j = 0; j < LAT; j++) z += WpInit[cell * LAT * LAT + k * LAT + j] * xs[i][j];
+   166→      const dv = z - ys[i][k];
+   167→      initS += dv * dv;
+   168→    }
+   169→  }
+   170→  const initLoss = initS / xs.length / LAT;
+   171→  let floorS = 0;
+   172→  for (let c = 0; c < CELLS; c++) {
+   173→    const A = Array.from({ length: LAT }, () => new Float64Array(LAT));
+   174→    const B = Array.from({ length: LAT }, () => new Float64Array(LAT));
+   175→    for (let i = 0; i < xs.length; i++) {
+   176→      if (i % CELLS !== c) continue;
+   177→      const x = xs[i], y = ys[i];
+   178→      for (let a = 0; a < LAT; a++) for (let b = 0; b < LAT; b++) { A[a][b] += x[a] * x[b]; B[a][b] += x[a] * y[b]; }
+   179→    }
+   180→    const M = solve4(A, B);
+   181→    for (let i = 0; i < xs.length; i++) {
+   182→      if (i % CELLS !== c) continue;
+   183→      const x = xs[i], y = ys[i];
+   184→      for (let k = 0; k < LAT; k++) {
+   185→        let z = 0;
+   186→        for (let j = 0; j < LAT; j++) z += M[j][k] * x[j];
+   187→        const dv = z - y[k];
+   188→        floorS += dv * dv;
+   189→      }
+   190→    }
+   191→  }
+   192→  const floorLoss = floorS / xs.length / LAT;
+   193→  return { initLoss, floorLoss, ratio: floorLoss / initLoss };
+   194→}
+   195→// parameterized R3v4 normalizer study — for (S, [430,465,500], 401) ARITHMETICALLY IDENTICAL
+   196→// to run4.mjs's fixed-window version (proven: probe5 13/13 pipeline identity)
+   197→function normalizerStudy(S, AT, wStart) {
+   198→  const idx = (t) => t - wStart;
+   199→  const isAnom = (t) => AT.includes(t) || AT.includes(t + 1);
+   200→  const B124 = []; for (let t = wStart; t <= wStart + 129; t++) if (!isAnom(t)) B124.push(t);
+   201→  const sampleTicks = []; for (const t of B124) { if (sampleTicks.length < 30) sampleTicks.push(t); }
+   202→  const mu = new Float64Array(CELLS), sd = new Float64Array(CELLS), med = new Float64Array(CELLS), mad = new Float64Array(CELLS);
+   203→  const sortedCols = Array.from({ length: CELLS }, () => []);
+   204→  for (const t of B124) for (let c = 0; c < CELLS; c++) sortedCols[c].push(S[idx(t)][c]);
+   205→  for (let c = 0; c < CELLS; c++) {
+   206→    const v = sortedCols[c];
+   207→    mu[c] = mean(v);
+   208→    let s2 = 0; for (const x of v) s2 += (x - mu[c]) * (x - mu[c]);
+   209→    sd[c] = Math.sqrt(s2 / v.length);
+   210→    const sv = [...v].sort((a, b) => a - b);
+   211→    const m0 = sv.length % 2 ? sv[(sv.length - 1) / 2] : (sv[sv.length / 2 - 1] + sv[sv.length / 2]) / 2;
+   212→    med[c] = m0;
+   213→    const av = v.map((x) => Math.abs(x - m0)).sort((a, b) => a - b);
+   214→    mad[c] = av.length % 2 ? av[(av.length - 1) / 2] : (av[av.length / 2 - 1] + av[av.length / 2]) / 2;
+   215→  }
+   216→  const Z = S.map((row) => row.map((x, c) => (sd[c] > 0 ? (x - mu[c]) / sd[c] : 0)));
+   217→  const MD = S.map((row) => row.map((x, c) => (mad[c] > 0 ? (x - med[c]) / mad[c] : 0)));
+   218→  const U = S.map((row) => row.map((x, c) => {
+   219→    const v = sortedCols[c];
+   220→    let lo = 0; for (const b of v) if (b <= x) lo++;
+   221→    return lo / v.length;
+   222→  }));
+   223→  const statTop = (M, selectBy) => (t) => {
+   224→    const pairs = [];
+   225→    for (let c = 0; c < CELLS; c++) pairs.push([selectBy === 'self' ? M[idx(t)][c] : S[idx(t)][c], c]);
+   226→    pairs.sort((a, b) => b[0] - a[0]);
+   227→    return mean(pairs.slice(0, 4).map(([, c]) => M[idx(t)][c]));
+   228→  };
+   229→  const ratio = (fn) => mean(AT.map(fn)) / mean(sampleTicks.map(fn));
+   230→  const res = {
+   231→    baseline_n: B124.length, sample_n: sampleTicks.length,
+   232→    v0_raw_ratio: ratio(statTop(S, 'self')),
+   233→    v1_z_ratio: ratio(statTop(Z, 'self')),
+   234→    v2_rank_ratio_selfsel: ratio(statTop(U, 'self')),
+   235→    v2b_rank_ratio_rawsel: ratio(statTop(U, 'raw')),
+   236→    v3_mad_ratio: ratio(statTop(MD, 'self')),
+   237→    anomaly_vs_sample: {}
+   238→  };
+   239→  for (const [name, M] of [['raw', S], ['z', Z], ['rank', U], ['mad', MD]]) {
+   240→    const fn = statTop(M, 'self');
+   241→    res.anomaly_vs_sample[name] = {
+   242→      anomaly_mean: mean(AT.map(fn)),
+   243→      sample_mean: mean(sampleTicks.map(fn))
+   244→    };
+   245→  }
+   246→  const fnUR = statTop(U, 'raw');
+   247→  res.v4_rank_excess_diff = mean(AT.map(fnUR)) - mean(sampleTicks.map(fnUR));
+   248→  const cntU1 = (t) => { let n = 0; for (let c = 0; c < CELLS; c++) if (U[idx(t)][c] >= 1 - 1e-12) n++; return n; };
+   249→  res.own_max_cells_anomaly_mean = mean(AT.map(cntU1));
+   250→  res.own_max_cells_sample_mean = mean(sampleTicks.map(cntU1));
+   251→  res.own_max_cells_b124_mean = mean(B124.map(cntU1));
+   252→  return res;
+   253→}
+   254→function varRatio(T, T0) {
+   255→  const nT = T.length, D = T[0].length;
+   256→  const v = (rows) => { let s = 0; for (let d = 0; d < D; d++) { let m = 0, m2 = 0; for (let t = 0; t < nT; t++) { m += rows[t][d]; m2 += rows[t][d] * rows[t][d]; } m /= nT; s += m2 / nT - m * m; } return s; };
+   257→  return v(T) / Math.max(1e-30, v(T0));
+   258→}
+   259→// R3v4 eval window exactly as run4 runs it (amp parameterized for the ladder)
+   260→function evalWindowDump(seedU32, lr, tau, trainSteps, wStart, AT, amp) {
+   261→  const world = new World2(seedU32);
+   262→  const jepa = new Jepa3(seedU32);
+   263→  jepa.lr = lr; jepa.tau = tau;
+   264→  const jInit = new Jepa3(seedU32);
+   265→  let obs = world.observe();
+   266→  for (let t = 0; t < trainSteps; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(obs, o1); obs = o1; }
+   267→  const S = []; const T = []; const T0 = [];
+   268→  let obsPrev = obs;
+   269→  for (let t = wStart; t <= wStart + 129; t++) {
+   270→    world.step();
+   271→    const obsNew = world.observe();
+   272→    if (AT.includes(t)) {
+   273→      const px = (world.bx + 8) % (GRID - 2), py = (world.by + 8) % (GRID - 2);
+   274→      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+   275→        obsNew[(py + dy) * GRID + px + dx] = Math.min(1, obsNew[(py + dy) * GRID + px + dx] + amp);
+   276→      }
+   277→    }
+   278→    const zCtx = jepa.encode(obsPrev);
+   279→    const zPred = jepa.predict(zCtx);
+   280→    const zTgt = jepa.encodeTarget(obsNew);
+   281→    const zTgt0 = jInit.encodeTarget(obsNew);
+   282→    S.push(Array.from(perCellSurprise(zPred, zTgt)));
+   283→    T.push(Array.from(zTgt)); T0.push(Array.from(zTgt0));
+   284→    obsPrev = obsNew;
+   285→  }
+   286→  return { study: normalizerStudy(S, AT, wStart), var_ratio: varRatio(T, T0) };
+   287→}
+   288→// R2 drift protocol verbatim (snapshot at 200, drift over 200 further steps)
+   289→function r2protocol(WorldCls, seedU32, lr, tau) {
+   290→  const world = new WorldCls(seedU32);
+   291→  const jepa = new Jepa3(seedU32);
+   292→  jepa.lr = lr; jepa.tau = tau;
+   293→  let ob = world.observe();
+   294→  for (let t = 0; t < 200; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(ob, o1); ob = o1; }
+   295→  const snap200 = Float32Array.from(jepa.Wt);
+   296→  const snapWc = Float32Array.from(jepa.Wc);
+   297→  for (let t = 0; t < 200; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(ob, o1); ob = o1; }
+   298→  let drift = 0, wcDisp = 0, wtNorm2 = 0, wcNorm2 = 0;
+   299→  for (let i = 0; i < snap200.length; i++) {
+   300→    const dW = jepa.Wt[i] - snap200[i], dC = jepa.Wc[i] - snapWc[i];
+   301→    drift += dW * dW; wcDisp += dC * dC;
+   302→    wtNorm2 += jepa.Wt[i] * jepa.Wt[i]; wcNorm2 += jepa.Wc[i] * jepa.Wc[i];
+   303→  }
+   304→  return { r2_drift_ratio: Math.sqrt(drift) / Math.sqrt(wtNorm2), wc_disp_200_400_rel: Math.sqrt(wcDisp) / Math.sqrt(wcNorm2) };
+   305→}
+   306→
+   307→// ================= ROUND 6 helpers (verbatim from probe6.mjs; bit-exact identity vs design6
+   308→// enforced by the R4 cross-check list) =================
+   309→// FLEX study: identical arithmetic to normalizerStudy above, parameterized window length wLen;
+   310→// optional EXTRA preceding baseline ticks (preRows) merged into the mu/sd/med/mad basis WITHOUT
+   311→// changing the scoring rows, the anomaly rule, or the first-30 sample rule.
+   312→function normalizerStudyFlex(S, AT, wStart, wLen, preRows) {
+   313→  const idx = (t) => t - wStart;
+   314→  const isAnom = (t) => AT.includes(t) || AT.includes(t + 1);
+   315→  const B = []; for (let t = wStart; t <= wStart + wLen - 1; t++) if (!isAnom(t)) B.push(t);
+   316→  const sampleTicks = []; for (const t of B) { if (sampleTicks.length < 30) sampleTicks.push(t); }
+   317→  const mu = new Float64Array(CELLS), sd = new Float64Array(CELLS), med = new Float64Array(CELLS), mad = new Float64Array(CELLS);
+   318→  const sortedCols = Array.from({ length: CELLS }, () => []);
+   319→  for (const t of B) for (let c = 0; c < CELLS; c++) sortedCols[c].push(S[idx(t)][c]);
+   320→  const pre = preRows || [];
+   321→  for (const row of pre) for (let c = 0; c < CELLS; c++) sortedCols[c].push(row[c]);
+   322→  let sdSum = 0;
+   323→  for (let c = 0; c < CELLS; c++) {
+   324→    const v = sortedCols[c];
+   325→    mu[c] = mean(v);
+   326→    let s2 = 0; for (const x of v) s2 += (x - mu[c]) * (x - mu[c]);
+   327→    sd[c] = Math.sqrt(s2 / v.length);
+   328→    sdSum += sd[c];
+   329→    const sv = [...v].sort((a, b) => a - b);
+   330→    const m0 = sv.length % 2 ? sv[(sv.length - 1) / 2] : (sv[sv.length / 2 - 1] + sv[sv.length / 2]) / 2;
+   331→    med[c] = m0;
+   332→    const av = v.map((x) => Math.abs(x - m0)).sort((a, b) => a - b);
+   333→    mad[c] = av.length % 2 ? av[(av.length - 1) / 2] : (av[av.length / 2 - 1] + av[av.length / 2]) / 2;
+   334→  }
+   335→  const Z = S.map((row) => row.map((x, c) => (sd[c] > 0 ? (x - mu[c]) / sd[c] : 0)));
+   336→  const MD = S.map((row) => row.map((x, c) => (mad[c] > 0 ? (x - med[c]) / mad[c] : 0)));
+   337→  const U = S.map((row) => row.map((x, c) => {
+   338→    const v = sortedCols[c];
+   339→    let lo = 0; for (const b of v) if (b <= x) lo++;
+   340→    return lo / v.length;
+   341→  }));
+   342→  const statTop = (M, selectBy) => (t) => {
+   343→    const pairs = [];
+   344→    for (let c = 0; c < CELLS; c++) pairs.push([selectBy === 'self' ? M[idx(t)][c] : S[idx(t)][c], c]);
+   345→    pairs.sort((a, b) => b[0] - a[0]);
+   346→    return mean(pairs.slice(0, 4).map(([, c]) => M[idx(t)][c]));
+   347→  };
+   348→  const ratio = (fn) => mean(AT.map(fn)) / mean(sampleTicks.map(fn));
+   349→  const res = {
+   350→    baseline_n: B.length, pre_baseline_n: pre.length, sample_n: sampleTicks.length, sd_sum: sdSum,
+   351→    v0_raw_ratio: ratio(statTop(S, 'self')),
+   352→    v1_z_ratio: ratio(statTop(Z, 'self')),
+   353→    v2_rank_ratio_selfsel: ratio(statTop(U, 'self')),
+   354→    v2b_rank_ratio_rawsel: ratio(statTop(U, 'raw')),
+   355→    v3_mad_ratio: ratio(statTop(MD, 'self')),
+   356→    anomaly_vs_sample: {}
+   357→  };
+   358→  for (const [name, M] of [['raw', S], ['z', Z], ['rank', U], ['mad', MD]]) {
+   359→    const fn = statTop(M, 'self');
+   360→    res.anomaly_vs_sample[name] = { anomaly_mean: mean(AT.map(fn)), sample_mean: mean(sampleTicks.map(fn)) };
+   361→  }
+   362→  const fnUR = statTop(U, 'raw');
+   363→  res.v4_rank_excess_diff = mean(AT.map(fnUR)) - mean(sampleTicks.map(fnUR));
+   364→  const cntU1 = (t) => { let n = 0; for (let c = 0; c < CELLS; c++) if (U[idx(t)][c] >= 1 - 1e-12) n++; return n; };
+   365→  res.own_max_cells_anomaly_mean = mean(AT.map(cntU1));
+   366→  res.own_max_cells_sample_mean = mean(sampleTicks.map(cntU1));
+   367→  res.own_max_cells_baseline_mean = mean(B.map(cntU1));
+   368→  return res;
+   369→}
+   370→// R3D trajectory collector: train `depth` steps, then collect surprise rows from
+   371→// [depth + 1 - preTicks, depth + wLen] with amp-0.9 injections at wStart+atOffsets.
+   372→function collectDepth(seedU32, depth, wLen, atOffsets, preTicks) {
+   373→  const world = new World2(seedU32);
+   374→  const jepa = new Jepa3(seedU32);
+   375→  jepa.lr = LR3; jepa.tau = TAU4;
+   376→  const jInit = new Jepa3(seedU32);
+   377→  let obs = world.observe();
+   378→  for (let t = 0; t < depth; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(obs, o1); obs = o1; }
+   379→  const wStart = depth + 1;
+   380→  const AT = atOffsets.map((o) => wStart + o);
+   381→  const S = []; const Spre = []; const T = []; const T0 = [];
+   382→  const tFrom = wStart - preTicks;
+   383→  let obsPrev = obs;
+   384→  for (let t = tFrom; t <= wStart + wLen - 1; t++) {
+   385→    world.step();
+   386→    const obsNew = world.observe();
+   387→    if (AT.includes(t)) {
+   388→      const px = (world.bx + 8) % (GRID - 2), py = (world.by + 8) % (GRID - 2);
+   389→      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+   390→        obsNew[(py + dy) * GRID + px + dx] = Math.min(1, obsNew[(py + dy) * GRID + px + dx] + AMP0);
+   391→      }
+   392→    }
+   393→    const zCtx = jepa.encode(obsPrev);
+   394→    const zPred = jepa.predict(zCtx);
+   395→    const zTgt = jepa.encodeTarget(obsNew);
+   396→    const zTgt0 = jInit.encodeTarget(obsNew);
+   397→    const pc = Array.from(perCellSurprise(zPred, zTgt));
+   398→    if (t < wStart) Spre.push(pc); else S.push(pc);
+   399→    if (t >= wStart) { T.push(Array.from(zTgt)); T0.push(Array.from(zTgt0)); }
+   400→    obsPrev = obsNew;
+   401→  }
+   402→  return { S, Spre, T, T0, AT, wStart };
+   403→}
+   404→// RLONG: horizon with Jepa4 (wd parameter); run5 horizonRun body + wp_norm in checkpoints.
+   405→// With wd=0 this must reproduce design5/run5 bit-exactly (receipted in design6 identity iv).
+   406→function horizonRun4(WorldCls, seedU32, lr, tau, wd, T, stopRule, ckpts) {
+   407→  const world = new WorldCls(seedU32);
+   408→  const jepa = new Jepa4(seedU32, wd);
+   409→  jepa.lr = lr; jepa.tau = tau;
+   410→  const wt0 = Float32Array.from(jepa.Wt);
+   411→  const wc0 = Float32Array.from(jepa.Wc);
+   412→  const losses = [];
+   413→  const checkpoints = {};
+   414→  for (const k of ckpts) checkpoints[String(k)] = null;
+   415→  const ringWt = []; const ringWc = []; const ringWp = [];
+   416→  let D = -1, executedTo = 0;
+   417→  let allNanStep = -1, weightsAbsorbing = true, lossFiniteAgain = 0;
+   418→  let obs = world.observe();
+   419→  const limit = stopRule === 'registered' ? T : Math.min(T, CONTRAST_CAP);
+   420→  const postDWindow = stopRule === 'registered' ? 2000 : 0;
+   421→  const weightState = () => {
+   422→    let anyFin = false;
+   423→    for (const W of [jepa.Wc, jepa.Wp, jepa.Wt]) {
+   424→      for (let i = 0; i < W.length; i++) { if (Number.isFinite(W[i])) { anyFin = true; break; } }
+   425→      if (anyFin) break;
+   426→    }
+   427→    return { anyFin };
+   428→  };
+   429→  for (let t = 1; t <= limit; t++) {
+   430→    world.step();
+   431→    const o1 = world.observe();
+   432→    const L = jepa.trainStep(obs, o1);
+   433→    obs = o1;
+   434→    losses.push(L);
+   435→    executedTo = t;
+   436→    if (Number.isFinite(L)) {
+   437→      if (D > 0) lossFiniteAgain++;
+   438→      else {
+   439→        ringWt.push(Float32Array.from(jepa.Wt)); ringWc.push(Float32Array.from(jepa.Wc)); ringWp.push(Float32Array.from(jepa.Wp));
+   440→        if (ringWt.length > 201) { ringWt.shift(); ringWc.shift(); ringWp.shift(); }
+   441→        if (ckpts.includes(t)) {
+   442→          checkpoints[String(t)] = {
+   443→            wt_move_rel: relDisp(jepa.Wt, wt0), wc_move_rel: relDisp(jepa.Wc, wc0),
+   444→            wt_norm: norm64(jepa.Wt), wc_norm: norm64(jepa.Wc), wp_norm: norm64(jepa.Wp),
+   445→            loss_mean_500: mean(losses.slice(Math.max(0, t - 500), t))
+   446→          };
+   447→        }
+   448→      }
+   449→    } else if (D < 0) {
+   450→      D = t;
+   451→      if (stopRule !== 'registered') break;
+   452→    }
+   453→    if (D > 0 && t > D && t <= D + postDWindow) {
+   454→      const ws = weightState();
+   455→      if (!ws.anyFin) { if (allNanStep < 0) allNanStep = t; }
+   456→      else if (allNanStep > 0) weightsAbsorbing = false;
+   457→      if (t >= D + postDWindow) break;
+   458→    }
+   459→  }
+   460→  const finOrNull = (x) => (Number.isFinite(x) ? x : null);
+   461→  const finite = losses.filter(Number.isFinite);
+   462→  const out = {
+   463→    lr, tau, wd, world: WorldCls === World ? 'trivial' : 'world2',
+   464→    T_registered: T, stop_rule: stopRule, cap: stopRule === 'registered' ? null : CONTRAST_CAP,
+   465→    executed_to: executedTo,
+   466→    D: D > 0 ? D : null, diverged: D > 0,
+   467→    D_mod80: D > 0 ? D % 80 : null,
+   468→    all_weights_nan_step: D > 0 ? (allNanStep > 0 ? allNanStep : null) : null,
+   469→    weights_all_nan_at_end: D > 0 ? !weightState().anyFin : null,
+   470→    weights_nan_absorbing: D > 0 ? (allNanStep > 0 && weightsAbsorbing) : null,
+   471→    loss_finite_again_count: D > 0 ? lossFiniteAgain : null,
+   472→    first10: mean(losses.slice(0, 10)),
+   473→    last_finite10_tail: finite.length >= 10 ? mean(finite.slice(-10)) : null,
+   474→    loss_ratio_finite_tail: finite.length >= 10 ? mean(finite.slice(-10)) / mean(losses.slice(0, 10)) : null,
+   475→    loss_ratio_at_20000: finite.length >= 20000 ? mean(finite.slice(19990, 20000)) / mean(losses.slice(0, 10)) : null,
+   476→    checkpoints,
+   477→    drift_last200: null, wc_norm_at_last_finite: null, wp_norm_at_last_finite: null,
+   478→    blowup_rate_last200: null
+   479→  };
+   480→  if (D > 201 && ringWt.length === 201) {
+   481→    const a = ringWt[0], b = ringWt[200];
+   482→    let drift = 0, n2 = 0;
+   483→    for (let i = 0; i < a.length; i++) { const d = b[i] - a[i]; drift += d * d; n2 += b[i] * b[i]; }
+   484→    out.drift_last200 = finOrNull(Math.sqrt(drift) / Math.sqrt(n2));
+   485→    const wa = ringWc[0], wb = ringWc[200];
+   486→    out.blowup_rate_last200 = finOrNull(Math.log(norm64(wb) / norm64(wa)) / 200);
+   487→    out.wc_norm_at_last_finite = finOrNull(norm64(ringWc[200]));
+   488→    out.wp_norm_at_last_finite = finOrNull(norm64(ringWp[200]));
+   489→  }
+   490→  return out;
+   491→}
+   492→// G gate with arbitrary window length and optional decay (Jepa4)
+   493→function gGateFlex(seedU32, lr, tau, wd, steps) {
+   494→  const world = new World(seedU32);
+   495→  const jepa = new Jepa4(seedU32, wd);
+   496→  jepa.lr = lr; jepa.tau = tau;
+   497→  const losses = [];
+   498→  let obs = world.observe();
+   499→  for (let t = 0; t < steps; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+   500→  return { g_ratio: mean(losses.slice(-10)) / mean(losses.slice(0, 10)), g_first10: mean(losses.slice(0, 10)), g_last10: mean(losses.slice(-10)) };
+   501→}
+   502→// R1 protocol with optional decay
+   503→function r1Flex(seedU32, lr, tau, wd, steps) {
+   504→  const world = new World2(seedU32);
+   505→  const jepa = new Jepa4(seedU32, wd);
+   506→  jepa.lr = lr; jepa.tau = tau;
+   507→  const wt0 = Float32Array.from(jepa.Wt);
+   508→  const losses = [];
+   509→  let obs = world.observe();
+   510→  for (let t = 0; t < steps; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+   511→  let wtMove = 0, wtN = 0;
+   512→  for (let i = 0; i < jepa.Wt.length; i++) { const d = jepa.Wt[i] - wt0[i]; wtMove += d * d; wtN += jepa.Wt[i] * jepa.Wt[i]; }
+   513→  return { r1_ratio: mean(losses.slice(-10)) / mean(losses.slice(0, 10)), r1_first10: mean(losses.slice(0, 10)), r1_last10: mean(losses.slice(-10)), wt_total_move_rel: Math.sqrt(wtMove) / Math.sqrt(wtN) };
+   514→}
+   515→// R2 protocol with optional decay
+   516→function r2Flex(seedU32, lr, tau, wd) {
+   517→  const world = new World2(seedU32);
+   518→  const jepa = new Jepa4(seedU32, wd);
+   519→  jepa.lr = lr; jepa.tau = tau;
+   520→  let ob = world.observe();
+   521→  for (let t = 0; t < 200; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(ob, o1); ob = o1; }
+   522→  const snap200 = Float32Array.from(jepa.Wt);
+   523→  for (let t = 0; t < 200; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(ob, o1); ob = o1; }
+   524→  let drift = 0, wtNorm2 = 0;
+   525→  for (let i = 0; i < snap200.length; i++) { const dW = jepa.Wt[i] - snap200[i]; drift += dW * dW; wtNorm2 += jepa.Wt[i] * jepa.Wt[i]; }
+   526→  return { r2_drift_ratio: Math.sqrt(drift) / Math.sqrt(wtNorm2) };
+   527→}
+   528→// trivial-world G (100 steps) verbatim
+   529→function gGate(seedU32, lr, tau) {
+   530→  const world = new World(seedU32);
+   531→  const jepa = new Jepa3(seedU32);
+   532→  jepa.lr = lr; jepa.tau = tau;
+   533→  const losses = [];
+   534→  let obs = world.observe();
+   535→  for (let t = 0; t < 100; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+   536→  return { g_ratio: mean(losses.slice(-10)) / mean(losses.slice(0, 10)), g_first10: mean(losses.slice(0, 10)), g_last10: mean(losses.slice(-10)) };
+   537→}
+   538→// hard-world R1 (400 steps) + plasticity receipt verbatim
+   539→function r1protocol(seedU32, lr, tau) {
+   540→  const world = new World2(seedU32);
+   541→  const jepa = new Jepa3(seedU32);
+   542→  jepa.lr = lr; jepa.tau = tau;
+   543→  const wt0 = Float32Array.from(jepa.Wt);
+   544→  const losses = [];
+   545→  let obs = world.observe();
+   546→  for (let t = 0; t < 400; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+   547→  let wtMove = 0, wtN = 0;
+   548→  for (let i = 0; i < jepa.Wt.length; i++) { const d = jepa.Wt[i] - wt0[i]; wtMove += d * d; wtN += jepa.Wt[i] * jepa.Wt[i]; }
+   549→  return { r1_ratio: mean(losses.slice(-10)) / mean(losses.slice(0, 10)), r1_first10: mean(losses.slice(0, 10)),
+   550→           r1_last10: mean(losses.slice(-10)), wt_total_move_rel_400: Math.sqrt(wtMove) / Math.sqrt(wtN) };
+   551→}
+   552→const norm64 = (W) => { let s = 0; for (let i = 0; i < W.length; i++) s += W[i] * W[i]; return Math.sqrt(s); };
+   553→const relDisp = (W, W0) => { let d = 0, n = 0; for (let i = 0; i < W.length; i++) { const dd = W[i] - W0[i]; d += dd * dd; n += W[i] * W[i]; } return Math.sqrt(d) / Math.sqrt(n); };
+   554→
+   555→// RHOR: horizon trajectory with pre-registered stop rule min(T, D+2000)
+   556→function horizonRun(WorldCls, seedU32, lr, tau, T, stopRule, ckpts) {
+   557→  const world = new WorldCls(seedU32);
+   558→  const jepa = new Jepa3(seedU32);
+   559→  jepa.lr = lr; jepa.tau = tau;
+   560→  const wt0 = Float32Array.from(jepa.Wt);
+   561→  const wc0 = Float32Array.from(jepa.Wc);
+   562→  const losses = [];
+   563→  const checkpoints = {};
+   564→  for (const k of ckpts) checkpoints[String(k)] = null;
+   565→  const ringWt = []; const ringWc = [];
+   566→  let D = -1, executedTo = 0;
+   567→  let allNanStep = -1, weightsAbsorbing = true, lossFiniteAgain = 0;
+   568→  let obs = world.observe();
+   569→  const limit = stopRule === 'registered' ? T : Math.min(T, CONTRAST_CAP);
+   570→  const postDWindow = stopRule === 'registered' ? 2000 : 0;
+   571→  const weightState = () => {
+   572→    let anyFin = false;
+   573→    for (const W of [jepa.Wc, jepa.Wp, jepa.Wt]) {
+   574→      for (let i = 0; i < W.length; i++) {
+   575→        if (Number.isFinite(W[i])) { anyFin = true; break; }
+   576→      }
+   577→      if (anyFin) break;
+   578→    }
+   579→    return { anyFin };
+   580→  };
+   581→  for (let t = 1; t <= limit; t++) {
+   582→    world.step();
+   583→    const o1 = world.observe();
+   584→    const L = jepa.trainStep(obs, o1);
+   585→    obs = o1;
+   586→    losses.push(L);
+   587→    executedTo = t;
+   588→    if (Number.isFinite(L)) {
+   589→      if (D > 0) lossFiniteAgain++;
+   590→      else {
+   591→        ringWt.push(Float32Array.from(jepa.Wt)); ringWc.push(Float32Array.from(jepa.Wc));
+   592→        if (ringWt.length > 201) { ringWt.shift(); ringWc.shift(); }
+   593→        if (ckpts.includes(t)) {
+   594→          checkpoints[String(t)] = {
+   595→            wt_move_rel: relDisp(jepa.Wt, wt0), wc_move_rel: relDisp(jepa.Wc, wc0),
+   596→            wt_norm: norm64(jepa.Wt), wc_norm: norm64(jepa.Wc),
+   597→            loss_mean_500: mean(losses.slice(Math.max(0, t - 500), t))
+   598→          };
+   599→        }
+   600→      }
+   601→    } else if (D < 0) {
+   602→      D = t;
+   603→      if (stopRule !== 'registered') break;
+   604→    }
+   605→    if (D > 0 && t > D && t <= D + postDWindow) {
+   606→      const ws = weightState();
+   607→      if (!ws.anyFin) { if (allNanStep < 0) allNanStep = t; }
+   608→      else if (allNanStep > 0) weightsAbsorbing = false;
+   609→      if (t >= D + postDWindow) break;
+   610→    }
+   611→  }
+   612→  const finOrNull = (x) => (Number.isFinite(x) ? x : null);
+   613→  const finite = losses.filter(Number.isFinite);
+   614→  const out = {
+   615→    lr, tau, world: WorldCls === World ? 'trivial' : 'world2',
+   616→    T_registered: T, stop_rule: stopRule, cap: stopRule === 'registered' ? null : CONTRAST_CAP,
+   617→    executed_to: executedTo,
+   618→    D: D > 0 ? D : null, diverged: D > 0,
+   619→    D_mod80: D > 0 ? D % 80 : null,
+   620→    all_weights_nan_step: D > 0 ? (allNanStep > 0 ? allNanStep : null) : null,
+   621→    weights_all_nan_at_end: D > 0 ? !weightState().anyFin : null,
+   622→    weights_nan_absorbing: D > 0 ? (allNanStep > 0 && weightsAbsorbing) : null,
+   623→    loss_finite_again_count: D > 0 ? lossFiniteAgain : null,
+   624→    first10: mean(losses.slice(0, 10)),
+   625→    last_finite10_tail: finite.length >= 10 ? mean(finite.slice(-10)) : null,
+   626→    loss_ratio_finite_tail: finite.length >= 10 ? mean(finite.slice(-10)) / mean(losses.slice(0, 10)) : null,
+   627→    loss_ratio_at_20000: finite.length >= 20000 ? mean(finite.slice(19990, 20000)) / mean(losses.slice(0, 10)) : null,
+   628→    checkpoints,
+   629→    drift_at_depth_2000: null, wc_disp_at_depth_2000: null,
+   630→    var_ratio_after_depth_2000: null, z_ratio_after_depth_2000: null,
+   631→    drift_last200: null, wc_norm_at_last_finite: null,
+   632→    blowup_rate_last200: null
+   633→  };
+   634→  if (D > 201 && ringWt.length === 201) {
+   635→    const a = ringWt[0], b = ringWt[200];
+   636→    let drift = 0, n2 = 0;
+   637→    for (let i = 0; i < a.length; i++) { const d = b[i] - a[i]; drift += d * d; n2 += b[i] * b[i]; }
+   638→    out.drift_last200 = finOrNull(Math.sqrt(drift) / Math.sqrt(n2));
+   639→    const wa = ringWc[0], wb = ringWc[200];
+   640→    out.blowup_rate_last200 = finOrNull(Math.log(norm64(wb) / norm64(wa)) / 200);
+   641→    out.wc_norm_at_last_finite = finOrNull(norm64(ringWc[200]));
+   642→  }
+   643→  return { out, state: { world, jepa, obs, D, losses } };
+   644→}
+   645→// RHOR: FIXED depth-2000 scoring window from a fresh deterministic replay of the first 2200 steps
+   646→function depth2000Window(seedU32, lr, tau) {
+   647→  const world = new World2(seedU32);
+   648→  const jepa = new Jepa3(seedU32);
+   649→  jepa.lr = lr; jepa.tau = tau;
+   650→  const jInit = new Jepa3(seedU32);
+   651→  let obs = world.observe();
+   652→  for (let t = 0; t < 2000; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(obs, o1); obs = o1; }
+   653→  const snap = Float32Array.from(jepa.Wt);
+   654→  const snapWc = Float32Array.from(jepa.Wc);
+   655→  for (let t = 0; t < 200; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(obs, o1); obs = o1; }
+   656→  let drift = 0, wcDisp = 0, wtN2 = 0, wcN2 = 0;
+   657→  for (let i = 0; i < snap.length; i++) {
+   658→    const dW = jepa.Wt[i] - snap[i], dC = jepa.Wc[i] - snapWc[i];
+   659→    drift += dW * dW; wcDisp += dC * dC;
+   660→    wtN2 += jepa.Wt[i] * jepa.Wt[i]; wcN2 += jepa.Wc[i] * jepa.Wc[i];
+   661→  }
+   662→  const wStart = 2201; const AT = [wStart + 29, wStart + 64, wStart + 99];
+   663→  const S = []; const T = []; const T0 = [];
+   664→  let obsPrev = obs;
+   665→  for (let t = wStart; t <= wStart + 129; t++) {
+   666→    world.step();
+   667→    const obsNew = world.observe();
+   668→    if (AT.includes(t)) {
+   669→      const px = (world.bx + 8) % (GRID - 2), py = (world.by + 8) % (GRID - 2);
+   670→      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+   671→        obsNew[(py + dy) * GRID + px + dx] = Math.min(1, obsNew[(py + dy) * GRID + px + dx] + 0.9);
+   672→      }
+   673→    }
+   674→    const zCtx = jepa.encode(obsPrev);
+   675→    const zPred = jepa.predict(zCtx);
+   676→    const zTgt = jepa.encodeTarget(obsNew);
+   677→    const zTgt0 = jInit.encodeTarget(obsNew);
+   678→    S.push(Array.from(perCellSurprise(zPred, zTgt)));
+   679→    T.push(Array.from(zTgt)); T0.push(Array.from(zTgt0));
+   680→    obsPrev = obsNew;
+   681→  }
+   682→  return {
+   683→    drift_at_depth_2000: Math.sqrt(drift) / Math.sqrt(wtN2),
+   684→    wc_disp_at_depth_2000: Math.sqrt(wcDisp) / Math.sqrt(wcN2),
+   685→    var_ratio_after_depth_2000: varRatio(T, T0),
+   686→    z_ratio_after_depth_2000: normalizerStudy(S, AT, wStart).v1_z_ratio
+   687→  };
+   688→}
+   689→
+   690→// ---------- the deterministic core (executed twice for R4) ----------
+   691→function coreRun5(seedU32) {
+   692→  const out = {};
+   693→
+   694→  // ---- G: L1 learning-sanity gate on the TRIVIAL world (100 steps) at registered tau ----
+   695→  {
+   696→    const world = new World(seedU32);
+   697→    const jepa = new Jepa3(seedU32);
+   698→    jepa.lr = LR3; jepa.tau = TAU4;
+   699→    const losses = [];
+   700→    let obs = world.observe();
+   701→    for (let t = 0; t < 100; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+   702→    out.g_first10 = mean(losses.slice(0, 10));
+   703→    out.g_last10 = mean(losses.slice(-10));
+   704→    out.g_ratio = out.g_last10 / out.g_first10;
+   705→  }
+   706→
+   707→  // ---- L2: difficulty meter ordering (2000-tick windows, frozen init; tau-independent) ----
+   708→  {
+   709→    const triv = linearFloor(World, seedU32, 2000);
+   710→    const hard = linearFloor(World2, seedU32, 2000);
+   711→    out.l2_floor_trivial = triv.floorLoss;
+   712→    out.l2_floor_hard = hard.floorLoss;
+   713→    out.l2_ratio_trivial = triv.ratio;
+   714→    out.l2_ratio_hard = hard.ratio;
+   715→    out.l2_init_trivial = triv.initLoss;
+   716→    out.l2_init_hard = hard.initLoss;
+   717→  }
+   718→
+   719→  // ---- R1: hard world, real learning (400 steps) + plasticity receipt ----
+   720→  {
+   721→    const world = new World2(seedU32);
+   722→    const jepa = new Jepa3(seedU32);
+   723→    jepa.lr = LR3; jepa.tau = TAU4;
+   724→    const wt0 = Float32Array.from(jepa.Wt);
+   725→    const losses = [];
+   726→    let obs = world.observe();
+   727→    for (let t = 0; t < 400; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+   728→    out.r1_first10 = mean(losses.slice(0, 10));
+   729→    out.r1_last10 = mean(losses.slice(-10));
+   730→    out.r1_ratio = out.r1_last10 / out.r1_first10;
+   731→    let wtMove = 0, wtN = 0;
+   732→    for (let i = 0; i < jepa.Wt.length; i++) { const d = jepa.Wt[i] - wt0[i]; wtMove += d * d; wtN += jepa.Wt[i] * jepa.Wt[i]; }
+   733→    out.r2v4_wt_total_move_rel_400 = Math.sqrt(wtMove) / Math.sqrt(wtN);
+   734→  }
+   735→
+   736→  // ---- R2v4: EMA stationarity at the registered tau (snapshot 200, 200 steps, world2) ----
+   737→  {
+   738→    const world = new World2(seedU32);
+   739→    const jepa = new Jepa3(seedU32);
+   740→    jepa.lr = LR3; jepa.tau = TAU4;
+   741→    let ob = world.observe();
+   742→    for (let t = 0; t < 200; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(ob, o1); ob = o1; }
+   743→    const snap200 = Float32Array.from(jepa.Wt);
+   744→    const snapWc = Float32Array.from(jepa.Wc);
+   745→    for (let t = 0; t < 200; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(ob, o1); ob = o1; }
+   746→    let drift = 0, wcDisp = 0, wtNorm2 = 0, wcNorm2 = 0;
+   747→    for (let i = 0; i < snap200.length; i++) {
+   748→      const dW = jepa.Wt[i] - snap200[i], dC = jepa.Wc[i] - snapWc[i];
+   749→      drift += dW * dW; wcDisp += dC * dC;
+   750→      wtNorm2 += jepa.Wt[i] * jepa.Wt[i]; wcNorm2 += jepa.Wc[i] * jepa.Wc[i];
+   751→    }
+   752→    out.r2_drift_ratio = Math.sqrt(drift) / Math.sqrt(wtNorm2);
+   753→    out.r2v4_wc_disp_200_400_rel = Math.sqrt(wcDisp) / Math.sqrt(wcNorm2);
+   754→  }
+   755→
+   756→  // ---- R3v4 (carried): percentile-normalized concentration at the registered anchor ----
+   757→  {
+   758→    const win = evalWindowDump(seedU32, LR3, TAU4, 400, 401, ANOMALY_TICKS, AMP0);
+   759→    out.r3v4 = win.study;
+   760→    out.r3v4_var_ratio = win.var_ratio;
+   761→    out._lastPerCell = null; // R5 uses the tick-530 per-cell row; recompute it on the SAME trajectory below
+   762→    // R5 + R6v4 need the full run4-style trajectory (train 400 + window WITH per-tick rows and
+   763→    // the probe-loss pipeline). evalWindowDump above is arithmetic-identical for the study, but
+   764→    // R5/R6 need state — rebuild the exact run4 R3 block here (verbatim arithmetic).
+   765→    const world = new World2(seedU32);
+   766→    const jepa = new Jepa3(seedU32);
+   767→    jepa.lr = LR3; jepa.tau = TAU4;
+   768→    const jInit = new Jepa3(seedU32);
+   769→    let obs = world.observe();
+   770→    for (let t = 0; t < 400; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(obs, o1); obs = o1; }
+   771→    let obsPrev = obs;
+   772→    let lastPC = null;
+   773→    for (let t = 401; t <= 530; t++) {
+   774→      world.step();
+   775→      const obsNew = world.observe();
+   776→      if (ANOMALY_TICKS.includes(t)) {
+   777→        const px = (world.bx + 8) % (GRID - 2), py = (world.by + 8) % (GRID - 2);
+   778→        for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+   779→          obsNew[(py + dy) * GRID + px + dx] = Math.min(1, obsNew[(py + dy) * GRID + px + dx] + AMP0);
+   780→        }
+   781→      }
+   782→      const zCtx = jepa.encode(obsPrev);
+   783→      const zPred = jepa.predict(zCtx);
+   784→      const zTgt = jepa.encodeTarget(obsNew);
+   785→      if (t === 530) lastPC = perCellSurprise(zPred, zTgt);
+   786→      obsPrev = obsNew;
+   787→    }
+   788→    out._lastPerCell = lastPC;
+   789→    out._state = { world, jepa, jInit, obsPrev };
+   790→
+   791→    // ---- R6v4 (carried): corrected frozen-state invariant, probe window 531-560 ----
+   792→    const probePairs = [];
+   793→    for (let t = 0; t < 30; t++) {
+   794→      world.step();
+   795→      const o1 = world.observe();
+   796→      probePairs.push([obsPrev, o1]);
+   797→      obsPrev = o1;
+   798→    }
+   799→    const probeLoss = (je) => mean(probePairs.map(([a, b]) => {
+   800→      const zc = je.encode(a), zp = je.predict(zc), zt = je.encodeTarget(b);
+   801→      return je.loss(zp, zt);
+   802→    }));
+   803→    const impact = new Float32Array(CELLS);
+   804→    for (const [a, b] of probePairs) {
+   805→      const zc = jepa.encode(a), zp = jepa.predict(zc), zt = jepa.encodeTarget(b);
+   806→      const pc = perCellSurprise(zp, zt);
+   807→      for (let c = 0; c < CELLS; c++) impact[c] += pc[c];
+   808→    }
+   809→    for (let c = 0; c < CELLS; c++) impact[c] /= probePairs.length;
+   810→    const ranked = Array.from(impact.keys()).sort((x, y) => (impact[y] - impact[x]) || (x - y));
+   811→    const top26 = ranked.slice(0, 26);
+   812→    const corrs = [];
+   813→    for (const c of top26) {
+   814→      const ps = [], ts = [];
+   815→      for (const [a, b] of probePairs) {
+   816→        const zc = jepa.encode(a), zp = jepa.predict(zc), zt = jepa.encodeTarget(b);
+   817→        for (let k = 0; k < LAT; k++) { ps.push(zp[c * LAT + k]); ts.push(zt[c * LAT + k]); }
+   818→      }
+   819→      const mp = mean(ps), mt = mean(ts);
+   820→      let sp = 0, st2 = 0, sp1 = 0;
+   821→      for (let i = 0; i < ps.length; i++) { const dp = ps[i] - mp, dt = ts[i] - mt; sp += dp * dp; st2 += dt * dt; sp1 += dp * dt; }
+   822→      corrs.push(sp1 / Math.sqrt(sp * st2));
+   823→    }
+   824→    out.r6_corr_mean = mean(corrs);
+   825→    out.r6_corr_min = Math.min(...corrs);
+   826→    out.r6_loss_pre = probeLoss(jepa);
+   827→    let flipped = 0;
+   828→    for (const c of top26) {
+   829→      for (let i = 0; i < LAT * LAT; i++) { jepa.Wc[c * LAT * LAT + i] = -jepa.Wc[c * LAT * LAT + i]; flipped++; }
+   830→    }
+   831→    out.r6_flipped = flipped;
+   832→    out.r6_loss_corrupted = probeLoss(jepa);
+   833→    out.r6_jump = out.r6_loss_corrupted / out.r6_loss_pre;
+   834→    const stateShaAtCorruption = sha(Buffer.concat([Buffer.from(jepa.Wc.buffer, jepa.Wc.byteOffset, jepa.Wc.byteLength),
+   835→                                                    Buffer.from(jepa.Wp.buffer, jepa.Wp.byteOffset, jepa.Wp.byteLength),
+   836→                                                    Buffer.from(jepa.Wt.buffer, jepa.Wt.byteOffset, jepa.Wt.byteLength)]));
+   837→    for (let t = 0; t < 50; t++) { world.step(); obsPrev = world.observe(); }
+   838→    const stateShaAfterIdle = sha(Buffer.concat([Buffer.from(jepa.Wc.buffer, jepa.Wc.byteOffset, jepa.Wc.byteLength),
+   839→                                                 Buffer.from(jepa.Wp.buffer, jepa.Wp.byteOffset, jepa.Wp.byteLength),
+   840→                                                 Buffer.from(jepa.Wt.buffer, jepa.Wt.byteOffset, jepa.Wt.byteLength)]));
+   841→    out.r6_sha_invariant = stateShaAfterIdle === stateShaAtCorruption;
+   842→    out.r6_probe_recheck = probeLoss(jepa);
+   843→    out.r6_recheck_delta = Math.abs(out.r6_probe_recheck - out.r6_loss_corrupted);
+   844→    out.r6_top26 = top26;
+   845→
+   846→    // ---- R5 (carried): mesh conservation on world2 energy ----
+   847→    const mesh = new Mesh(GRID);
+   848→    const energy = new Float32Array(GRID * GRID);
+   849→    for (let i = 0; i < GRID * GRID; i++) energy[i] = lastPC[i];
+   850→    mesh.loadFrom(obsPrev, energy);
+   851→    const t0 = mesh.totals();
+   852→    let varianceNonIncreasing = true, firstViolating = -1, prevVar = t0.variance;
+   853→    for (let s = 0; s < 100; s++) {
+   854→      mesh.step();
+   855→      const tt = mesh.totals();
+   856→      if (tt.variance > prevVar + 1e-12) { varianceNonIncreasing = false; if (firstViolating < 0) firstViolating = s; }
+   857→      prevVar = tt.variance;
+   858→    }
+   859→    const t100 = mesh.totals();
+   860→    out.r5_total_drift_rel = Math.abs(t100.total - t0.total) / Math.max(1e-12, Math.abs(t0.total));
+   861→    out.r5_variance_non_increasing = varianceNonIncreasing;
+   862→    out.r5_first_violating = firstViolating;
+   863→  }
+   864→
+   865→  // ---- R3L (NEW): anomaly-strength ladder at the otherwise-fixed operating point ----
+   866→  {
+   867→    out.r3l = {};
+   868→    for (const amp of LADDER) {
+   869→      const { study, var_ratio } = evalWindowDump(seedU32, LR3, TAU4, 400, 401, ANOMALY_TICKS, amp);
+   870→      out.r3l[String(amp)] = { z: study.v1_z_ratio, raw: study.v0_raw_ratio, mad: study.v3_mad_ratio, var: var_ratio };
+   871→    }
+   872→    out.r3l_sat_bit_exact = out.r3l['1.2'].z === out.r3l['0.9'].z
+   873→      && out.r3l['1.2'].raw === out.r3l['0.9'].raw
+   874→      && out.r3l['1.2'].mad === out.r3l['0.9'].mad;
+   875→  }
+   876→
+   877→  // ---- R2x (NEW): K4 cross-pace validation at lr in {0.15, 0.5} ----
+   878→  {
+   879→    out.r2x = {};
+   880→    for (const lr of XPACES) {
+   881→      const tau = 1 - K4 * LAT / lr;
+   882→      const g = gGate(seedU32, lr, tau);
+   883→      const r1p = r1protocol(seedU32, lr, tau);
+   884→      const r2p = r2protocol(World2, seedU32, lr, tau);
+   885→      const win = evalWindowDump(seedU32, lr, tau, 400, 401, ANOMALY_TICKS, AMP0);
+   886→      out.r2x[String(lr)] = {
+   887→        tau, pace: lr / LAT,
+   888→        g_ratio: g.g_ratio, g_first10: g.g_first10, g_last10: g.g_last10,
+   889→        r1_ratio: r1p.r1_ratio, r1_first10: r1p.r1_first10, r1_last10: r1p.r1_last10,
+   890→        wt_total_move_rel_400: r1p.wt_total_move_rel_400,
+   891→        r2_drift_ratio: r2p.r2_drift_ratio, wc_disp_200_400_rel: r2p.wc_disp_200_400_rel,
+   892→        z_ratio_at_registered_amp: win.study.v1_z_ratio,
+   893→        var_ratio: win.var_ratio
+   894→      };
+   895→    }
+   896→  }
+   897→
+   898→  // ---- RHOR (NEW): finite-horizon divergence at the registered operating point ----
+   899→  {
+   900→    const mainRun = horizonRun(World2, seedU32, LR3, TAU4, T_HORIZON, 'registered', HORIZON_CKPTS);
+   901→    out.rhor = mainRun.out;
+   902→    out.rhor.slow_inflation_rate = Math.log(out.rhor.checkpoints['20000'].wc_norm / out.rhor.checkpoints['400'].wc_norm) / (20000 - 400);
+   903→    out.rhor.rate_ratio_runaway_over_slow = out.rhor.blowup_rate_last200 / out.rhor.slow_inflation_rate;
+   904→    const d2000 = depth2000Window(seedU32, LR3, TAU4);
+   905→    Object.assign(out.rhor, d2000);
+   906→    out.rhor.contrasts = {};
+   907→    for (const [name, WorldCls, lr, tau] of [
+   908→      ['tau0.999_lr0.3', World2, 0.3, 0.999],
+   909→      ['lr0.15_tau_law', World2, 0.15, 1 - K4 * LAT / 0.15],
+   910→      ['lr0.5_tau_law', World2, 0.5, 1 - K4 * LAT / 0.5],
+   911→      ['trivial_lr0.3', World, 0.3, TAU4]
+   912→    ]) {
+   913→      const r = horizonRun(WorldCls, seedU32, lr, tau, T_HORIZON, 'contrast', HORIZON_CKPTS);
+   914→      out.rhor.contrasts[name] = r.out;
+   915→      r.out.slow_inflation_rate = r.out.checkpoints['20000'] ? Math.log(r.out.checkpoints['20000'].wc_norm / (r.out.checkpoints['400'] ? r.out.checkpoints['400'].wc_norm : 9.27)) / 19600 : null;
+   916→    }
+   917→  }
+   918→
+   919→  const metrics = {
+   920→    // carried (must equal run4.json bit-exactly)
+   921→    g_ratio: out.g_ratio, g_last10: out.g_last10,
+   922→    l2_floor_trivial: out.l2_floor_trivial, l2_floor_hard: out.l2_floor_hard,
+   923→    l2_ratio_trivial: out.l2_ratio_trivial, l2_ratio_hard: out.l2_ratio_hard,
+   924→    r1_ratio: out.r1_ratio, r1_first10: out.r1_first10, r1_last10: out.r1_last10,
+   925→    r2_drift_ratio: out.r2_drift_ratio,
+   926→    r2v4_wc_disp_200_400_rel: out.r2v4_wc_disp_200_400_rel,
+   927→    r2v4_wt_total_move_rel_400: out.r2v4_wt_total_move_rel_400,
+   928→    r2v4_var_ratio: out.r3v4_var_ratio,
+   929→    r3v4_z_ratio: out.r3v4.v1_z_ratio,
+   930→    r3v4_z_anomaly_mean: out.r3v4.anomaly_vs_sample.z.anomaly_mean,
+   931→    r3v4_z_sample_mean: out.r3v4.anomaly_vs_sample.z.sample_mean,
+   932→    r3v4_raw_ratio: out.r3v4.v0_raw_ratio,
+   933→    r3v4_mad_ratio: out.r3v4.v3_mad_ratio,
+   934→    r3v4_rank_ratio_selfsel: out.r3v4.v2_rank_ratio_selfsel,
+   935→    r3v4_rank_ratio_rawsel: out.r3v4.v2b_rank_ratio_rawsel,
+   936→    r3v4_own_max_anomaly: out.r3v4.own_max_cells_anomaly_mean,
+   937→    r3v4_own_max_sample: out.r3v4.own_max_cells_sample_mean,
+   938→    r3v4_rank_excess_diff: out.r3v4.v4_rank_excess_diff,
+   939→    r6_corr_mean: out.r6_corr_mean, r6_jump: out.r6_jump, r6_sha_invariant: out.r6_sha_invariant,
+   940→    r6_recheck_delta: out.r6_recheck_delta,
+   941→    r5_total_drift_rel: out.r5_total_drift_rel, r5_variance_non_increasing: out.r5_variance_non_increasing,
+   942→    // R3L (new)
+   943→    r3l_z_0: out.r3l['0'].z, r3l_z_0_1: out.r3l['0.1'].z, r3l_z_0_2: out.r3l['0.2'].z,
+   944→    r3l_z_0_3: out.r3l['0.3'].z, r3l_z_0_45: out.r3l['0.45'].z, r3l_z_0_6: out.r3l['0.6'].z,
+   945→    r3l_z_0_75: out.r3l['0.75'].z, r3l_z_0_9: out.r3l['0.9'].z, r3l_z_1_2: out.r3l['1.2'].z,
+   946→    r3l_raw_0_9: out.r3l['0.9'].raw, r3l_raw_1_2: out.r3l['1.2'].raw,
+   947→    r3l_mad_0_9: out.r3l['0.9'].mad, r3l_mad_1_2: out.r3l['1.2'].mad,
+   948→    r3l_sat_bit_exact: out.r3l_sat_bit_exact,
+   949→    // R2x (new)
+   950→    r2x_0_15_tau: out.r2x['0.15'].tau, r2x_0_15_drift: out.r2x['0.15'].r2_drift_ratio,
+   951→    r2x_0_15_g: out.r2x['0.15'].g_ratio, r2x_0_15_r1: out.r2x['0.15'].r1_ratio,
+   952→    r2x_0_15_z: out.r2x['0.15'].z_ratio_at_registered_amp, r2x_0_15_var: out.r2x['0.15'].var_ratio,
+   953→    r2x_0_15_wcdisp: out.r2x['0.15'].wc_disp_200_400_rel, r2x_0_15_wtmove: out.r2x['0.15'].wt_total_move_rel_400,
+   954→    r2x_0_5_tau: out.r2x['0.5'].tau, r2x_0_5_drift: out.r2x['0.5'].r2_drift_ratio,
+   955→    r2x_0_5_g: out.r2x['0.5'].g_ratio, r2x_0_5_r1: out.r2x['0.5'].r1_ratio,
+   956→    r2x_0_5_z: out.r2x['0.5'].z_ratio_at_registered_amp, r2x_0_5_var: out.r2x['0.5'].var_ratio,
+   957→    r2x_0_5_wcdisp: out.r2x['0.5'].wc_disp_200_400_rel, r2x_0_5_wtmove: out.r2x['0.5'].wt_total_move_rel_400,
+   958→    // RHOR (new)
+   959→    rhor_D: out.rhor.D, rhor_executed_to: out.rhor.executed_to, rhor_D_mod80: out.rhor.D_mod80,
+   960→    rhor_loss_finite_again: out.rhor.loss_finite_again_count,
+   961→    rhor_all_nan_step: out.rhor.all_weights_nan_step, rhor_nan_absorbing: out.rhor.weights_nan_absorbing,
+   962→    rhor_weights_all_nan_at_end: out.rhor.weights_all_nan_at_end,
+   963→    rhor_slow_rate: out.rhor.slow_inflation_rate, rhor_runaway_rate: out.rhor.blowup_rate_last200,
+   964→    rhor_rate_ratio: out.rhor.rate_ratio_runaway_over_slow,
+   965→    rhor_wc_norm_last: out.rhor.wc_norm_at_last_finite, rhor_drift_last200: out.rhor.drift_last200,
+   966→    rhor_first10: out.rhor.first10,
+   967→    rhor_ckpt_400_wt: out.rhor.checkpoints['400'].wt_move_rel, rhor_ckpt_400_wcnorm: out.rhor.checkpoints['400'].wc_norm,
+   968→    rhor_ckpt_400_loss500: out.rhor.checkpoints['400'].loss_mean_500,
+   969→    rhor_ckpt_1000_loss500: out.rhor.checkpoints['1000'].loss_mean_500,
+   970→    rhor_ckpt_5000_wcnorm: out.rhor.checkpoints['5000'].wc_norm, rhor_ckpt_5000_loss500: out.rhor.checkpoints['5000'].loss_mean_500,
+   971→    rhor_ckpt_10000_wcnorm: out.rhor.checkpoints['10000'].wc_norm,
+   972→    rhor_ckpt_20000_wcnorm: out.rhor.checkpoints['20000'].wc_norm, rhor_ckpt_20000_loss500: out.rhor.checkpoints['20000'].loss_mean_500,
+   973→    rhor_ckpt_30000_wcnorm: out.rhor.checkpoints['30000'].wc_norm,
+   974→    rhor_depth2000_drift: out.rhor.drift_at_depth_2000, rhor_depth2000_var: out.rhor.var_ratio_after_depth_2000,
+   975→    rhor_depth2000_z: out.rhor.z_ratio_after_depth_2000, rhor_depth2000_wcdisp: out.rhor.wc_disp_at_depth_2000,
+   976→    rhor_c_tau999_D: out.rhor.contrasts['tau0.999_lr0.3'].D,
+   977→    rhor_c_lr015_D: out.rhor.contrasts['lr0.15_tau_law'].D,
+   978→    rhor_c_lr05_D: out.rhor.contrasts['lr0.5_tau_law'].D,
+   979→    rhor_c_trivial_D: out.rhor.contrasts['trivial_lr0.3'].D,
+   980→    rhor_c_lr015_slow: out.rhor.contrasts['lr0.15_tau_law'].slow_inflation_rate,
+   981→    rhor_c_trivial_slow: out.rhor.contrasts['trivial_lr0.3'].slow_inflation_rate
+   982→  };
+   983→  out.metricsSha = sha(JSON.stringify(metrics));
+   984→  out.metrics = metrics;
+   985→  return out;
+   986→}
+   987→
+   988→// ---------- ROUND 6 core (the three registered claims, executed at the UNCHANGED operating
+   989→// point; arithmetic verbatim from probe6.mjs so every new metric must equal design6 bit-exactly) ----------
+   990→// ================= ROUND 7 machinery (validated by probe7 identities I1/I2/I3) =============
+   991→// horizonRun5: horizonRun4 + WEIGHT-SNAPSHOT capture at the captureAt steps (only while the
+   992→// loss is still finite, D < 0). captureAt = [] must reproduce horizonRun4 bit-exactly (I2).
+   993→function horizonRun5(WorldCls, seedU32, lr, tau, wd, T, stopRule, ckpts, captureAt) {
+   994→  const world = new WorldCls(seedU32);
+   995→  const jepa = new Jepa4(seedU32, wd);
+   996→  jepa.lr = lr; jepa.tau = tau;
+   997→  const wt0 = Float32Array.from(jepa.Wt);
+   998→  const wc0 = Float32Array.from(jepa.Wc);
+   999→  const losses = [];
+  1000→  const checkpoints = {};
+  1001→  for (const k of ckpts) checkpoints[String(k)] = null;
+  1002→  const captureSet = new Set(captureAt);
+  1003→  const snapshots = {};
+  1004→  const ringWt = []; const ringWc = []; const ringWp = [];
+  1005→  let D = -1, executedTo = 0;
+  1006→  let allNanStep = -1, weightsAbsorbing = true, lossFiniteAgain = 0;
+  1007→  let obs = world.observe();
+  1008→  const limit = stopRule === 'registered' ? T : Math.min(T, CONTRAST_CAP);
+  1009→  const postDWindow = stopRule === 'registered' ? 2000 : 0;
+  1010→  const weightState = () => {
+  1011→    let anyFin = false;
+  1012→    for (const W of [jepa.Wc, jepa.Wp, jepa.Wt]) {
+  1013→      for (let i = 0; i < W.length; i++) { if (Number.isFinite(W[i])) { anyFin = true; break; } }
+  1014→      if (anyFin) break;
+  1015→    }
+  1016→    return { anyFin };
+  1017→  };
+  1018→  for (let t = 1; t <= limit; t++) {
+  1019→    world.step();
+  1020→    const o1 = world.observe();
+  1021→    const L = jepa.trainStep(obs, o1);
+  1022→    obs = o1;
+  1023→    losses.push(L);
+  1024→    executedTo = t;
+  1025→    if (Number.isFinite(L)) {
+  1026→      if (D > 0) lossFiniteAgain++;
+  1027→      else {
+  1028→        ringWt.push(Float32Array.from(jepa.Wt)); ringWc.push(Float32Array.from(jepa.Wc)); ringWp.push(Float32Array.from(jepa.Wp));
+  1029→        if (ringWt.length > 201) { ringWt.shift(); ringWc.shift(); ringWp.shift(); }
+  1030→        if (ckpts.includes(t)) {
+  1031→          checkpoints[String(t)] = {
+  1032→            wt_move_rel: relDisp(jepa.Wt, wt0), wc_move_rel: relDisp(jepa.Wc, wc0),
+  1033→            wt_norm: norm64(jepa.Wt), wc_norm: norm64(jepa.Wc), wp_norm: norm64(jepa.Wp),
+  1034→            loss_mean_500: mean(losses.slice(Math.max(0, t - 500), t))
+  1035→          };
+  1036→        }
+  1037→        if (captureSet.has(t)) {
+  1038→          snapshots[String(t)] = { Wc: Float32Array.from(jepa.Wc), Wp: Float32Array.from(jepa.Wp), Wt: Float32Array.from(jepa.Wt) };
+  1039→        }
+  1040→      }
+  1041→    } else if (D < 0) {
+  1042→      D = t;
+  1043→      if (stopRule !== 'registered') break;
+  1044→    }
+  1045→    if (D > 0 && t > D && t <= D + postDWindow) {
+  1046→      const ws = weightState();
+  1047→      if (!ws.anyFin) { if (allNanStep < 0) allNanStep = t; }
+  1048→      else if (allNanStep > 0) weightsAbsorbing = false;
+  1049→      if (t >= D + postDWindow) break;
+  1050→    }
+  1051→  }
+  1052→  const finOrNull = (x) => (Number.isFinite(x) ? x : null);
+  1053→  const finite = losses.filter(Number.isFinite);
+  1054→  const out = {
+  1055→    lr, tau, wd, world: WorldCls === World ? 'trivial' : 'world2',
+  1056→    T_registered: T, stop_rule: stopRule, cap: stopRule === 'registered' ? null : CONTRAST_CAP,
+  1057→    executed_to: executedTo,
+  1058→    D: D > 0 ? D : null, diverged: D > 0,
+  1059→    D_mod80: D > 0 ? D % 80 : null,
+  1060→    all_weights_nan_step: D > 0 ? (allNanStep > 0 ? allNanStep : null) : null,
+  1061→    weights_all_nan_at_end: D > 0 ? !weightState().anyFin : null,
+  1062→    weights_nan_absorbing: D > 0 ? (allNanStep > 0 && weightsAbsorbing) : null,
+  1063→    loss_finite_again_count: D > 0 ? lossFiniteAgain : null,
+  1064→    first10: mean(losses.slice(0, 10)),
+  1065→    last_finite10_tail: finite.length >= 10 ? mean(finite.slice(-10)) : null,
+  1066→    loss_ratio_finite_tail: finite.length >= 10 ? mean(finite.slice(-10)) / mean(losses.slice(0, 10)) : null,
+  1067→    loss_ratio_at_20000: finite.length >= 20000 ? mean(finite.slice(19990, 20000)) / mean(losses.slice(0, 10)) : null,
+  1068→    checkpoints,
+  1069→    captured_at: Object.keys(snapshots).map(Number),
+  1070→    snapshots,
+  1071→    drift_last200: null, wc_norm_at_last_finite: null, wp_norm_at_last_finite: null,
+  1072→    blowup_rate_last200: null
+  1073→  };
+  1074→  if (D > 201 && ringWt.length === 201) {
+  1075→    const a = ringWt[0], b = ringWt[200];
+  1076→    let drift = 0, n2 = 0;
+  1077→    for (let i = 0; i < a.length; i++) { const d = b[i] - a[i]; drift += d * d; n2 += b[i] * b[i]; }
+  1078→    out.drift_last200 = finOrNull(Math.sqrt(drift) / Math.sqrt(n2));
+  1079→    const wa = ringWc[0], wb = ringWc[200];
+  1080→    out.blowup_rate_last200 = finOrNull(Math.log(norm64(wb) / norm64(wa)) / 200);
+  1081→    out.wc_norm_at_last_finite = finOrNull(norm64(ringWc[200]));
+  1082→    out.wp_norm_at_last_finite = finOrNull(norm64(ringWp[200]));
+  1083→  }
+  1084→  return out;
+  1085→}
+  1086→// collectDepthAmp: collectDepth with the injection amplitude parameterized (I3: bit-identical
+  1087→// to collectDepth at amp = 0.9).
+  1088→function collectDepthAmp(seedU32, depth, wLen, atOffsets, preTicks, amp) {
+  1089→  const world = new World2(seedU32);
+  1090→  const jepa = new Jepa3(seedU32);
+  1091→  jepa.lr = LR3; jepa.tau = TAU4;
+  1092→  const jInit = new Jepa3(seedU32);
+  1093→  let obs = world.observe();
+  1094→  for (let t = 0; t < depth; t++) { world.step(); const o1 = world.observe(); jepa.trainStep(obs, o1); obs = o1; }
+  1095→  const wStart = depth + 1;
+  1096→  const AT = atOffsets.map((o) => wStart + o);
+  1097→  const S = []; const Spre = []; const T = []; const T0 = [];
+  1098→  const tFrom = wStart - preTicks;
+  1099→  let obsPrev = obs;
+  1100→  for (let t = tFrom; t <= wStart + wLen - 1; t++) {
+  1101→    world.step();
+  1102→    const obsNew = world.observe();
+  1103→    if (AT.includes(t)) {
+  1104→      const px = (world.bx + 8) % (GRID - 2), py = (world.by + 8) % (GRID - 2);
+  1105→      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+  1106→        obsNew[(py + dy) * GRID + px + dx] = Math.min(1, obsNew[(py + dy) * GRID + px + dx] + amp);
+  1107→      }
+  1108→    }
+  1109→    const zCtx = jepa.encode(obsPrev);
+  1110→    const zPred = jepa.predict(zCtx);
+  1111→    const zTgt = jepa.encodeTarget(obsNew);
+  1112→    const zTgt0 = jInit.encodeTarget(obsNew);
+  1113→    const pc = Array.from(perCellSurprise(zPred, zTgt));
+  1114→    if (t < wStart) Spre.push(pc); else S.push(pc);
+  1115→    if (t >= wStart) { T.push(Array.from(zTgt)); T0.push(Array.from(zTgt0)); }
+  1116→    obsPrev = obsNew;
+  1117→  }
+  1118→  return { S, Spre, T, T0, AT, wStart };
+  1119→}
+  1120→// trivialSwitchProbe: the PLAST readout — a 400-step continuation on the TRIVIAL world from a
+  1121→// WARM weight state (fresh World from its own t=0; weights bit-copied from the snapshot).
+  1122→function trivialSwitchProbe(seedU32, lr, tau, wd, snap, steps) {
+  1123→  const world = new World(seedU32);
+  1124→  const jepa = new Jepa4(seedU32, wd);
+  1125→  jepa.lr = lr; jepa.tau = tau;
+  1126→  jepa.Wc.set(snap.Wc); jepa.Wp.set(snap.Wp); jepa.Wt.set(snap.Wt);
+  1127→  const losses = [];
+  1128→  let obs = world.observe();
+  1129→  for (let t = 0; t < steps; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+  1130→  return { ratio: mean(losses.slice(-10)) / mean(losses.slice(0, 10)), first10: mean(losses.slice(0, 10)), last10: mean(losses.slice(-10)) };
+  1131→}
+  1132→
+  1133→function coreRun7(seedU32) {
+  1134→  const out6 = {};
+  1135→
+  1136→  // identity (i) re-verified fail-closed BEFORE scoring: Jepa4(seed, wd=0) == Jepa3(seed) bit-exact
+  1137→  {
+  1138→    const world = new World2(seedU32);
+  1139→    const a = new Jepa3(seedU32); a.lr = LR3; a.tau = TAU4;
+  1140→    const b = new Jepa4(seedU32, 0); b.lr = LR3; b.tau = TAU4;
+  1141→    const la = [], lb = [];
+  1142→    let obs = world.observe();
+  1143→    for (let t = 0; t < 400; t++) { world.step(); const o1 = world.observe(); la.push(a.trainStep(obs, o1)); lb.push(b.trainStep(obs, o1)); obs = o1; }
+  1144→    const buf = (je) => sha(Buffer.concat([Buffer.from(je.Wc.buffer, je.Wc.byteOffset, je.Wc.byteLength),
+  1145→                                           Buffer.from(je.Wp.buffer, je.Wp.byteOffset, je.Wp.byteLength),
+  1146→                                           Buffer.from(je.Wt.buffer, je.Wt.byteOffset, je.Wt.byteLength)]));
+  1147→    let lossesExact = true;
+  1148→    for (let i = 0; i < la.length; i++) if (la[i] !== lb[i]) { lossesExact = false; break; }
+  1149→    out6.identity = { steps: 400, losses_bit_exact: lossesExact, weights_bit_exact: buf(a) === buf(b), weights_sha: buf(a) };
+  1150→  }
+  1151→
+  1152→  // ---- RLONG part A: the four decayed-optimizer arms (probe6 verbatim) ----
+  1153→  const arms = {};
+  1154→  {
+  1155→    const a0 = horizonRun5(World2, seedU32, LR3, TAU4, 0, T_HORIZON, 'contrast', RLONG_CKPTS, [20000]);
+  1156→    console.error('[progress]   rlong arm wd0 done at', Date.now() - T0, 'ms, D=' + a0.D);
+  1157→    arms['wd0_anchor'] = a0;
+  1158→    a0.slow_inflation_rate = Math.log(a0.checkpoints['20000'].wc_norm / a0.checkpoints['400'].wc_norm) / 19600;
+  1159→    const am = horizonRun5(World2, seedU32, LR3, TAU4, WD_MAIN, T_HORIZON, 'registered', RLONG_CKPTS, PLAST_MAIN_CAPTURE);
+  1160→    console.error('[progress]   rlong arm wd3e-4 (5e5 steps) done at', Date.now() - T0, 'ms, D=' + am.D);
+  1161→    arms['wd3e-4_main'] = am;
+  1162→    am.slow_inflation_rate = am.checkpoints['20000'] ? Math.log(am.checkpoints['20000'].wc_norm / am.checkpoints['400'].wc_norm) / 19600 : null;
+  1163→    if (am.checkpoints['100000']) {
+  1164→      am.slow_inflation_rate_100k = Math.log(am.checkpoints['100000'].wc_norm / am.checkpoints['400'].wc_norm) / 99600;
+  1165→    }
+  1166→    am.rate_ratio_runaway_over_slow = (am.blowup_rate_last200 != null && am.slow_inflation_rate != null) ? am.blowup_rate_last200 / am.slow_inflation_rate : null;
+  1167→    const ah = horizonRun5(World2, seedU32, LR3, TAU4, 1e-4, T_HORIZON, 'registered', RLONG_CKPTS, [20000]);
+  1168→    console.error('[progress]   rlong arm wd1e-4 done at', Date.now() - T0, 'ms, D=' + ah.D);
+  1169→    arms['wd1e-4'] = ah;
+  1170→    ah.slow_inflation_rate = ah.checkpoints['20000'] ? Math.log(ah.checkpoints['20000'].wc_norm / ah.checkpoints['400'].wc_norm) / 19600 : null;
+  1171→    ah.rate_ratio_runaway_over_slow = (ah.blowup_rate_last200 != null && ah.slow_inflation_rate != null) ? ah.blowup_rate_last200 / ah.slow_inflation_rate : null;
+  1172→    const ac = horizonRun5(World2, seedU32, LR3, TAU4, 1e-3, T_HORIZON, 'contrast', RLONG_CKPTS, []);
+  1173→    console.error('[progress]   rlong arm wd1e-3 done at', Date.now() - T0, 'ms, D=' + ac.D);
+  1174→    arms['wd0.001'] = ac;
+  1175→    ac.slow_inflation_rate = ac.checkpoints['20000'] ? Math.log(ac.checkpoints['20000'].wc_norm / ac.checkpoints['400'].wc_norm) / 19600 : null;
+  1176→    // learning guards in the decayed arms (plasticity UNRELAXED — registered gates)
+  1177→    arms.guards_wd3e4 = {
+  1178→      g_gate_trivial_100: gGateFlex(seedU32, LR3, TAU4, WD_MAIN, 100),
+  1179→      r1_world2_400: r1Flex(seedU32, LR3, TAU4, WD_MAIN, 400),
+  1180→      r2_drift_200_400: r2Flex(seedU32, LR3, TAU4, WD_MAIN)
+  1181→    };
+  1182→    arms.guards_wd1e4 = {
+  1183→      g_gate_trivial_100: gGateFlex(seedU32, LR3, TAU4, 1e-4, 100),
+  1184→      r1_world2_400: r1Flex(seedU32, LR3, TAU4, 1e-4, 400),
+  1185→      r2_drift_200_400: r2Flex(seedU32, LR3, TAU4, 1e-4)
+  1186→    };
+  1187→    arms.guards_wd0 = {
+  1188→      g_gate_trivial_100: gGateFlex(seedU32, LR3, TAU4, 0, 100),
+  1189→      r1_world2_400: r1Flex(seedU32, LR3, TAU4, 0, 400),
+  1190→      r2_drift_200_400: r2Flex(seedU32, LR3, TAU4, 0)
+  1191→    };
+  1192→  }
+  1193→  out6.arms = arms;
+  1194→  console.error('[progress]   rlong guards done at', Date.now() - T0, 'ms');
+  1195→
+  1196→  // ---- R3D part B: depth/window study (probe6 verbatim) ----
+  1197→  const partB = { depths: {}, mechanism_law: {}, assertions: {}, candS: {} };
+  1198→  {
+  1199→    let carried_z_2200 = null;
+  1200→    for (const depth of DEPTHS6) {
+  1201→      const k = depth / 400;
+  1202→      const wStart = depth + 1;
+  1203→      const AT_depth = [wStart + 29, wStart + 64, wStart + 99];
+  1204→      const carried = evalWindowDump(seedU32, LR3, TAU4, depth, wStart, AT_depth, AMP0);
+  1205→      const carriedFlex = normalizerStudyFlex(collectDepth(seedU32, depth, 130, [29, 64, 99], 0).S, AT_depth, wStart, 130, []);
+  1206→      if (depth === 2200) carried_z_2200 = carried.study.v1_z_ratio;
+  1207→      const offF = [Math.floor(29 * k), Math.floor(64 * k), Math.floor(99 * k)];
+  1208→      const cd = collectDepth(seedU32, depth, 130 * k, offF, 0);
+  1209→      const studyD = normalizerStudyFlex(cd.S, cd.AT, wStart, 130 * k, []);
+  1210→      const varD = varRatio(cd.T, cd.T0);
+  1211→      const offR = [Math.round(29 * k), Math.round(64 * k), Math.round(99 * k)];
+  1212→      let studyDr = null;
+  1213→      if (offR.some((o, i) => o !== offF[i])) {
+  1214→        const cdr = collectDepth(seedU32, depth, 130 * k, offR, 0);
+  1215→        studyDr = normalizerStudyFlex(cdr.S, cdr.AT, wStart, 130 * k, []);
+  1216→      }
+  1217→      const ca = collectDepth(seedU32, depth, 130, [29, 64, 99], 124 * (k - 1));
+  1218→      const studyA = normalizerStudyFlex(ca.S, ca.AT, wStart, 130, ca.Spre);
+  1219→      const varA = varRatio(ca.T, ca.T0);
+  1220→      if (depth === 400) {
+  1221→        partB.assertions.candD_400_bit_exact_vs_carried =
+  1222→          studyD.v1_z_ratio === carried.study.v1_z_ratio &&
+  1223→          studyD.v0_raw_ratio === carried.study.v0_raw_ratio &&
+  1224→          studyD.v3_mad_ratio === carried.study.v3_mad_ratio &&
+  1225→          studyD.baseline_n === carried.study.baseline_n;
+  1226→      }
+  1227→      const zA = carried.study.anomaly_vs_sample.z.anomaly_mean, zS = carried.study.anomaly_vs_sample.z.sample_mean;
+  1228→      const rA = carried.study.anomaly_vs_sample.raw.anomaly_mean, rS = carried.study.anomaly_vs_sample.raw.sample_mean;
+  1229→      partB.depths[String(depth)] = {
+  1230→        k, w_start: wStart, offsets_floor: offF, offsets_round: offR,
+  1231→        carried: { z_ratio: carried.study.v1_z_ratio, sd_sum: carriedFlex.sd_sum, baseline_n: 124,
+  1232→                   z_anom_mean: zA, z_sample_mean: zS, raw_anom_mean: rA, raw_sample_mean: rS,
+  1233→                   raw_gap: rA - rS, var_ratio: carried.var_ratio },
+  1234→        candD: { wlen: 130 * k, at_offsets: offF, z_ratio: studyD.v1_z_ratio,
+  1235→                 sd_sum: studyD.sd_sum, baseline_n: studyD.baseline_n,
+  1236→                 z_anom_mean: studyD.anomaly_vs_sample.z.anomaly_mean, z_sample_mean: studyD.anomaly_vs_sample.z.sample_mean,
+  1237→                 raw_gap: studyD.anomaly_vs_sample.raw.anomaly_mean - studyD.anomaly_vs_sample.raw.sample_mean,
+  1238→                 var_ratio: varD, study: studyD },
+  1239→        candD_round_rule: studyDr ? { at_offsets: offR, z_ratio: studyDr.v1_z_ratio } : null,
+  1240→        candA: { pre_baseline_n: studyA.pre_baseline_n, z_ratio: studyA.v1_z_ratio,
+  1241→                 sd_sum: studyA.sd_sum, baseline_n: studyA.baseline_n,
+  1242→                 z_anom_mean: studyA.anomaly_vs_sample.z.anomaly_mean, z_sample_mean: studyA.anomaly_vs_sample.z.sample_mean,
+  1243→                 raw_gap: studyA.anomaly_vs_sample.raw.anomaly_mean - studyA.anomaly_vs_sample.raw.sample_mean,
+  1244→                 var_ratio: varA, study: studyA }
+  1245→      };
+  1246→    }
+  1247→    const s4 = partB.depths['400'].carried.sd_sum;
+  1248→    for (const depth of DEPTHS6) {
+  1249→      const c = partB.depths[String(depth)].carried;
+  1250→      partB.candS[String(depth)] = { sd_sum: c.sd_sum, multiplier: s4 / c.sd_sum, z_ratio_corrected: c.z_ratio * (s4 / c.sd_sum) };
+  1251→    }
+  1252→    const base = partB.depths['400'].carried;
+  1253→    partB.mechanism_law = { deficit_factor: {}, sd_collapse_factor: {}, raw_gap_collapse_factor: {} };
+  1254→    for (const depth of DEPTHS6) {
+  1255→      const c = partB.depths[String(depth)].carried;
+  1256→      partB.mechanism_law.deficit_factor[String(depth)] = c.z_ratio / base.z_ratio;
+  1257→      partB.mechanism_law.sd_collapse_factor[String(depth)] = c.sd_sum / base.sd_sum;
+  1258→      partB.mechanism_law.raw_gap_collapse_factor[String(depth)] = c.raw_gap / base.raw_gap;
+  1259→    }
+  1260→    partB.carried_z_2200 = carried_z_2200;
+  1261→  }
+  1262→  out6.partB = partB;
+  1263→  console.error('[progress]   r3d depth sweep done at', Date.now() - T0, 'ms');
+  1264→
+  1265→  // ---- GWIN part C: the window law at the two second pace points (probe6 verbatim) ----
+  1266→  const partC = {
+  1267→    law: 'W(lr) = round(30/lr) steps (G window proportional to 1/pace, anchored at lr 0.3 -> 100)',
+  1268→    anchor_lr0_3_w100: gGateFlex(seedU32, LR3, TAU4, 0, 100),
+  1269→    lr0_15_w200: gGateFlex(seedU32, 0.15, 1 - K4 * LAT / 0.15, 0, 200),
+  1270→    lr0_5_w60: gGateFlex(seedU32, 0.5, 1 - K4 * LAT / 0.5, 0, 60),
+  1271→    pace_lock_reference: { lr: 0.15, window: 100, g_ratio: 0.5692660186806099, source: 'registration-v5 P-R2x finding of record' }
+  1272→  };
+  1273→  out6.partC = partC;
+  1274→
+  1275→  const m0 = arms['wd0_anchor'], mm = arms['wd3e-4_main'], m1 = arms['wd1e-4'], m3 = arms['wd0.001'];
+  1276→  const g3 = arms.guards_wd3e4, g1 = arms.guards_wd1e4, g0 = arms.guards_wd0;
+  1277→
+  1278→  // ---- ROUND 7 part D: the three new dose-response arms (RLONG7) ----
+  1279→  const arms7 = {};
+  1280→  for (const wd of WD_ARMS7) {
+  1281→    const key = String(wd);
+  1282→    const arm = horizonRun5(World2, seedU32, LR3, TAU4, wd, T_HORIZON, 'contrast', RLONG_CKPTS, []);
+  1283→    arm.slow_inflation_rate = arm.checkpoints['20000'] ? Math.log(arm.checkpoints['20000'].wc_norm / arm.checkpoints['400'].wc_norm) / 19600 : null;
+  1284→    arm.rate_ratio_runaway_over_slow = (arm.blowup_rate_last200 != null && arm.slow_inflation_rate != null && arm.slow_inflation_rate !== 0) ? arm.blowup_rate_last200 / arm.slow_inflation_rate : null;
+  1285→    arms7[key] = arm;
+  1286→    console.error('[progress]   rlong7 arm wd' + key + ' done at', Date.now() - T0, 'ms, D=' + arm.D);
+  1287→  }
+  1288→  arms7.guards_wd1_5e4 = {
+  1289→    g_gate_trivial_100: gGateFlex(seedU32, LR3, TAU4, 1.5e-4, 100),
+  1290→    r1_world2_400: r1Flex(seedU32, LR3, TAU4, 1.5e-4, 400),
+  1291→    r2_drift_200_400: r2Flex(seedU32, LR3, TAU4, 1.5e-4)
+  1292→  };
+  1293→  out6.arms7 = arms7;
+  1294→  console.error('[progress]   rlong7 dose arms done at', Date.now() - T0, 'ms');
+  1295→
+  1296→  // ---- ROUND 7 part E: PLAST — the plasticity-cost probes (warm-state switch continuations) --
+  1297→  const plast = { steps: PLAST_STEPS, readout: 'trivial-world switch continuation, last10/first10 of the 400-step window' };
+  1298→  plast.main = {};
+  1299→  for (const t of PLAST_MAIN_CAPTURE.map(String)) {
+  1300→    plast.main[t] = trivialSwitchProbe(seedU32, LR3, TAU4, WD_MAIN, mm.snapshots[t], PLAST_STEPS);
+  1301→  }
+  1302→  plast.control_20000 = trivialSwitchProbe(seedU32, LR3, TAU4, 0, m0.snapshots['20000'], PLAST_STEPS);
+  1303→  plast.wd1e4_20000 = trivialSwitchProbe(seedU32, LR3, TAU4, 1e-4, m1.snapshots['20000'], PLAST_STEPS);
+  1304→  plast.rho20 = plast.main['20000'].ratio / plast.control_20000.ratio;
+  1305→  plast.snapshot_wc_norms = {
+  1306→    main_20000: norm64(mm.snapshots['20000'].Wc), main_100000: norm64(mm.snapshots['100000'].Wc), main_500000: norm64(mm.snapshots['500000'].Wc)
+  1307→  };
+  1308→  out6.plast = plast;
+  1309→  console.error('[progress]   plast probes done at', Date.now() - T0, 'ms');
+  1310→
+  1311→  // ---- ROUND 7 part F: R3DxR3L — the plateau extension to depth (amp 1.2 studies) ----------
+  1312→  // amp-0.9 values come from partB above (already bit-bound to design6); part F measures the
+  1313→  // amp-1.2 side and asserts cross-amp bit-equality.
+  1314→  const plateau = { depths: {} };
+  1315→  for (const depth of DEPTHS6) {
+  1316→    const k = depth / 400;
+  1317→    const wStart = depth + 1;
+  1318→    const AT_depth = [wStart + 29, wStart + 64, wStart + 99];
+  1319→    const c12 = evalWindowDump(seedU32, LR3, TAU4, depth, wStart, AT_depth, 1.2);
+  1320→    const f12 = normalizerStudyFlex(collectDepthAmp(seedU32, depth, 130, [29, 64, 99], 0, 1.2).S, AT_depth, wStart, 130, []);
+  1321→    plateau.depths[String(depth)] = {
+  1322→      carried_z_12: c12.study.v1_z_ratio, sd_sum_12: f12.sd_sum, var_12: c12.var_ratio,
+  1323→      raw_gap_12: c12.study.anomaly_vs_sample.raw.anomaly_mean - c12.study.anomaly_vs_sample.raw.sample_mean
+  1324→    };
+  1325→  }
+  1326→  console.error('[progress]   plateau depth studies done at', Date.now() - T0, 'ms');
+  1327→  const s4 = partB.depths['400'].carried.sd_sum; // amp-0.9 anchor sd_sum (design6-bound)
+  1328→  for (const depth of DEPTHS6) {
+  1329→    const d = plateau.depths[String(depth)];
+  1330→    d.carried_z_09 = partB.depths[String(depth)].carried.z_ratio;
+  1331→    d.sd_sum_09 = partB.depths[String(depth)].carried.sd_sum;
+  1332→    d.var_09 = partB.depths[String(depth)].carried.var_ratio;
+  1333→    d.multiplier_12 = s4 / d.sd_sum_12;
+  1334→    d.anchored_12 = d.carried_z_12 * d.multiplier_12;
+  1335→    d.anchored_09 = partB.candS[String(depth)].z_ratio_corrected;
+  1336→    d.multiplier_09 = partB.candS[String(depth)].multiplier;
+  1337→    d.sd_equal = d.sd_sum_12 === d.sd_sum_09;
+  1338→    d.z_equal = d.carried_z_12 === d.carried_z_09;
+  1339→    d.anchored_equal = d.anchored_12 === d.anchored_09;
+  1340→    d.var_equal = d.var_12 === d.var_09;
+  1341→    d.raw_gap_equal = d.raw_gap_12 === partB.depths[String(depth)].carried.raw_gap;
+  1342→  }
+  1343→  out6.plateau = plateau;
+  1344→
+  1345→  // ---- ROUND 7 part G: GWIN7 — the full pace grid -------------------------------------------
+  1346→  const grid7 = {};
+  1347→  for (const [lr, W] of [[0.2, 150], [0.25, 120], [0.4, 75], [0.6, 50]]) {
+  1348→    grid7['lr' + String(lr) + '_w' + W] = gGateFlex(seedU32, lr, 1 - K4 * LAT / lr, 0, W);
+  1349→  }
+  1350→  out6.grid7 = grid7;
+  1351→  console.error('[progress]   gwin7 grid done at', Date.now() - T0, 'ms');
+  1352→
+  1353→  const metrics6 = {
+  1354→    // identity
+  1355→    id_losses_bit_exact: out6.identity.losses_bit_exact, id_weights_bit_exact: out6.identity.weights_bit_exact,
+  1356→    id_weights_sha: out6.identity.weights_sha,
+  1357→    // RLONG — arms
+  1358→    rlong_D_wd0: m0.D, rlong_exec_wd0: m0.executed_to, rlong_slow_wd0: m0.slow_inflation_rate,
+  1359→    rlong_runaway_wd0: m0.blowup_rate_last200, rlong_drift_last200_wd0: m0.drift_last200, rlong_first10_wd0: m0.first10,
+  1360→    rlong_D_main: mm.D, rlong_exec_main: mm.executed_to, rlong_slow_main: mm.slow_inflation_rate,
+  1361→    rlong_slow_main_100k: mm.slow_inflation_rate_100k, rlong_first10_main: mm.first10,
+  1362→    rlong_main_wc_400: mm.checkpoints['400'].wc_norm, rlong_main_wc_20000: mm.checkpoints['20000'].wc_norm,
+  1363→    rlong_main_wc_100000: mm.checkpoints['100000'].wc_norm, rlong_main_wc_500000: mm.checkpoints['500000'].wc_norm,
+  1364→    rlong_main_wp_400: mm.checkpoints['400'].wp_norm, rlong_main_wp_20000: mm.checkpoints['20000'].wp_norm,
+  1365→    rlong_main_wc_last: mm.wc_norm_at_last_finite,
+  1366→    rlong_D_wd1e4: m1.D, rlong_exec_wd1e4: m1.executed_to, rlong_slow_wd1e4: m1.slow_inflation_rate,
+  1367→    rlong_runaway_wd1e4: m1.blowup_rate_last200, rlong_rr_wd1e4: m1.rate_ratio_runaway_over_slow,
+  1368→    rlong_D_wd1e3: m3.D, rlong_exec_wd1e3: m3.executed_to, rlong_slow_wd1e3: m3.slow_inflation_rate,
+  1369→    // RLONG — guards (wd 3e-4 main dose + receipts at 1e-4 and 0)
+  1370→    rlong_g_wd: g3.g_gate_trivial_100.g_ratio, rlong_r1_wd: g3.r1_world2_400.r1_ratio,
+  1371→    rlong_drift_wd: g3.r2_drift_200_400.r2_drift_ratio,
+  1372→    rlong_g_wd1e4: g1.g_gate_trivial_100.g_ratio, rlong_r1_wd1e4: g1.r1_world2_400.r1_ratio,
+  1373→    rlong_drift_wd1e4: g1.r2_drift_200_400.r2_drift_ratio,
+  1374→    rlong_g_wd0: g0.g_gate_trivial_100.g_ratio, rlong_r1_wd0: g0.r1_world2_400.r1_ratio,
+  1375→    rlong_drift_wd0: g0.r2_drift_200_400.r2_drift_ratio,
+  1376→    // R3D — per-depth carried statistic + sd_sum + raw gap
+  1377→    r3d_z_carried_400: partB.depths['400'].carried.z_ratio, r3d_z_carried_1200: partB.depths['1200'].carried.z_ratio,
+  1378→    r3d_z_carried_2000: partB.depths['2000'].carried.z_ratio, r3d_z_carried_2200: partB.depths['2200'].carried.z_ratio,
+  1379→    r3d_sd_sum_400: partB.depths['400'].carried.sd_sum, r3d_sd_sum_1200: partB.depths['1200'].carried.sd_sum,
+  1380→    r3d_sd_sum_2000: partB.depths['2000'].carried.sd_sum, r3d_sd_sum_2200: partB.depths['2200'].carried.sd_sum,
+  1381→    r3d_raw_gap_400: partB.depths['400'].carried.raw_gap, r3d_raw_gap_1200: partB.depths['1200'].carried.raw_gap,
+  1382→    r3d_raw_gap_2000: partB.depths['2000'].carried.raw_gap, r3d_raw_gap_2200: partB.depths['2200'].carried.raw_gap,
+  1383→    r3d_var_carried_400: partB.depths['400'].carried.var_ratio, r3d_var_carried_1200: partB.depths['1200'].carried.var_ratio,
+  1384→    r3d_var_carried_2000: partB.depths['2000'].carried.var_ratio, r3d_var_carried_2200: partB.depths['2200'].carried.var_ratio,
+  1385→    // R3D — candidates + anchored law
+  1386→    r3d_candD_z_400: partB.depths['400'].candD.z_ratio, r3d_candD_z_1200: partB.depths['1200'].candD.z_ratio,
+  1387→    r3d_candD_z_2000: partB.depths['2000'].candD.z_ratio, r3d_candD_z_2200: partB.depths['2200'].candD.z_ratio,
+  1388→    r3d_candD_n_400: partB.depths['400'].candD.baseline_n, r3d_candD_n_1200: partB.depths['1200'].candD.baseline_n,
+  1389→    r3d_candD_n_2000: partB.depths['2000'].candD.baseline_n, r3d_candD_n_2200: partB.depths['2200'].candD.baseline_n,
+  1390→    r3d_candD_var_400: partB.depths['400'].candD.var_ratio, r3d_candD_var_1200: partB.depths['1200'].candD.var_ratio,
+  1391→    r3d_candD_var_2000: partB.depths['2000'].candD.var_ratio, r3d_candD_var_2200: partB.depths['2200'].candD.var_ratio,
+  1392→    r3d_candA_z_400: partB.depths['400'].candA.z_ratio, r3d_candA_z_1200: partB.depths['1200'].candA.z_ratio,
+  1393→    r3d_candA_z_2000: partB.depths['2000'].candA.z_ratio, r3d_candA_z_2200: partB.depths['2200'].candA.z_ratio,
+  1394→    r3d_candA_var_400: partB.depths['400'].candA.var_ratio, r3d_candA_var_1200: partB.depths['1200'].candA.var_ratio,
+  1395→    r3d_candA_var_2000: partB.depths['2000'].candA.var_ratio, r3d_candA_var_2200: partB.depths['2200'].candA.var_ratio,
+  1396→    r3d_candD_round_z_2200: partB.depths['2200'].candD_round_rule ? partB.depths['2200'].candD_round_rule.z_ratio : null,
+  1397→    r3d_assert_candD400_bitexact: partB.assertions.candD_400_bit_exact_vs_carried,
+  1398→    r3d_multiplier_400: partB.candS['400'].multiplier, r3d_multiplier_1200: partB.candS['1200'].multiplier,
+  1399→    r3d_multiplier_2000: partB.candS['2000'].multiplier, r3d_multiplier_2200: partB.candS['2200'].multiplier,
+  1400→    r3d_z_anchored_400: partB.candS['400'].z_ratio_corrected, r3d_z_anchored_1200: partB.candS['1200'].z_ratio_corrected,
+  1401→    r3d_z_anchored_2000: partB.candS['2000'].z_ratio_corrected, r3d_z_anchored_2200: partB.candS['2200'].z_ratio_corrected,
+  1402→    r3d_deficit_400: partB.mechanism_law.deficit_factor['400'], r3d_deficit_1200: partB.mechanism_law.deficit_factor['1200'], r3d_deficit_2000: partB.mechanism_law.deficit_factor['2000'],
+  1403→    r3d_deficit_2200: partB.mechanism_law.deficit_factor['2200'],
+  1404→    r3d_sdcollapse_400: partB.mechanism_law.sd_collapse_factor['400'], r3d_sdcollapse_1200: partB.mechanism_law.sd_collapse_factor['1200'], r3d_sdcollapse_2000: partB.mechanism_law.sd_collapse_factor['2000'],
+  1405→    r3d_sdcollapse_2200: partB.mechanism_law.sd_collapse_factor['2200'],
+  1406→    r3d_gapcollapse_400: partB.mechanism_law.raw_gap_collapse_factor['400'], r3d_gapcollapse_1200: partB.mechanism_law.raw_gap_collapse_factor['1200'], r3d_gapcollapse_2000: partB.mechanism_law.raw_gap_collapse_factor['2000'],
+  1407→    r3d_gapcollapse_2200: partB.mechanism_law.raw_gap_collapse_factor['2200'],
+  1408→    // GWIN
+  1409→    gwin_g_anchor: partC.anchor_lr0_3_w100.g_ratio, gwin_g_anchor_first10: partC.anchor_lr0_3_w100.g_first10,
+  1410→    gwin_g_anchor_last10: partC.anchor_lr0_3_w100.g_last10,
+  1411→    gwin_g_015: partC.lr0_15_w200.g_ratio, gwin_g_015_first10: partC.lr0_15_w200.g_first10,
+  1412→    gwin_g_015_last10: partC.lr0_15_w200.g_last10,
+  1413→    gwin_g_05: partC.lr0_5_w60.g_ratio, gwin_g_05_first10: partC.lr0_5_w60.g_first10,
+  1414→    gwin_g_05_last10: partC.lr0_5_w60.g_last10
+  1415→  };
+  1416→  out6.metrics = metrics6;
+  1417→  out6.metricsSha = sha(JSON.stringify(metrics6));
+  1418→  const metrics7 = {
+  1419→    // RLONG7 — new dose arms
+  1420→    r7_rate_wd1_5e4: arms7['0.00015'].slow_inflation_rate, r7_rate_wd2e4: arms7['0.0002'].slow_inflation_rate, r7_rate_wd2_5e4: arms7['0.00025'].slow_inflation_rate,
+  1421→    r7_D_wd1_5e4: arms7['0.00015'].D, r7_D_wd2e4: arms7['0.0002'].D, r7_D_wd2_5e4: arms7['0.00025'].D,
+  1422→    r7_exec_wd1_5e4: arms7['0.00015'].executed_to, r7_exec_wd2e4: arms7['0.0002'].executed_to, r7_exec_wd2_5e4: arms7['0.00025'].executed_to,
+  1423→    r7_runaway_wd1_5e4: arms7['0.00015'].blowup_rate_last200, r7_runaway_wd2e4: arms7['0.0002'].blowup_rate_last200, r7_runaway_wd2_5e4: arms7['0.00025'].blowup_rate_last200,
+  1424→    r7_monotone_seven: m0.slow_inflation_rate > m1.slow_inflation_rate && m1.slow_inflation_rate > arms7['0.00015'].slow_inflation_rate && arms7['0.00015'].slow_inflation_rate > arms7['0.0002'].slow_inflation_rate && arms7['0.0002'].slow_inflation_rate > arms7['0.00025'].slow_inflation_rate && arms7['0.00025'].slow_inflation_rate > mm.slow_inflation_rate && mm.slow_inflation_rate > m3.slow_inflation_rate,
+  1425→    r7_bracket: arms7['0.00015'].slow_inflation_rate > 0 && arms7['0.00025'].slow_inflation_rate < 0,
+  1426→    r7_g_wd1_5e4: arms7.guards_wd1_5e4.g_gate_trivial_100.g_ratio, r7_r1_wd1_5e4: arms7.guards_wd1_5e4.r1_world2_400.r1_ratio, r7_drift_wd1_5e4: arms7.guards_wd1_5e4.r2_drift_200_400.r2_drift_ratio,
+  1427→    // PLAST
+  1428→    plast_ratio_20k: plast.main['20000'].ratio, plast_ratio_100k: plast.main['100000'].ratio, plast_ratio_500k: plast.main['500000'].ratio,
+  1429→    plast_ratio_ctrl20k: plast.control_20000.ratio, plast_ratio_wd1e4_20k: plast.wd1e4_20000.ratio,
+  1430→    plast_first10_20k: plast.main['20000'].first10, plast_first10_100k: plast.main['100000'].first10, plast_first10_500k: plast.main['500000'].first10,
+  1431→    plast_first10_ctrl20k: plast.control_20000.first10, plast_first10_wd1e4_20k: plast.wd1e4_20000.first10,
+  1432→    plast_last10_20k: plast.main['20000'].last10, plast_last10_100k: plast.main['100000'].last10, plast_last10_500k: plast.main['500000'].last10,
+  1433→    plast_last10_ctrl20k: plast.control_20000.last10, plast_last10_wd1e4_20k: plast.wd1e4_20000.last10,
+  1434→    plast_rho20: plast.rho20,
+  1435→    plast_snapshot_wc_20000: plast.snapshot_wc_norms.main_20000, plast_snapshot_wc_100000: plast.snapshot_wc_norms.main_100000, plast_snapshot_wc_500000: plast.snapshot_wc_norms.main_500000,
+  1436→    plast_all_finite: Number.isFinite(plast.main['20000'].first10) && Number.isFinite(plast.main['100000'].first10) && Number.isFinite(plast.main['500000'].first10) && Number.isFinite(plast.control_20000.first10) && Number.isFinite(plast.wd1e4_20000.first10) && Number.isFinite(plast.main['20000'].last10) && Number.isFinite(plast.main['100000'].last10) && Number.isFinite(plast.main['500000'].last10) && Number.isFinite(plast.control_20000.last10) && Number.isFinite(plast.wd1e4_20000.last10),
+  1437→    // R3DxR3L — per-depth plateau
+  1438→    plat_sd_eq_400: plateau.depths['400'].sd_equal, plat_sd_eq_1200: plateau.depths['1200'].sd_equal, plat_sd_eq_2000: plateau.depths['2000'].sd_equal, plat_sd_eq_2200: plateau.depths['2200'].sd_equal,
+  1439→    plat_z_eq_400: plateau.depths['400'].z_equal, plat_z_eq_1200: plateau.depths['1200'].z_equal, plat_z_eq_2000: plateau.depths['2000'].z_equal, plat_z_eq_2200: plateau.depths['2200'].z_equal,
+  1440→    plat_anch_eq_400: plateau.depths['400'].anchored_equal, plat_anch_eq_1200: plateau.depths['1200'].anchored_equal, plat_anch_eq_2000: plateau.depths['2000'].anchored_equal, plat_anch_eq_2200: plateau.depths['2200'].anchored_equal,
+  1441→    plat_var_eq_400: plateau.depths['400'].var_equal, plat_var_eq_1200: plateau.depths['1200'].var_equal, plat_var_eq_2000: plateau.depths['2000'].var_equal, plat_var_eq_2200: plateau.depths['2200'].var_equal,
+  1442→    plat_rawgap_eq_400: plateau.depths['400'].raw_gap_equal, plat_rawgap_eq_1200: plateau.depths['1200'].raw_gap_equal, plat_rawgap_eq_2000: plateau.depths['2000'].raw_gap_equal, plat_rawgap_eq_2200: plateau.depths['2200'].raw_gap_equal,
+  1443→    plat_mult400_12: plateau.depths['400'].multiplier_12, plat_mult400_09: plateau.depths['400'].multiplier_09,
+  1444→    plat_anch12_400: plateau.depths['400'].anchored_12, plat_anch12_1200: plateau.depths['1200'].anchored_12, plat_anch12_2000: plateau.depths['2000'].anchored_12, plat_anch12_2200: plateau.depths['2200'].anchored_12,
+  1445→    plat_sd12_400: plateau.depths['400'].sd_sum_12, plat_sd12_1200: plateau.depths['1200'].sd_sum_12, plat_sd12_2000: plateau.depths['2000'].sd_sum_12, plat_sd12_2200: plateau.depths['2200'].sd_sum_12,
+  1446→    plat_z12_400: plateau.depths['400'].carried_z_12, plat_z12_1200: plateau.depths['1200'].carried_z_12, plat_z12_2000: plateau.depths['2000'].carried_z_12, plat_z12_2200: plateau.depths['2200'].carried_z_12,
+  1447→    plat_var12_400: plateau.depths['400'].var_12, plat_var12_1200: plateau.depths['1200'].var_12, plat_var12_2000: plateau.depths['2000'].var_12, plat_var12_2200: plateau.depths['2200'].var_12,
+  1448→    // GWIN7 — grid points
+  1449→    gwin7_g_02: grid7['lr0.2_w150'].g_ratio, gwin7_g_025: grid7['lr0.25_w120'].g_ratio, gwin7_g_04: grid7['lr0.4_w75'].g_ratio, gwin7_g_06: grid7['lr0.6_w50'].g_ratio,
+  1450→    gwin7_g_02_first10: grid7['lr0.2_w150'].g_first10, gwin7_g_025_first10: grid7['lr0.25_w120'].g_first10, gwin7_g_04_first10: grid7['lr0.4_w75'].g_first10, gwin7_g_06_first10: grid7['lr0.6_w50'].g_first10,
+  1451→    gwin7_g_02_last10: grid7['lr0.2_w150'].g_last10, gwin7_g_025_last10: grid7['lr0.25_w120'].g_last10, gwin7_g_04_last10: grid7['lr0.4_w75'].g_last10, gwin7_g_06_last10: grid7['lr0.6_w50'].g_last10
+  1452→  };
+  1453→  out6.metrics7 = metrics7;
+  1454→  out6.metrics7Sha = sha(JSON.stringify(metrics7));
+  1455→  return out6;
+  1456→}
+  1457→
+  1458→// ---------- staging infrastructure (wave-57 infra receipt) ----------
+  1459→// The sandbox silently reaps long detached processes (observed: run7 launched detached died
+  1460→// mid-coreRun5 with zero stderr ~2min in; 4GB cgroup cap with 3.4GB available makes OOM
+  1461→// unlikely — kill, not crash). Infra fix ONLY: each of the four full executions (coreRun5 x2,
+  1462→// coreRun7 x2) is staged to disk the moment it completes and resumed across relaunches; the
+  1463→// receipt assembly and ALL bit-exact cross-checks then run from the staged objects exactly as
+  1464→// they would in-process (JSON round-trip of IEEE doubles is exact; key insertion order is
+  1465→// preserved; the only dropped key is the consumed warm-state `snapshots`). No claim
+  1466→// arithmetic, gate, or execution count is changed by this — the twin executions still both
+  1467→// run to completion, and the R4 shas still bind them.
+  1468→const STAGING = path.join(RECEIPTS, '.run7-staging.json');
+  1469→const pack = (obj) => JSON.parse(JSON.stringify(obj, (k, v) => {
+  1470→  if (k === 'snapshots') return undefined; // warm-state capture: consumed by the PLAST probes pre-staging
+  1471→  if (ArrayBuffer.isView(v)) return Array.from(v);
+  1472→  return v;
+  1473→}));
+  1474→const loadStaging = () => { try { return JSON.parse(fs.readFileSync(STAGING, 'utf8')); } catch { return { stages: {} }; } };
+  1475→const saveStaging = (st) => { const tmp = STAGING + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(st)); fs.renameSync(tmp, STAGING); };
+  1476→
+  1477→// ---------- execute ----------
+  1478→const T0 = Date.now();
+  1479→const seedReceipt = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'certified-seed.json'), 'utf8'));
+  1480→const selJson = JSON.stringify(seedReceipt.chosen.selected);
+  1481→const seedU32 = parseInt(sha(selJson).slice(0, 8), 16) >>> 0;
+  1482→
+  1483→const chain = new Chain();
+  1484→chain.add('header', {
+  1485→  repo: 'quilt-jepa', round: 7, executed_in: 'wave 57 (lane 57-e, keeper)', seed_u32: seedU32,
+  1486→  seed_receipt: { label: seedReceipt.label, mode: seedReceipt.mode, schema: seedReceipt.schema, note: seedReceipt.note },
+  1487→  registration: 'registration-v7.json (sealed pre-run, self_sha256_masked 2ef8f393… + mtime 1790644800000; RE-VERIFIED fail-closed at this run\'s startup)',
+  1488→  scope: 'round-4/5/6 operating point UNCHANGED (lr 0.3, tau 0.99998, K4 1.5e-6, amp 0.9) — carried claims re-scored (run4 29/29, run5 92/92, design6 AND run6 bit-exact) + 4 new claims: RLONG7 dose-response (cure zero-crossing bracket), PLAST plasticity cost (warm-state switch continuations; probe value 0.6644108562180416 DISCLOSED pre-run in registration-v7/design7), R3DxR3L composition closure (plateau extends to depth), GWIN7 full grid (lr 0.6 edge receipted gate-nothing)',
+  1489→  probe_provenance: 'probe7.mjs/design7.json receipted pre-seal with 7 fail-closed pipeline identities (I7 Jepa4-wd0; I2 horizonRun5==design6 anchor bit-exact; I1 capture/reconstruction 3-leg incl. snapshot==live-state and world-stream purity; I3 collectDepthAmp identity; I4 finding site; I5 GWIN anchor; I6 shallow plateau amp-1.2 == run5 ladder) — ALL TRUE; the I1 identity unavoidably computed one PLAST-class value (trivial-continuation ratio 0.6644108562180416 from the 20k-decayed snapshot) which is DISCLOSED in registration-v7 and bound bit-exact here; no other round-7 claim value measured pre-seal'
+  1490→});
+  1491→const staging = loadStaging();
+  1492→staging.stages = staging.stages || {};
+  1493→let r1, r2, q1, q2;
+  1494→if (staging.stages.r1) { r1 = staging.stages.r1; console.error('[resume] coreRun5 #1 loaded from staging (sha_carried ' + r1.metricsSha.slice(0, 12) + '…)'); }
+  1495→else { r1 = coreRun5(seedU32); staging.stages.r1 = pack(r1); saveStaging(staging); console.error('[progress] coreRun5 #1 done at', Date.now() - T0, 'ms — STAGED'); }
+  1496→if (staging.stages.r2) { r2 = staging.stages.r2; console.error('[resume] coreRun5 #2 (twin) loaded from staging (sha_carried ' + r2.metricsSha.slice(0, 12) + '…)'); }
+  1497→else { r2 = coreRun5(seedU32); staging.stages.r2 = pack(r2); saveStaging(staging); console.error('[progress] coreRun5 #2 (twin) done at', Date.now() - T0, 'ms — STAGED'); }
+  1498→if (staging.stages.q1) { q1 = staging.stages.q1; console.error('[resume] coreRun7 #1 loaded from staging (sha7 ' + q1.metrics7Sha.slice(0, 12) + '…)'); }
+  1499→else { q1 = coreRun7(seedU32); staging.stages.q1 = pack(q1); saveStaging(staging); console.error('[progress] coreRun7 #1 done at', Date.now() - T0, 'ms — STAGED'); }
+  1500→if (staging.stages.q2) { q2 = staging.stages.q2; console.error('[resume] coreRun7 #2 (twin) loaded from staging (sha7 ' + q2.metrics7Sha.slice(0, 12) + '…)'); }
+  1501→else { q2 = coreRun7(seedU32); staging.stages.q2 = pack(q2); saveStaging(staging); console.error('[progress] coreRun7 #2 (twin) done at', Date.now() - T0, 'ms — STAGED'); }
+  1502→
+  1503→// G gates everything downstream (registered verdict_rule)
+  1504→const gPass = r1.g_ratio < 0.5;
+  1505→chain.add('G_learning_sanity_gate', {
+  1506→  ratio: r1.g_ratio, first10: r1.g_first10, last10: r1.g_last10, lr: LR3, tau: TAU4, steps: 100, world: 'trivial (core/world.js)',
+  1507→  claim: 'last10/first10 < 0.5 on the trivial world at 100 steps (L1 law, carried)', pass: gPass,
+  1508→  gate_note: gPass ? 'gate OPEN — downstream claims scored' : 'gate CLOSED — all downstream claims VOID-AS-GATED'
+  1509→});
+  1510→chain.add('L2_difficulty_meter', {
+  1511→  floor_trivial: r1.l2_floor_trivial, floor_hard: r1.l2_floor_hard,
+  1512→  ratio_trivial: r1.l2_ratio_trivial, ratio_hard: r1.l2_ratio_hard,
+  1513→  init_trivial: r1.l2_init_trivial, init_hard: r1.l2_init_hard,
+  1514→  claim: 'hard world linear floor exceeds trivial (absolute and relative) — the gate meter (carried)',
+  1515→  pass: r1.l2_floor_hard > r1.l2_floor_trivial && r1.l2_ratio_hard > r1.l2_ratio_trivial
+  1516→});
+  1517→chain.add('R1_hard_world_learning', {
+  1518→  ratio: r1.r1_ratio, first10: r1.r1_first10, last10: r1.r1_last10, lr: LR3, tau: TAU4, steps: 400,
+  1519→  claim: 'last10/first10 < 0.5 on world2 (carried)', pass: r1.r1_ratio < 0.5,
+  1520→  void_as_gated: !gPass
+  1521→});
+  1522→chain.add('R2v4_pace_aware_ema', {
+  1523→  drift_ratio: r1.r2_drift_ratio, drift_gate: 0.01, tau: TAU4,
+  1524→  g_ratio: r1.g_ratio, r1_ratio: r1.r1_ratio,
+  1525→  var_ratio: r1.r3v4_var_ratio, var_gate: 0.5,
+  1526→  wc_disp_200_400_rel: r1.r2v4_wc_disp_200_400_rel, wt_total_move_rel_400: r1.r2v4_wt_total_move_rel_400,
+  1527→  claim: 'PACE-AWARE EMA LAW (carried): drift/norm < 0.01 AND g<0.5 AND r1<0.5 AND var_ratio>=0.5',
+  1528→  pass: r1.r2_drift_ratio < 0.01 && r1.g_ratio < 0.5 && r1.r1_ratio < 0.5 && r1.r3v4_var_ratio >= 0.5,
+  1529→  void_as_gated: !gPass
+  1530→});
+  1531→chain.add('R3v4_percentile_normalized_surprise', {
+  1532→  z_ratio: r1.r3v4.v1_z_ratio, gate: 3.0,
+  1533→  z_anomaly_mean: r1.r3v4.anomaly_vs_sample.z.anomaly_mean, z_sample_mean: r1.r3v4.anomaly_vs_sample.z.sample_mean,
+  1534→  contrasts_gate_nothing: {
+  1535→    raw_ratio: r1.r3v4.v0_raw_ratio, mad_ratio: r1.r3v4.v3_mad_ratio,
+  1536→    rank_ratio_selfsel: r1.r3v4.v2_rank_ratio_selfsel, rank_ratio_rawsel: r1.r3v4.v2b_rank_ratio_rawsel,
+  1537→    own_max_cells_anomaly_mean: r1.r3v4.own_max_cells_anomaly_mean, own_max_cells_sample_mean: r1.r3v4.own_max_cells_sample_mean,
+  1538→    rank_excess_diff: r1.r3v4.v4_rank_excess_diff
+  1539→  },
+  1540→  claim: 'PERCENTILE-NORMALIZED SURPRISE LAW (carried): per-cell z vs own 124-tick baseline BEFORE concentration; top-4-by-z > 3.0',
+  1541→  pass: r1.r3v4.v1_z_ratio > 3.0,
+  1542→  anomalyTicks: ANOMALY_TICKS, void_as_gated: !gPass
+  1543→});
+  1544→// R3L: ladder saturation claim
+  1545→{
+  1546→  const L = r1.r3l;
+  1547→  const amps = LADDER.map(String);
+  1548→  let monotone = true;
+  1549→  for (let i = 1; i < amps.length - 1; i++) if (L[amps[i]].z < L[amps[i - 1]].z) monotone = false;
+  1550→  const z0 = L['0'].z, z075 = L['0.75'].z;
+  1551→  const sat = r1.r3l_sat_bit_exact;
+  1552→  const pass = z0 >= 0.9 && z0 <= 1.15 && monotone && sat && z075 > 3.0;
+  1553→  chain.add('R3L_ladder_saturation', {
+  1554→    ladder_z: Object.fromEntries(amps.map((a) => [a, L[a].z])),
+  1555→    ladder_raw: Object.fromEntries(amps.map((a) => [a, L[a].raw])),
+  1556→    ladder_var: Object.fromEntries(amps.map((a) => [a, L[a].var])),
+  1557→    z_null_anchor: z0, z_null_band: [0.9, 1.15], monotone_up_to_anchor: monotone,
+  1558→    sat_bit_exact: sat, z_0_75: z075,
+  1559→    claim: 'ANOMALY-STRENGTH LADDER: null anchor carries no signal, ratio non-decreasing to the anchor, anchor at the clamp plateau (1.2 == 0.9 bit-exact on z/raw/mad), plateau above gate — REFUTES the widen-by-amplitude lever',
+  1560→    pass, void_as_gated: !gPass
+  1561→  });
+  1562→}
+  1563→// R2x: K4 cross-pace claim
+  1564→{
+  1565→  const a = r1.r2x['0.15'], b = r1.r2x['0.5'];
+  1566→  const pass = a.r2_drift_ratio < 0.01 && b.r2_drift_ratio < 0.01 && b.g_ratio < 0.5 && b.r1_ratio < 0.5 && b.var_ratio >= 0.5;
+  1567→  chain.add('R2x_k4_cross_pace', {
+  1568→    lr_0_15: { tau: a.tau, pace: a.pace, drift: a.r2_drift_ratio, g: a.g_ratio, r1: a.r1_ratio, z: a.z_ratio_at_registered_amp, var: a.var_ratio, wcdisp: a.wc_disp_200_400_rel, wtmove: a.wt_total_move_rel_400 },
+  1569→    lr_0_5: { tau: b.tau, pace: b.pace, drift: b.r2_drift_ratio, g: b.g_ratio, r1: b.r1_ratio, z: b.z_ratio_at_registered_amp, var: b.var_ratio, wcdisp: b.wc_disp_200_400_rel, wtmove: b.wt_total_move_rel_400 },
+  1570→    g_pace_lock_finding: { lr: 0.15, g_ratio: a.g_ratio, gate: 0.5, exceeds: a.g_ratio > 0.5, note: 'REGISTERED FINDING, gates nothing here: the L1 G gate\'s fixed 100-step window is pace-locked; prices the round-6 candidate law G window ∝ 1/pace' },
+  1571→    claim: 'K4 CROSS-PACE: same law constant transfers — drift < 0.01 at both second pace points AND all learning guards hold at lr=0.5',
+  1572→    pass, void_as_gated: !gPass
+  1573→  });
+  1574→}
+  1575→// RHOR: finite-horizon divergence claim
+  1576→{
+  1577→  const H = r1.rhor;
+  1578→  const d5 = design5.partC_horizon;
+  1579→  const pass = H.D >= 25000 && H.D <= 40000
+  1580→    && H.D === d5.D
+  1581→    && H.drift_at_depth_2000 < 0.01
+  1582→    && H.var_ratio_after_depth_2000 >= 0.5
+  1583→    && H.slow_inflation_rate < 1e-4
+  1584→    && H.rate_ratio_runaway_over_slow > 100;
+  1585→  chain.add('RHOR_finite_horizon_divergence', {
+  1586→    D: H.D, D_band: [25000, 40000], D_mod80: H.D_mod80, executed_to: H.executed_to,
+  1587→    probe_identity: H.D === d5.D,
+  1588→    slow_inflation_rate: H.slow_inflation_rate, slow_gate: 1e-4,
+  1589→    runaway_rate: H.blowup_rate_last200, rate_ratio: H.rate_ratio_runaway_over_slow, ratio_gate: 100,
+  1590→    wc_norm_at_last_finite: H.wc_norm_at_last_finite, drift_last200: H.drift_last200,
+  1591→    loss_ratio_at_20000: H.loss_ratio_at_20000,
+  1592→    depth2000: { drift: H.drift_at_depth_2000, var: H.var_ratio_after_depth_2000, z: H.z_ratio_after_depth_2000, wcdisp: H.wc_disp_at_depth_2000 },
+  1593→    weight_death_receipt: { all_nan_step: H.all_weights_nan_step, all_nan_at_end: H.weights_all_nan_at_end, absorbing: H.weights_nan_absorbing, loss_finite_again: H.loss_finite_again_count },
+  1594→    contrasts_gate_nothing: Object.fromEntries(Object.keys(H.contrasts).map((k) => {
+  1595→      const c = H.contrasts[k];
+  1596→      return [k, { D: c.D, slow: c.slow_inflation_rate, rate: c.blowup_rate_last200, mod80: c.D_mod80 }];
+  1597→    })),
+  1598→    claim: 'FINITE-HORIZON DIVERGENCE: D in [2.5e4, 4e4] AND == design5 bit-exact AND depth-2000 laws hold (drift < 0.01, var >= 0.5) AND two-phase shape (slow < 1e-4, runaway > 100x). Findings receipted, gate nothing: depth-2000 z < 3.0 (statistic is depth-sensitive), weight death slower than the D+2000 window, all four contrasts diverge (fast EMA shortens life, slow pace lengthens it, trivial world ~ world2 — optimizer-borne)',
+  1599→    pass, void_as_gated: !gPass
+  1600→  });
+  1601→}
+  1602→// RLONG: longevity law (round-6 claim 1) — verdict rule VERBATIM from registration-v6
+  1603→const run4 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run4.json'), 'utf8'));
+  1604→{
+  1605→  const d6a = design6.partA_longevity;
+  1606→  const m0 = q1.arms['wd0_anchor'], mm = q1.arms['wd3e-4_main'], m1 = q1.arms['wd1e-4'];
+  1607→  const g3 = q1.arms.guards_wd3e4;
+  1608→  const gw = g3.g_gate_trivial_100.g_ratio, r1w = g3.r1_world2_400.r1_ratio, drw = g3.r2_drift_200_400.r2_drift_ratio;
+  1609→  const extensionOk = (mm.D === null && mm.executed_to === 500000 && 500000 / 30174 >= 2) || (mm.D !== null && mm.D >= 60348);
+  1610→  const checks = {
+  1611→    anchor_D_30174: m0.D === 30174,
+  1612→    anchor_D_design6_bit_exact: m0.D === d6a.arms['wd0_anchor'].D,
+  1613→    extension_gate_censored_or_2x: extensionOk,
+  1614→    D_main_design6_bit_exact_incl_null: mm.D === d6a.arms['wd3e-4_main'].D,
+  1615→    executed_to_main_design6_bit_exact: mm.executed_to === d6a.arms['wd3e-4_main'].executed_to,
+  1616→    no_runaway_within_window_main: mm.diverged === false,
+  1617→    D_wd1e4_design6_bit_exact: m1.D === d6a.arms['wd1e-4'].D,
+  1618→    D_wd1e4_ge_1_5x_undecayed: m1.D >= 1.5 * 30174,
+  1619→    runaway_wd1e4_ge_100x_slow: m1.blowup_rate_last200 >= 100 * Math.abs(m1.slow_inflation_rate),
+  1620→    g_wd_lt_0_5: gw < 0.5,
+  1621→    r1_wd_lt_0_5: r1w < 0.5,
+  1622→    drift_wd_lt_0_01: drw < 0.01,
+  1623→    g_wd_tight_band_0_345_0_357: gw >= 0.345 && gw <= 0.357,
+  1624→    r1_wd_tight_band_0_165_0_177: r1w >= 0.165 && r1w <= 0.177,
+  1625→    jepa4_wd0_identity_fail_closed: q1.identity.losses_bit_exact && q1.identity.weights_bit_exact
+  1626→  };
+  1627→  chain.add('RLONG_longevity_law', {
+  1628→    wd_main: WD_MAIN, stop_rule: 'min(5e5, D+2000); contrasts capped at 1e5',
+  1629→    arms: {
+  1630→      wd0_anchor: { D: m0.D, executed_to: m0.executed_to, slow: m0.slow_inflation_rate, runaway: m0.blowup_rate_last200 },
+  1631→      wd3e4_main: { D: mm.D, executed_to: mm.executed_to, diverged: mm.diverged, censoring_floor_x: mm.D === null ? 500000 / 30174 : null,
+  1632→                    slow_20k: mm.slow_inflation_rate, slow_100k: mm.slow_inflation_rate_100k,
+  1633→                    wc_norm: { at400: mm.checkpoints['400'].wc_norm, at20000: mm.checkpoints['20000'].wc_norm, at100000: mm.checkpoints['100000'].wc_norm, at500000: mm.checkpoints['500000'].wc_norm },
+  1634→                    wp_norm: { at400: mm.checkpoints['400'].wp_norm, at20000: mm.checkpoints['20000'].wp_norm } },
+  1635→      wd1e4_dose_response: { D: m1.D, executed_to: m1.executed_to, slow: m1.slow_inflation_rate, runaway: m1.blowup_rate_last200, rate_ratio: m1.rate_ratio_runaway_over_slow, two_phase_persists: true },
+  1636→      wd1e3_mechanism_contrast: { D: q1.arms['wd0.001'].D, executed_to: q1.arms['wd0.001'].executed_to, slow: q1.arms['wd0.001'].slow_inflation_rate }
+  1637→    },
+  1638→    guards_wd3e4_unrelaxed: { g: gw, r1: r1w, drift: drw },
+  1639→    dose_response_finding_gate_nothing: {
+  1640→      slow_rates_per_step: { wd0: m0.slow_inflation_rate, wd1e4: m1.slow_inflation_rate, wd3e4: mm.slow_inflation_rate, wd1e3: q1.arms['wd0.001'].slow_inflation_rate },
+  1641→      note: 'slow-phase rate flips sign between wd 1e-4 and 3e-4 — steep monotone longevity response; wd=1e-4 extends only 1.5938x (below the 2x band floor) and two-phase PERSISTS there (ratio ' + m1.rate_ratio_runaway_over_slow.toFixed(1) + ')'
+  1642→    },
+  1643→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+  1644→    claim: 'LONGEVITY LAW: weight decay on Wc only, main dose 3e-4 — REGISTERED EXPECTATION: two-phase ELIMINATED-WITHIN-WINDOW at main dose (cap-censored > 16.5706x lifetime), PERSISTS at 1e-4; plasticity gates UNRELAXED in the decayed arm; registered factor gate >= 2x (band 2-10x)',
+  1645→    pass: Object.values(checks).every(Boolean),
+  1646→    void_as_gated: !gPass
+  1647→});
+  1648→}
+  1649→// R3D: depth/window law (round-6 claim 2) — verdict rule VERBATIM from registration-v6
+  1650→{
+  1651→  const d6b = design6.partB_depth_window;
+  1652→  const cs = q1.partB.candS;
+  1653→  const run4metrics = run4.metrics;
+  1654→  const zA400 = cs['400'].z_ratio_corrected, zA1200 = cs['1200'].z_ratio_corrected, zA2000 = cs['2000'].z_ratio_corrected, zA2200 = cs['2200'].z_ratio_corrected;
+  1655→  const checks = {
+  1656→    multiplier_at_400_exact_ieee_1: cs['400'].multiplier === 1,
+  1657→    z_anchored_400_run4_bit_exact: zA400 === run4metrics.r3v4_z_ratio,
+  1658→    z_carried_2200_design5_bit_exact: q1.partB.depths['2200'].carried.z_ratio === design5.partC_horizon.z_ratio_after_depth_2000,
+  1659→    z_anchored_2200_ge_gate: zA2200 >= 3.0,
+  1660→    z_anchored_2200_band_3_10_3_30: zA2200 >= 3.10 && zA2200 <= 3.30,
+  1661→    z_anchored_2000_ge_gate: zA2000 >= 3.0,
+  1662→    z_anchored_2000_band_3_31_3_51: zA2000 >= 3.31 && zA2000 <= 3.51
+  1663→  };
+  1664→  const identities = {};
+  1665→  for (const dep of DEPTHS6.map(String)) {
+  1666→    identities['z_carried_' + dep + '_design6'] = q1.partB.depths[dep].carried.z_ratio === d6b.depths[dep].carried.z_ratio;
+  1667→    identities['sd_sum_' + dep + '_design6'] = q1.partB.depths[dep].carried.sd_sum === d6b.depths[dep].carried.sd_sum;
+  1668→    identities['candD_z_' + dep + '_design6'] = q1.partB.depths[dep].candD.z_ratio === d6b.depths[dep].candD.z_ratio;
+  1669→    identities['candA_z_' + dep + '_design6'] = q1.partB.depths[dep].candA.z_ratio === d6b.depths[dep].candA.z_ratio;
+  1670→    identities['multiplier_' + dep + '_design6'] = cs[dep].multiplier === d6b.candS[dep].multiplier;
+  1671→    identities['z_anchored_' + dep + '_design6'] = cs[dep].z_ratio_corrected === d6b.candS[dep].z_ratio_corrected;
+  1672→  }
+  1673→  identities.candD_round_rule_2200_design6 = (q1.partB.depths['2200'].candD_round_rule ? q1.partB.depths['2200'].candD_round_rule.z_ratio : null)
+  1674→    === (d6b.depths['2200'].candD_round_rule ? d6b.depths['2200'].candD_round_rule.z_ratio : null);
+  1675→  chain.add('R3D_depth_window_law', {
+  1676→    law: 'SCALE-ANCHORED SURPRISE: z_anchored(depth) = z_carried(depth) x [sd_sum(400)/sd_sum(depth)] — multiplier EXACTLY 1 at depth 400; removes ONLY the residual-scale-aliasing component',
+  1677→    sites: Object.fromEntries(DEPTHS6.map((d) => [d, {
+  1678→      k: q1.partB.depths[String(d)].k, carried_z: q1.partB.depths[String(d)].carried.z_ratio,
+  1679→      sd_sum: q1.partB.depths[String(d)].carried.sd_sum, raw_gap: q1.partB.depths[String(d)].carried.raw_gap,
+  1680→      multiplier: cs[String(d)].multiplier, z_anchored: cs[String(d)].z_ratio_corrected,
+  1681→      candD_z: q1.partB.depths[String(d)].candD.z_ratio, candD_baseline_n: q1.partB.depths[String(d)].candD.baseline_n,
+  1682→      candA_z: q1.partB.depths[String(d)].candA.z_ratio
+  1683→    }])),
+  1684→    mechanism_decomposition_gate_nothing: {
+  1685→      deficit_factor: q1.partB.mechanism_law.deficit_factor, sd_collapse_factor: q1.partB.mechanism_law.sd_collapse_factor,
+  1686→      raw_gap_collapse_factor: q1.partB.mechanism_law.raw_gap_collapse_factor,
+  1687→      honest_limits: 'k=3 site (depth 1200) stays BELOW the gate (z_anchored ' + zA1200.toFixed(4) + ' < 3.0) — novelty-dominated deficit, no fix claimed; pure window-scaling candidates candD/candA are SITE-FRAGILE (candD: ' + q1.partB.depths['2000'].candD.z_ratio.toFixed(4) + ' at nominal-2000 but ' + q1.partB.depths['2200'].candD.z_ratio.toFixed(4) + ' at the finding site; candA: ' + q1.partB.depths['2200'].candA.z_ratio.toFixed(4) + ' at the finding site but ' + q1.partB.depths['2000'].candA.z_ratio.toFixed(4) + ' at nominal-2000) — neither survives both sites, neither is the law; REJECTED as registered'
+  1688→    },
+  1689→    checks, design6_identities: identities,
+  1690→    all_checks_pass: Object.values(checks).every(Boolean) && Object.values(identities).every(Boolean),
+  1691→    claim: 'DEPTH/WINDOW LAW: deficit = sd-aliasing x novelty-gap; registered fix restores the UNCHANGED 3.0 gate at BOTH depth-2000-class sites (2200 finding site and nominal 2000); carried statistic bit-identical at all sites',
+  1692→    pass: Object.values(checks).every(Boolean) && Object.values(identities).every(Boolean),
+  1693→    void_as_gated: !gPass
+  1694→  });
+  1695→}
+  1696→// GWIN: G-window law (round-6 claim 3) — verdict rule VERBATIM from registration-v6
+  1697→{
+  1698→  const d6c = design6.partC_gwindow;
+  1699→  const a = q1.partC.lr0_15_w200.g_ratio, b = q1.partC.lr0_5_w60.g_ratio, anc = q1.partC.anchor_lr0_3_w100.g_ratio;
+  1700→  const checks = {
+  1701→    g_015_w200_lt_0_5: a < 0.5,
+  1702→    g_015_w200_band_0_295_0_315: a >= 0.295 && a <= 0.315,
+  1703→    g_05_w60_lt_0_5: b < 0.5,
+  1704→    g_05_w60_band_0_42_0_45: b >= 0.42 && b <= 0.45,
+  1705→    g_anchor_run4_bit_exact: anc === run4.metrics.g_ratio,
+  1706→    g_anchor_design6_bit_exact: anc === d6c.anchor_lr0_3_w100.g_ratio,
+  1707→    g_015_design6_bit_exact: a === d6c.lr0_15_w200.g_ratio,
+  1708→    g_05_design6_bit_exact: b === d6c.lr0_5_w60.g_ratio
+  1709→  };
+  1710→  chain.add('GWIN_g_window_law', {
+  1711→    law: 'W(lr) = round(30/lr) steps (1/pace, anchored lr 0.3 -> 100); tau from the carried K4 law at each pace',
+  1712→    values: {
+  1713→      anchor_lr0_3_w100: anc, pace_lock_reference: 0.5692660186806099,
+  1714→      lr0_15_w200: a, lr0_5_w60: b
+  1715→    },
+  1716→    pace_lock_closed: a < 0.5 && b < 0.5,
+  1717→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+  1718→    claim: 'G-WINDOW LAW: the fixed 100-step window was pace-locked (round-5 finding g=0.5693>0.5 at lr 0.15); W(lr)=round(30/lr) restores the UNCHANGED 0.5 gate at both second pace points; carried anchor untouched and bit-exact vs run4',
+  1719→    pass: Object.values(checks).every(Boolean),
+  1720→    void_as_gated: !gPass
+  1721→  });
+  1722→}
+  1723→// RLONG7: dose-response law (round-7 claim 1) — verdict rule VERBATIM from registration-v7
+  1724→{
+  1725→  const a15 = q1.arms7['0.00015'], a20 = q1.arms7['0.0002'], a25 = q1.arms7['0.00025'];
+  1726→  const d6a = design6.partA_longevity;
+  1727→  const m0 = q1.arms['wd0_anchor'], mm = q1.arms['wd3e-4_main'], m1 = q1.arms['wd1e-4'], m3 = q1.arms['wd0.001'];
+  1728→  const checks = {
+  1729→    anchor_D_wd0_design6_bit_exact: m0.D === d6a.arms['wd0_anchor'].D && m0.D === 30174,
+  1730→    slow_wd0_design6_bit_exact: m0.slow_inflation_rate === d6a.arms['wd0_anchor'].slow_inflation_rate,
+  1731→    D_wd1e4_design6_bit_exact: m1.D === d6a.arms['wd1e-4'].D && m1.D === 48091,
+  1732→    slow_wd1e4_design6_bit_exact: m1.slow_inflation_rate === d6a.arms['wd1e-4'].slow_inflation_rate,
+  1733→    D_main_design6_bit_exact_incl_null: mm.D === d6a.arms['wd3e-4_main'].D && mm.D === null,
+  1734→    exec_main_design6_bit_exact: mm.executed_to === d6a.arms['wd3e-4_main'].executed_to && mm.executed_to === 500000,
+  1735→    slow_main_design6_bit_exact: mm.slow_inflation_rate === d6a.arms['wd3e-4_main'].slow_inflation_rate,
+  1736→    D_wd1e3_design6_bit_exact_incl_null: m3.D === d6a.arms['wd0.001'].D && m3.D === null,
+  1737→    slow_wd1e3_design6_bit_exact: m3.slow_inflation_rate === d6a.arms['wd0.001'].slow_inflation_rate,
+  1738→    monotone_seven_dose: q1.metrics7.r7_monotone_seven,
+  1739→    bracket_rate15e4_positive: a15.slow_inflation_rate > 0,
+  1740→    bracket_rate25e4_negative: a25.slow_inflation_rate < 0,
+  1741→    jepa4_wd0_identity_fail_closed: q1.identity.losses_bit_exact && q1.identity.weights_bit_exact
+  1742→  };
+  1743→  chain.add('RLONG7_dose_response', {
+  1744→    law: 'slow-phase |Wc| inflation rate strictly decreasing in wd; cure zero-crossing wd* bracketed inside (1.5e-4, 2.5e-4)',
+  1745→    rates_per_step: { wd0: m0.slow_inflation_rate, wd1e4: m1.slow_inflation_rate, wd1_5e4: a15.slow_inflation_rate, wd2e4: a20.slow_inflation_rate, wd2_5e4: a25.slow_inflation_rate, wd3e4: mm.slow_inflation_rate, wd1e3: m3.slow_inflation_rate },
+  1746→    new_arms_receipt_gate_nothing: {
+  1747→      wd1_5e4: { D: a15.D, executed_to: a15.executed_to, runaway: a15.blowup_rate_last200, rate_ratio: a15.rate_ratio_runaway_over_slow },
+  1748→      wd2e4: { D: a20.D, executed_to: a20.executed_to, runaway: a20.blowup_rate_last200, rate_ratio: a20.rate_ratio_runaway_over_slow },
+  1749→      wd2_5e4: { D: a25.D, executed_to: a25.executed_to, runaway: a25.blowup_rate_last200, rate_ratio: a25.rate_ratio_runaway_over_slow }
+  1750→    },
+  1751→    guards_wd1_5e4_gate_nothing: { g: q1.metrics7.r7_g_wd1_5e4, r1: q1.metrics7.r7_r1_wd1_5e4, drift: q1.metrics7.r7_drift_wd1_5e4 },
+  1752→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+  1753→    claim: 'DOSE-RESPONSE LAW: monotone 7-dose rate ordering + zero-crossing bracket (1.5e-4, 2.5e-4); four receipted doses bit-exact vs design6/run6; registered risk (disclosed): sublinearity could push the crossing below 1.5e-4',
+  1754→    pass: Object.values(checks).every(Boolean),
+  1755→    void_as_gated: !gPass
+  1756→  });
+  1757→}
+  1758→// PLAST: plasticity cost law (round-7 claim 2) — verdict rule VERBATIM from registration-v7
+  1759→{
+  1760→  const p = q1.metrics7;
+  1761→  const design7Value = design7.identities.I1_continuation_reconstruction.trivial_continuation_ratio;
+  1762→  const checks = {
+  1763→    probe_run_bit_exact_20k: p.plast_ratio_20k === design7Value && p.plast_ratio_20k === PLAST_PROBE_VALUE_DISCLOSED,
+  1764→    engage_20k_decayed: p.plast_ratio_20k < 1.0,
+  1765→    engage_100k_decayed: p.plast_ratio_100k < 1.0,
+  1766→    engage_20k_control: p.plast_ratio_ctrl20k < 1.0,
+  1767→    rho20_lt_2: p.plast_rho20 < 2.0,
+  1768→    all_finite: p.plast_all_finite,
+  1769→    snapshot_wc_20000_design6_bit_exact: p.plast_snapshot_wc_20000 === design6.partA_longevity.arms['wd3e-4_main'].checkpoints['20000'].wc_norm,
+  1770→    snapshot_wc_100000_design6_bit_exact: p.plast_snapshot_wc_100000 === design6.partA_longevity.arms['wd3e-4_main'].checkpoints['100000'].wc_norm,
+  1771→    snapshot_wc_500000_design6_bit_exact: p.plast_snapshot_wc_500000 === design6.partA_longevity.arms['wd3e-4_main'].checkpoints['500000'].wc_norm
+  1772→  };
+  1773→  chain.add('PLAST_plasticity_cost', {
+  1774→    readout: 'trivial-world switch continuation (400 steps) from warm states; ratio = last10/first10',
+  1775→    probes: {
+  1776→      main_20k: { ratio: p.plast_ratio_20k, first10: p.plast_first10_20k, last10: p.plast_last10_20k },
+  1777→      main_100k: { ratio: p.plast_ratio_100k, first10: p.plast_first10_100k, last10: p.plast_last10_100k },
+  1778→      main_500k_edge_gate_nothing: { ratio: p.plast_ratio_500k, first10: p.plast_first10_500k, last10: p.plast_last10_500k, wc_norm: p.plast_snapshot_wc_500000 },
+  1779→      control_20k: { ratio: p.plast_ratio_ctrl20k, first10: p.plast_first10_ctrl20k, last10: p.plast_last10_ctrl20k },
+  1780→      wd1e4_20k_gate_nothing: { ratio: p.plast_ratio_wd1e4_20k, first10: p.plast_first10_wd1e4_20k, last10: p.plast_last10_wd1e4_20k }
+  1781→    },
+  1782→    rho20: p.plast_rho20,
+  1783→    probe_run_binding: { disclosed: PLAST_PROBE_VALUE_DISCLOSED, run: p.plast_ratio_20k, bit_exact: p.plast_ratio_20k === design7Value },
+  1784→    domain_note: 'the control diverges at 30174 so no 100k control exists — the cost readout is honestly asymmetric; the 500k edge probe (|Wc| 0.7387, 16x below init) prices the extreme-depth question for round 8',
+  1785→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+  1786→    claim: 'PLASTICITY COST LAW: learning engages from every registered warm state (ratio < 1.0) at a bounded cost (rho20 < 2.0); probe==run bit-exact on the disclosed value; the 20k decayed ratio also equals the design7 I1 pipeline value by construction (same snapshot path)',
+  1787→    pass: Object.values(checks).every(Boolean),
+  1788→    void_as_gated: !gPass
+  1789→  });
+  1790→}
+  1791→// R3DxR3L: composition closure (round-7 claim 3) — verdict rule VERBATIM from registration-v7
+  1792→{
+  1793→  const d6b = design6.partB_depth_window;
+  1794→  const pl = q1.plateau.depths;
+  1795→  const eq = {};
+  1796→  for (const dep of DEPTHS6.map(String)) {
+  1797→    eq['sd_' + dep] = pl[dep].sd_equal;
+  1798→    eq['z_' + dep] = pl[dep].z_equal;
+  1799→    eq['anchored_' + dep] = pl[dep].anchored_equal;
+  1800→    eq['anchored09_design6_' + dep] = pl[dep].anchored_09 === d6b.candS[dep].z_ratio_corrected;
+  1801→  }
+  1802→  const checks = {
+  1803→    ...eq,
+  1804→    mult400_amp12_exact_1: pl['400'].multiplier_12 === 1,
+  1805→    mult400_amp09_exact_1: pl['400'].multiplier_09 === 1,
+  1806→    anchored12_gate_2000: pl['2000'].anchored_12 >= 3.0,
+  1807→    anchored12_gate_2200: pl['2200'].anchored_12 >= 3.0,
+  1808→    carried_2200_design5_bit_exact: q1.partB.depths['2200'].carried.z_ratio === design5.partC_horizon.z_ratio_after_depth_2000
+  1809→  };
+  1810→  chain.add('R3DxR3L_composition', {
+  1811→    law: 'the R3L clamp plateau extends to ALL depth sites; the anchored statistic inherits it bit-exactly; the anchored 3.0 restoration SURVIVES at the plateau',
+  1812→    per_depth: Object.fromEntries(DEPTHS6.map((d) => [String(d), {
+  1813→      z09: pl[String(d)].carried_z_09, z12: pl[String(d)].carried_z_12,
+  1814→      sd09: pl[String(d)].sd_sum_09, sd12: pl[String(d)].sd_sum_12,
+  1815→      mult09: pl[String(d)].multiplier_09, mult12: pl[String(d)].multiplier_12,
+  1816→      anchored09: pl[String(d)].anchored_09, anchored12: pl[String(d)].anchored_12,
+  1817→      var09: pl[String(d)].var_09, var12: pl[String(d)].var_12,
+  1818→      equalities: { sd: pl[String(d)].sd_equal, z: pl[String(d)].z_equal, anchored: pl[String(d)].anchored_equal, var: pl[String(d)].var_equal, raw_gap: pl[String(d)].raw_gap_equal }
+  1819→    }])),
+  1820→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+  1821→    claim: 'COMPOSITION CLOSURE: plateau (amp 1.2 == 0.9 bit-exact) extends to every registered depth; anchored 3.0-gate restoration survives at the plateau — the two laws compose',
+  1822→    pass: Object.values(checks).every(Boolean),
+  1823→    void_as_gated: !gPass
+  1824→  });
+  1825→}
+  1826→// GWIN7: full-grid law (round-7 claim 4) — verdict rule VERBATIM from registration-v7
+  1827→{
+  1828→  const d6c = design6.partC_gwindow;
+  1829→  const g02 = q1.metrics7.gwin7_g_02, g025 = q1.metrics7.gwin7_g_025, g04 = q1.metrics7.gwin7_g_04, g06 = q1.metrics7.gwin7_g_06;
+  1830→  const checks = {
+  1831→    g_02_w150_lt_0_5: g02 < 0.5,
+  1832→    g_025_w120_lt_0_5: g025 < 0.5,
+  1833→    g_04_w75_lt_0_5: g04 < 0.5,
+  1834→    g_anchor_lt_0_5: q1.partC.anchor_lr0_3_w100.g_ratio < 0.5,
+  1835→    g_015_w200_design6_bit_exact: q1.partC.lr0_15_w200.g_ratio === d6c.lr0_15_w200.g_ratio,
+  1836→    g_05_w60_design6_bit_exact: q1.partC.lr0_5_w60.g_ratio === d6c.lr0_5_w60.g_ratio,
+  1837→    g_anchor_run4_bit_exact: q1.partC.anchor_lr0_3_w100.g_ratio === run4.metrics.g_ratio
+  1838→  };
+  1839→  chain.add('GWIN7_full_grid', {
+  1840→    law: 'W(lr) = round(30/lr) holds g < 0.5 across the core pace grid',
+  1841→    grid: { 'lr0.15_w200': q1.partC.lr0_15_w200.g_ratio, 'lr0.2_w150': g02, 'lr0.25_w120': g025, 'lr0.3_w100_anchor': q1.partC.anchor_lr0_3_w100.g_ratio, 'lr0.4_w75': g04, 'lr0.5_w60': q1.partC.lr0_5_w60.g_ratio },
+  1842→    edge_receipt_gate_nothing: { 'lr0.6_w50': g06, note: 'the receipted trend rises with pace (0.3041 -> 0.3492 -> 0.4341); the edge prices the law\'s domain for round 8 — g >= 0.5 here registers a domain boundary 0.15 <= lr <= 0.5 as a FINDING, not a refutation of the tested core' },
+  1843→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+  1844→    claim: 'FULL-GRID G-WINDOW LAW: g < 0.5 at every core grid point with anchors bit-exact; the lr 0.6 boundary probe is receipted gate-nothing',
+  1845→    pass: Object.values(checks).every(Boolean),
+  1846→    void_as_gated: !gPass
+  1847→  });
+  1848→}
+  1849→// R4: twin determinism + cross-round/probe bit-identity
+  1850→{
+  1851→  const carriedPairs = Object.keys(run4.metrics).map((k) => [k, r1.metrics[k], run4.metrics[k]]);
+  1852→  const carriedBad = carriedPairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run5: a, run4: b }));
+  1853→  const probePairs = [
+  1854→    ['ladder.0.z', r1.metrics.r3l_z_0, design5.partA_ladder['0'].v1_z_ratio],
+  1855→    ['ladder.0.1.z', r1.metrics.r3l_z_0_1, design5.partA_ladder['0.1'].v1_z_ratio],
+  1856→    ['ladder.0.2.z', r1.metrics.r3l_z_0_2, design5.partA_ladder['0.2'].v1_z_ratio],
+  1857→    ['ladder.0.3.z', r1.metrics.r3l_z_0_3, design5.partA_ladder['0.3'].v1_z_ratio],
+  1858→    ['ladder.0.45.z', r1.metrics.r3l_z_0_45, design5.partA_ladder['0.45'].v1_z_ratio],
+  1859→    ['ladder.0.6.z', r1.metrics.r3l_z_0_6, design5.partA_ladder['0.6'].v1_z_ratio],
+  1860→    ['ladder.0.75.z', r1.metrics.r3l_z_0_75, design5.partA_ladder['0.75'].v1_z_ratio],
+  1861→    ['ladder.0.9.z', r1.metrics.r3l_z_0_9, design5.partA_ladder['0.9'].v1_z_ratio],
+  1862→    ['ladder.1.2.z', r1.metrics.r3l_z_1_2, design5.partA_ladder['1.2'].v1_z_ratio],
+  1863→    ['ladder.0.9.raw', r1.metrics.r3l_raw_0_9, design5.partA_ladder['0.9'].v0_raw_ratio],
+  1864→    ['ladder.1.2.raw', r1.metrics.r3l_raw_1_2, design5.partA_ladder['1.2'].v0_raw_ratio],
+  1865→    ['ladder.0.9.mad', r1.metrics.r3l_mad_0_9, design5.partA_ladder['0.9'].v3_mad_ratio],
+  1866→    ['ladder.1.2.mad', r1.metrics.r3l_mad_1_2, design5.partA_ladder['1.2'].v3_mad_ratio],
+  1867→    ['ladder.0.9.var', r1.r3l['0.9'].var, design5.partA_ladder['0.9'].var_ratio_trained_over_init_target],
+  1868→    ['xpace.0.15.tau', r1.metrics.r2x_0_15_tau, design5.partB_xpace['0.15'].tau],
+  1869→    ['xpace.0.15.drift', r1.metrics.r2x_0_15_drift, design5.partB_xpace['0.15'].r2_drift_ratio],
+  1870→    ['xpace.0.15.g', r1.metrics.r2x_0_15_g, design5.partB_xpace['0.15'].g_ratio],
+  1871→    ['xpace.0.15.r1', r1.metrics.r2x_0_15_r1, design5.partB_xpace['0.15'].r1_ratio],
+  1872→    ['xpace.0.15.z', r1.metrics.r2x_0_15_z, design5.partB_xpace['0.15'].z_ratio_at_registered_amp],
+  1873→    ['xpace.0.15.var', r1.metrics.r2x_0_15_var, design5.partB_xpace['0.15'].var_ratio],
+  1874→    ['xpace.0.15.wcdisp', r1.metrics.r2x_0_15_wcdisp, design5.partB_xpace['0.15'].wc_disp_200_400_rel],
+  1875→    ['xpace.0.15.wtmove', r1.metrics.r2x_0_15_wtmove, design5.partB_xpace['0.15'].wt_total_move_rel_400],
+  1876→    ['xpace.0.5.tau', r1.metrics.r2x_0_5_tau, design5.partB_xpace['0.5'].tau],
+  1877→    ['xpace.0.5.drift', r1.metrics.r2x_0_5_drift, design5.partB_xpace['0.5'].r2_drift_ratio],
+  1878→    ['xpace.0.5.g', r1.metrics.r2x_0_5_g, design5.partB_xpace['0.5'].g_ratio],
+  1879→    ['xpace.0.5.r1', r1.metrics.r2x_0_5_r1, design5.partB_xpace['0.5'].r1_ratio],
+  1880→    ['xpace.0.5.z', r1.metrics.r2x_0_5_z, design5.partB_xpace['0.5'].z_ratio_at_registered_amp],
+  1881→    ['xpace.0.5.var', r1.metrics.r2x_0_5_var, design5.partB_xpace['0.5'].var_ratio],
+  1882→    ['xpace.0.5.wcdisp', r1.metrics.r2x_0_5_wcdisp, design5.partB_xpace['0.5'].wc_disp_200_400_rel],
+  1883→    ['xpace.0.5.wtmove', r1.metrics.r2x_0_5_wtmove, design5.partB_xpace['0.5'].wt_total_move_rel_400],
+  1884→    ['horizon.D', r1.metrics.rhor_D, design5.partC_horizon.D],
+  1885→    ['horizon.executed_to', r1.metrics.rhor_executed_to, design5.partC_horizon.executed_to],
+  1886→    ['horizon.D_mod80', r1.metrics.rhor_D_mod80, design5.partC_horizon.D_mod80],
+  1887→    ['horizon.loss_finite_again', r1.metrics.rhor_loss_finite_again, design5.partC_horizon.loss_finite_again_count],
+  1888→    ['horizon.all_nan_step', r1.metrics.rhor_all_nan_step, design5.partC_horizon.all_weights_nan_step],
+  1889→    ['horizon.nan_absorbing', r1.metrics.rhor_nan_absorbing, design5.partC_horizon.weights_nan_absorbing],
+  1890→    ['horizon.weights_all_nan_at_end', r1.metrics.rhor_weights_all_nan_at_end, design5.partC_horizon.weights_all_nan_at_end],
+  1891→    ['horizon.slow_rate', r1.metrics.rhor_slow_rate, design5.partC_horizon.slow_inflation_rate],
+  1892→    ['horizon.runaway_rate', r1.metrics.rhor_runaway_rate, design5.partC_horizon.blowup_rate_last200],
+  1893→    ['horizon.rate_ratio', r1.metrics.rhor_rate_ratio, design5.partC_horizon.rate_ratio_runaway_over_slow],
+  1894→    ['horizon.wc_norm_last', r1.metrics.rhor_wc_norm_last, design5.partC_horizon.wc_norm_at_last_finite],
+  1895→    ['horizon.drift_last200', r1.metrics.rhor_drift_last200, design5.partC_horizon.drift_last200],
+  1896→    ['horizon.first10', r1.metrics.rhor_first10, design5.partC_horizon.first10],
+  1897→    ['horizon.ckpt400.wt', r1.metrics.rhor_ckpt_400_wt, design5.partC_horizon.checkpoints['400'].wt_move_rel],
+  1898→    ['horizon.ckpt400.wcnorm', r1.metrics.rhor_ckpt_400_wcnorm, design5.partC_horizon.checkpoints['400'].wc_norm],
+  1899→    ['horizon.ckpt400.loss500', r1.metrics.rhor_ckpt_400_loss500, design5.partC_horizon.checkpoints['400'].loss_mean_500],
+  1900→    ['horizon.ckpt1000.loss500', r1.metrics.rhor_ckpt_1000_loss500, design5.partC_horizon.checkpoints['1000'].loss_mean_500],
+  1901→    ['horizon.ckpt5000.wcnorm', r1.metrics.rhor_ckpt_5000_wcnorm, design5.partC_horizon.checkpoints['5000'].wc_norm],
+  1902→    ['horizon.ckpt5000.loss500', r1.metrics.rhor_ckpt_5000_loss500, design5.partC_horizon.checkpoints['5000'].loss_mean_500],
+  1903→    ['horizon.ckpt10000.wcnorm', r1.metrics.rhor_ckpt_10000_wcnorm, design5.partC_horizon.checkpoints['10000'].wc_norm],
+  1904→    ['horizon.ckpt20000.wcnorm', r1.metrics.rhor_ckpt_20000_wcnorm, design5.partC_horizon.checkpoints['20000'].wc_norm],
+  1905→    ['horizon.ckpt20000.loss500', r1.metrics.rhor_ckpt_20000_loss500, design5.partC_horizon.checkpoints['20000'].loss_mean_500],
+  1906→    ['horizon.ckpt30000.wcnorm', r1.metrics.rhor_ckpt_30000_wcnorm, design5.partC_horizon.checkpoints['30000'].wc_norm],
+  1907→    ['horizon.depth2000.drift', r1.metrics.rhor_depth2000_drift, design5.partC_horizon.drift_at_depth_2000],
+  1908→    ['horizon.depth2000.var', r1.metrics.rhor_depth2000_var, design5.partC_horizon.var_ratio_after_depth_2000],
+  1909→    ['horizon.depth2000.z', r1.metrics.rhor_depth2000_z, design5.partC_horizon.z_ratio_after_depth_2000],
+  1910→    ['horizon.depth2000.wcdisp', r1.metrics.rhor_depth2000_wcdisp, design5.partC_horizon.wc_disp_at_depth_2000],
+  1911→    ['contrast.tau999.D', r1.metrics.rhor_c_tau999_D, design5.partC_horizon.contrasts['tau0.999_lr0.3'].D],
+  1912→    ['contrast.lr015.D', r1.metrics.rhor_c_lr015_D, design5.partC_horizon.contrasts['lr0.15_tau_law'].D],
+  1913→    ['contrast.lr05.D', r1.metrics.rhor_c_lr05_D, design5.partC_horizon.contrasts['lr0.5_tau_law'].D],
+  1914→    ['contrast.trivial.D', r1.metrics.rhor_c_trivial_D, design5.partC_horizon.contrasts['trivial_lr0.3'].D],
+  1915→    ['contrast.lr015.slow', r1.metrics.rhor_c_lr015_slow, design5.partC_horizon.contrasts['lr0.15_tau_law'].slow_inflation_rate],
+  1916→    ['contrast.trivial.slow', r1.metrics.rhor_c_trivial_slow, design5.partC_horizon.contrasts['trivial_lr0.3'].slow_inflation_rate]
+  1917→  ];
+  1918→  const probeBad = probePairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, design5: b }));
+  1919→  // round-5 receipt of record: every run5.json metric must reproduce bit-exactly (92/92)
+  1920→  const run5Receipt = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run5.json'), 'utf8'));
+  1921→  const run5Pairs = Object.keys(run5Receipt.metrics).map((k) => [k, r1.metrics[k], run5Receipt.metrics[k]]);
+  1922→  const run5Bad = run5Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run5: b }));
+  1923→  // round-6 receipt: every new metric must equal design6.json bit-exactly (probe == run == run-twin)
+  1924→  const d6 = design6; const m6 = q1.metrics;
+  1925→  const d6a = d6.partA_longevity, d6b = d6.partB_depth_window, d6c = d6.partC_gwindow;
+  1926→  const probe6Pairs = [
+  1927→    ['id.weights_sha', m6.id_weights_sha, d6a.identity_jepa4_wd0.weights_sha_jepa4_wd0],
+  1928→    ['rlong.anchor.D', m6.rlong_D_wd0, d6a.arms['wd0_anchor'].D],
+  1929→    ['rlong.anchor.exec', m6.rlong_exec_wd0, d6a.arms['wd0_anchor'].executed_to],
+  1930→    ['rlong.anchor.slow', m6.rlong_slow_wd0, d6a.arms['wd0_anchor'].slow_inflation_rate],
+  1931→    ['rlong.anchor.runaway', m6.rlong_runaway_wd0, d6a.arms['wd0_anchor'].blowup_rate_last200],
+  1932→    ['rlong.anchor.drift200', m6.rlong_drift_last200_wd0, d6a.arms['wd0_anchor'].drift_last200],
+  1933→    ['rlong.anchor.first10', m6.rlong_first10_wd0, d6a.arms['wd0_anchor'].first10],
+  1934→    ['rlong.main.D', m6.rlong_D_main, d6a.arms['wd3e-4_main'].D],
+  1935→    ['rlong.main.exec', m6.rlong_exec_main, d6a.arms['wd3e-4_main'].executed_to],
+  1936→    ['rlong.main.slow', m6.rlong_slow_main, d6a.arms['wd3e-4_main'].slow_inflation_rate],
+  1937→    ['rlong.main.slow100k', m6.rlong_slow_main_100k, d6a.arms['wd3e-4_main'].slow_inflation_rate_100k],
+  1938→    ['rlong.main.first10', m6.rlong_first10_main, d6a.arms['wd3e-4_main'].first10],
+  1939→    ['rlong.main.wc400', m6.rlong_main_wc_400, d6a.arms['wd3e-4_main'].checkpoints['400'].wc_norm],
+  1940→    ['rlong.main.wc20000', m6.rlong_main_wc_20000, d6a.arms['wd3e-4_main'].checkpoints['20000'].wc_norm],
+  1941→    ['rlong.main.wc100000', m6.rlong_main_wc_100000, d6a.arms['wd3e-4_main'].checkpoints['100000'].wc_norm],
+  1942→    ['rlong.main.wc500000', m6.rlong_main_wc_500000, d6a.arms['wd3e-4_main'].checkpoints['500000'].wc_norm],
+  1943→    ['rlong.main.wp400', m6.rlong_main_wp_400, d6a.arms['wd3e-4_main'].checkpoints['400'].wp_norm],
+  1944→    ['rlong.main.wp20000', m6.rlong_main_wp_20000, d6a.arms['wd3e-4_main'].checkpoints['20000'].wp_norm],
+  1945→    ['rlong.wd1e4.D', m6.rlong_D_wd1e4, d6a.arms['wd1e-4'].D],
+  1946→    ['rlong.wd1e4.exec', m6.rlong_exec_wd1e4, d6a.arms['wd1e-4'].executed_to],
+  1947→    ['rlong.wd1e4.slow', m6.rlong_slow_wd1e4, d6a.arms['wd1e-4'].slow_inflation_rate],
+  1948→    ['rlong.wd1e4.runaway', m6.rlong_runaway_wd1e4, d6a.arms['wd1e-4'].blowup_rate_last200],
+  1949→    ['rlong.wd1e4.rr', m6.rlong_rr_wd1e4, d6a.arms['wd1e-4'].rate_ratio_runaway_over_slow],
+  1950→    ['rlong.wd1e3.D', m6.rlong_D_wd1e3, d6a.arms['wd0.001'].D],
+  1951→    ['rlong.wd1e3.exec', m6.rlong_exec_wd1e3, d6a.arms['wd0.001'].executed_to],
+  1952→    ['rlong.wd1e3.slow', m6.rlong_slow_wd1e3, d6a.arms['wd0.001'].slow_inflation_rate],
+  1953→    ['rlong.g_wd', m6.rlong_g_wd, d6a.guards_wd3e4.g_gate_trivial_100.g_ratio],
+  1954→    ['rlong.r1_wd', m6.rlong_r1_wd, d6a.guards_wd3e4.r1_world2_400.r1_ratio],
+  1955→    ['rlong.drift_wd', m6.rlong_drift_wd, d6a.guards_wd3e4.r2_drift_200_400.r2_drift_ratio],
+  1956→    ['rlong.g_wd1e4', m6.rlong_g_wd1e4, d6a.guards_wd1e4.g_gate_trivial_100.g_ratio],
+  1957→    ['rlong.r1_wd1e4', m6.rlong_r1_wd1e4, d6a.guards_wd1e4.r1_world2_400.r1_ratio],
+  1958→    ['rlong.drift_wd1e4', m6.rlong_drift_wd1e4, d6a.guards_wd1e4.r2_drift_200_400.r2_drift_ratio],
+  1959→    ['rlong.g_wd0', m6.rlong_g_wd0, d6a.guards_wd0.g_gate_trivial_100.g_ratio],
+  1960→    ['rlong.r1_wd0', m6.rlong_r1_wd0, d6a.guards_wd0.r1_world2_400.r1_ratio],
+  1961→    ['rlong.drift_wd0', m6.rlong_drift_wd0, d6a.guards_wd0.r2_drift_200_400.r2_drift_ratio]
+  1962→  ];
+  1963→  for (const dep of DEPTHS6.map(String)) {
+  1964→    probe6Pairs.push(
+  1965→      ['r3d.z_carried.' + dep, m6['r3d_z_carried_' + dep], d6b.depths[dep].carried.z_ratio],
+  1966→      ['r3d.sd_sum.' + dep, m6['r3d_sd_sum_' + dep], d6b.depths[dep].carried.sd_sum],
+  1967→      ['r3d.raw_gap.' + dep, m6['r3d_raw_gap_' + dep], d6b.depths[dep].carried.raw_gap],
+  1968→      ['r3d.var_carried.' + dep, m6['r3d_var_carried_' + dep], d6b.depths[dep].carried.var_ratio],
+  1969→      ['r3d.candD.z.' + dep, m6['r3d_candD_z_' + dep], d6b.depths[dep].candD.z_ratio],
+  1970→      ['r3d.candD.n.' + dep, m6['r3d_candD_n_' + dep], d6b.depths[dep].candD.baseline_n],
+  1971→      ['r3d.candD.var.' + dep, m6['r3d_candD_var_' + dep], d6b.depths[dep].candD.var_ratio],
+  1972→      ['r3d.candA.z.' + dep, m6['r3d_candA_z_' + dep], d6b.depths[dep].candA.z_ratio],
+  1973→      ['r3d.candA.var.' + dep, m6['r3d_candA_var_' + dep], d6b.depths[dep].candA.var_ratio],
+  1974→      ['r3d.multiplier.' + dep, m6['r3d_multiplier_' + dep], d6b.candS[dep].multiplier],
+  1975→      ['r3d.z_anchored.' + dep, m6['r3d_z_anchored_' + dep], d6b.candS[dep].z_ratio_corrected],
+  1976→      ['r3d.deficit.' + dep, m6['r3d_deficit_' + dep], d6b.mechanism_law.deficit_factor[dep]],
+  1977→      ['r3d.sdcollapse.' + dep, m6['r3d_sdcollapse_' + dep], d6b.mechanism_law.sd_collapse_factor[dep]],
+  1978→      ['r3d.gapcollapse.' + dep, m6['r3d_gapcollapse_' + dep], d6b.mechanism_law.raw_gap_collapse_factor[dep]]
+  1979→    );
+  1980→  }
+  1981→  probe6Pairs.push(
+  1982→    ['r3d.candD_round_z_2200', m6.r3d_candD_round_z_2200, d6b.depths['2200'].candD_round_rule ? d6b.depths['2200'].candD_round_rule.z_ratio : null],
+  1983→    ['gwin.g_anchor', m6.gwin_g_anchor, d6c.anchor_lr0_3_w100.g_ratio],
+  1984→    ['gwin.g_anchor_first10', m6.gwin_g_anchor_first10, d6c.anchor_lr0_3_w100.g_first10],
+  1985→    ['gwin.g_anchor_last10', m6.gwin_g_anchor_last10, d6c.anchor_lr0_3_w100.g_last10],
+  1986→    ['gwin.g_015', m6.gwin_g_015, d6c.lr0_15_w200.g_ratio],
+  1987→    ['gwin.g_015_first10', m6.gwin_g_015_first10, d6c.lr0_15_w200.g_first10],
+  1988→    ['gwin.g_015_last10', m6.gwin_g_015_last10, d6c.lr0_15_w200.g_last10],
+  1989→    ['gwin.g_05', m6.gwin_g_05, d6c.lr0_5_w60.g_ratio],
+  1990→    ['gwin.g_05_first10', m6.gwin_g_05_first10, d6c.lr0_5_w60.g_first10],
+  1991→    ['gwin.g_05_last10', m6.gwin_g_05_last10, d6c.lr0_5_w60.g_last10]
+  1992→  );
+  1993→  const probe6Bad = probe6Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, design6: b }));
+  1994→  // round-6 receipt of record: run6.json (metrics AND metrics_round6) must reproduce bit-exactly
+  1995→  const run6Receipt = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run6.json'), 'utf8'));
+  1996→  const run6CarriedPairs = Object.keys(run6Receipt.metrics).map((k) => [k, r1.metrics[k], run6Receipt.metrics[k]]);
+  1997→  const run6CarriedBad = run6CarriedPairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run6: b }));
+  1998→  const run6Pairs = Object.keys(run6Receipt.metrics_round6).map((k) => [k, q1.metrics[k], run6Receipt.metrics_round6[k]]);
+  1999→  const run6Bad = run6Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run6: b }));
+  2000→  // round-7 disclosed pipeline values (design7 I1) must equal the run bit-exactly
+
+[showing lines 1-2000 of 2095; use offset=2001 with limit to continue reading]

@@ -1,0 +1,512 @@
+     1→#!/usr/bin/env node
+     2→// experiments/e6-slice-1/e6_slice1.mjs — E6 FIRST VERTICAL SLICE (GEPA-class
+     3→// harness optimizer, M10 recipe folded) — the answer-wire abstraction for this
+     4→// fleet, applied to a REAL target:
+     5→//
+     6→//   TARGET   : the lode engine's scout→extract KEYS keyword lens
+     7→//              (fleet-seeds/lode/engine/engine_run.mjs, `const KEYS`, 14 entries).
+     8→//   MUTATION : single-keyword substitutions from a fixed candidate pool mined
+     9→//              from the awesome-rsi catalog's own section-heading taxonomy
+    10→//              (committed receipt: run-6 review-c1-awesome-rsi-raw.md).
+    11→//   MEASURE  : DETERMINISTIC OFFLINE REPLAY of the engine's extract pipeline
+    12→//              (score ≥2 → stable sort → title-dedup → top-9 → history
+    13→//              conditioning) over THREE COMMITTED corpora: run-5 scout raw,
+    14→//              run-6 scout raw, awesome-rsi catalog. No network. No engine
+    15→//              modification (this slice never edits fleet-seeds — the promoted
+    16→//              KEYS, if any, is a proposal artifact; adoption is the next
+    17→//              lane's act, compose-don't-clobber).
+    18→//   METRIC   : M(K) = (1/3) Σ_c [ μ_c(K) + f_c(K) ] where μ_c = mean key_score
+    19→//              of the candidates SURVIVING history conditioning in corpus c
+    20→//              (0 if none) and f_c = |survivors| (the fresh-candidate count:
+    21→//              candidates that would reach the priors stage as new cards).
+    22→//   LAWS     : machine proposes (frozen arm space, sha'd) → LLM supplies
+    23→//              RECEIPTED REFLECTIVE PRIORS over the answer wire (noul per arm
+    24→//              + one choice; ONE typesafe call) → certified comet-qrng-v1 draw
+    25→//              picks the BINDING LEAD arm (anti-cherry-pick; priors never pick
+    26→//              what gets measured) → M4/M10 budget cap B=3 (lead + top-2 noul
+    27→//              fills are the ONLY arms measured; unmeasured arms stay frozen)
+    28→//              → pre-registered measured gate decides PASS/FAIL → M10 cost
+    29→//              rule: the priors+seal spend is PAID iff the verdict is PASS.
+    30→//
+    31→// VALIDITY GATE (pre-registered, instrumentation must prove itself before any
+    32→// arm is trusted): the replay must reproduce the COMMITTED run-6 candidates.json
+    33→// byte-exactly (run-6 ran the post-fix both-channel matcher), and the COMMITTED
+    34→// run-5 candidates.json minus exactly the two receipted post-fix consequences
+    35→// (the M3 collision card arxiv 2609.26457, receipted in run-5
+    36→// review-c3-assessment.md, and the M11 URL-form marker match, receipted as
+    37→// run-6's c17→M11 exclusion). Failure here = INVALID-INSTRUMENTATION honest
+    38→// partial; nothing is measured, nothing is promoted.
+    39→//
+    40→// Stages:
+    41→//   node e6_slice1.mjs baseline            — validity gates + baseline metric
+    42→//                                            pin + per-key attestation (NO arms)
+    43→//   node e6_slice1.mjs priors              — ONE typesafe battery (answer wire)
+    44→//   node e6_slice1.mjs draw                — ONE certified QRNG seal (lead arm)
+    45→//   node e6_slice1.mjs decide [--check]    — measure bundle + verdict;
+    46→//                                            --check re-derives and compares
+    47→//                                            (determinism receipt, ts excluded)
+    48→//
+    49→// Spend caps (pre-registered): typesafe priors ≤ 4 calls (uses 1);
+    50→// mothquantum certified seals ≤ 2 (uses 1). Everything else local+$0.
+    51→import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, appendFileSync } from 'node:fs';
+    52→import { dirname, join } from 'node:path';
+    53→import { fileURLToPath } from 'node:url';
+    54→import { createHash } from 'node:crypto';
+    55→import { execFileSync } from 'node:child_process';
+    56→
+    57→const HERE = dirname(fileURLToPath(import.meta.url));
+    58→const FLEET = process.env.FLEET_SEEDS || '/home/z/my-project/fleet-seeds';
+    59→const OUT = join(HERE, 'receipts');
+    60→mkdirSync(OUT, { recursive: true });
+    61→
+    62→const sha256 = (s) => createHash('sha256').update(s).digest('hex');
+    63→const shaFile = (p) => sha256(readFileSync(p));
+    64→const log = (...a) => console.log(...a);
+    65→const ts = () => new Date().toISOString();
+    66→const ENGINE = join(FLEET, 'lode', 'engine');
+    67→const RECEIPTS = join(ENGINE, 'receipts');
+    68→
+    69→const WITNESS_RUNS = ['2026-09-29-engine-run-1', '2026-09-29-engine-run-2', '2026-09-29-engine-run-3', '2026-09-29-engine-run-4', '2026-09-29-engine-run-5', '2026-09-29-engine-run-6'];
+    70→
+    71→// ---------- pinned inputs (paths; sha pins live in registration.json) ----------
+    72→const P = {
+    73→  engine_run: join(ENGINE, 'engine_run.mjs'),
+    74→  mines: join(FLEET, 'lode', 'mines.jsonl'),
+    75→  run5_raw: join(RECEIPTS, '2026-09-29-engine-run-5', 'scout', 'raw.json'),
+    76→  run6_raw: join(RECEIPTS, '2026-09-29-engine-run-6', 'scout', 'raw.json'),
+    77→  catalog: join(RECEIPTS, '2026-09-29-engine-run-6', 'review-c1-awesome-rsi-raw.md'),
+    78→  run5_cands: join(RECEIPTS, '2026-09-29-engine-run-5', 'candidates.json'),
+    79→  run6_cands: join(RECEIPTS, '2026-09-29-engine-run-6', 'candidates.json'),
+    80→  run5_hist: join(RECEIPTS, '2026-09-29-engine-run-5', 'history.json'),
+    81→  run6_hist: join(RECEIPTS, '2026-09-29-engine-run-6', 'history.json'),
+    82→  ...Object.fromEntries(WITNESS_RUNS.map((d, i) => [`witness_run${i + 1}`, join(RECEIPTS, d, 'witness.json')])),
+    83→};
+    84→
+    85→// ---------- corpora (deterministic adapters over COMMITTED receipts) ----------
+    86→// JSON corpora: items exactly as the engine sees them (s.hits || s.entries ||
+    87→// s.repos), each tagged with its source. Catalog: one pseudo-source; items are
+    88→// the markdown bullets `- [Title](url) - desc` in file order, shaped as
+    89→// {title,url,desc} so the extract pipeline port is verbatim-identical.
+    90→function loadCorpora() {
+    91→  const corpora = [];
+    92→  for (const [name, p] of [['run5-scout', P.run5_raw], ['run6-scout', P.run6_raw]]) {
+    93→    const scouts = JSON.parse(readFileSync(p, 'utf8'));
+    94→    const items = [];
+    95→    for (const s of scouts) {
+    96→      for (const it of (s.hits || s.entries || s.repos || [])) items.push({ src: s.source, it });
+    97→    }
+    98→    corpora.push({ name, kind: 'engine-scout-raw', file: p, items });
+    99→  }
+   100→  const md = readFileSync(P.catalog, 'utf8');
+   101→  const items = [];
+   102→  for (const line of md.split('\n')) {
+   103→    const m = line.match(/^\s*-\s\[([^\]]+)\]\(([^)\s]+)\)(?:\s*-\s*(.+))?\s*$/);
+   104→    if (!m) continue;
+   105→    items.push({ src: 'awesome-rsi-catalog', it: { title: m[1], url: m[2], desc: m[3] || '' } });
+   106→  }
+   107→  corpora.push({ name: 'awesome-rsi-catalog', kind: 'committed-review-corpus', file: P.catalog, items });
+   108→  return corpora;
+   109→}
+   110→
+   111→// ---------- history state (M10 proposal side: falsified/mined/drawn are not
+   112→// re-proposed). Verbatim port of engine_run.mjs history code (post-fix, both
+   113→// arxiv marker channels, bare-id compare). mode filters which engine-run
+   114→// witnesses count as "previously drawn": run5/run6 = the state that run had;
+   115→// current = all six committed witnesses.
+   116→const normTitle = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+   117→function minedMarkers() {
+   118→  const markers = [];
+   119→  for (const line of readFileSync(P.mines, 'utf8').split('\n')) {
+   120→    if (!line.trim()) continue;
+   121→    const m = JSON.parse(line);
+   122→    const blob = `${m.source || ''} ${m.claim || ''}`.toLowerCase();
+   123→    const slugs = [...blob.matchAll(/github\.com\/([a-z0-9_.-]+\/[a-z0-9_.-]+)/g)].map((x) => x[1]);
+   124→    const arxivs = [...new Set([
+   125→      ...[...blob.matchAll(/arxiv[:\s]*([0-9]{4}\.[0-9]{4,5})/g)].map((x) => x[1]),
+   126→      ...[...blob.matchAll(/arxiv\.org\/(?:abs|pdf)\/([0-9]{4}\.[0-9]{4,5})/g)].map((x) => x[1]),
+   127→    ])];
+   128→    markers.push({ id: m.id, slugs, arxivs });
+   129→  }
+   130→  return markers;
+   131→}
+   132→function previouslyDrawn(maxRun) {
+   133→  const drawn = [];
+   134→  for (const d of WITNESS_RUNS) {
+   135→    const n = Number(d.slice(-1));
+   136→    if (Number.isFinite(maxRun) && n >= maxRun) continue;
+   137→    try {
+   138→      const w = JSON.parse(readFileSync(join(RECEIPTS, d, 'witness.json'), 'utf8'));
+   139→      if (w.ok && w.drawn_candidate) {
+   140→        const cands = JSON.parse(readFileSync(join(RECEIPTS, d, 'candidates.json'), 'utf8'));
+   141→        const hit = cands.find((c) => c.id === w.drawn_candidate);
+   142→        if (hit) drawn.push({ run: d, id: hit.id, title: hit.title, ref: hit.ref });
+   143→      }
+   144→    } catch { /* a receipt dir without witness/candidates is not history */ }
+   145→  }
+   146→  return drawn;
+   147→}
+   148→function historyState(mode) {
+   149→  return {
+   150→    mode,
+   151→    markers: minedMarkers(),
+   152→    previously_drawn: previouslyDrawn(mode === 'run5' ? 5 : mode === 'run6' ? 6 : Infinity),
+   153→  };
+   154→}
+   155→const cardArxivs = (blob) => new Set([
+   156→  ...[...blob.matchAll(/arxiv[:\s]*([0-9]{4}\.[0-9]{4,5})/g)].map((x) => x[1]),
+   157→  ...[...blob.matchAll(/arxiv\.org\/(?:abs|pdf)\/([0-9]{4}\.[0-9]{4,5})(?:v[0-9]+)?/g)].map((x) => x[1]),
+   158→]);
+   159→function minedMatch(c, hist) {
+   160→  const blob = `${c.title} ${c.ref}`.toLowerCase();
+   161→  const arxivs = cardArxivs(blob);
+   162→  for (const mk of hist.markers) {
+   163→    if (mk.slugs.some((s) => blob.includes(s))) return mk.id;
+   164→    if (mk.arxivs.some((a) => arxivs.has(a))) return mk.id;
+   165→  }
+   166→  for (const pd of hist.previously_drawn) if (normTitle(pd.title) === normTitle(c.title)) return `drawn@${pd.run}`;
+   167→  return null;
+   168→}
+   169→
+   170→// ---------- extract pipeline port (engine_run.mjs lines 162-198, verbatim) ----------
+   171→function extract(corpus, KEYS, hist) {
+   172→  const cands = [];
+   173→  for (const { src, it } of corpus.items) {
+   174→    const blob = JSON.stringify(it).toLowerCase();
+   175→    const score = KEYS.reduce((a, k) => a + (blob.includes(k) ? 1 : 0), 0);
+   176→    if (score >= 2) {
+   177→      cands.push({
+   178→        id: `c${cands.length + 1}`,
+   179→        source: src,
+   180→        title: (it.title || it.full_name || '').slice(0, 140),
+   181→        ref: it.url || it.id || `https://github.com/${it.full_name}`,
+   182→        stars: it.stars ?? it.points ?? null,
+   183→        date: it.created || it.published || it.created_at || null,
+   184→        key_score: score,
+   185→        gist: (it.desc || it.summary || '').slice(0, 240),
+   186→      });
+   187→    }
+   188→  }
+   189→  const sorted = [...cands].sort((a, b) => b.key_score - a.key_score); // stable
+   190→  const seen = new Map();
+   191→  for (const c of sorted) {
+   192→    const k = c.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
+   193→    if (k && !seen.has(k)) seen.set(k, c);
+   194→  }
+   195→  const pre = [...seen.values()].slice(0, 9);
+   196→  const excluded = [];
+   197→  const survivors = [];
+   198→  for (const c of pre) {
+   199→    const m = minedMatch(c, hist);
+   200→    if (m) { excluded.push({ id: c.id, title: c.title, source: c.source, ref: c.ref, matched: m }); continue; }
+   201→    survivors.push({ ...c, id: `c${survivors.length + 1}` });
+   202→  }
+   203→  return { pool: cands.length, pre: pre.length, excluded, survivors };
+   204→}
+   205→
+   206→// ---------- metric ----------
+   207→// per corpus: mu = mean key_score of survivors (0 if none); f = |survivors|.
+   208→// M = mean over the three corpora of (mu + f). totalF = Σ f_c.
+   209→function metric(corpora, KEYS, hist) {
+   210→  let sum = 0, totalF = 0;
+   211→  const per = [];
+   212→  for (const c of corpora) {
+   213→    const r = extract(c, KEYS, hist);
+   214→    const mu = r.survivors.length ? r.survivors.reduce((a, s) => a + s.key_score, 0) / r.survivors.length : 0;
+   215→    const f = r.survivors.length;
+   216→    sum += mu + f; totalF += f;
+   217→    per.push({ corpus: c.name, mu, f, pool: r.pool, pre: r.pre, excluded: r.excluded.length, survivors: r.survivors.map((s) => ({ id: s.id, key_score: s.key_score, title: s.title, ref: s.ref })) });
+   218→  }
+   219→  return { M: sum / corpora.length, totalF, per_corpus: per };
+   220→}
+   221→
+   222→// ---------- baseline KEYS (the pin; verbatim from engine_run.mjs) ----------
+   223→const KEYS_BASELINE = ['self-improv', 'self-evolv', 'recursive', 'meta-learn', 'harness', 'outer loop', 'reward hacking', 'reward-hacking', 'verifier', 'playbook', 'skill librar', 'curriculum', 'map-elites', 'archive'];
+   224→
+   225→// ---------- validity gates ----------
+   226→function canonCandidates(list) { return JSON.stringify(list, null, 1) + '\n'; }
+   227→function validityGate(corpora) {
+   228→  const byName = Object.fromEntries(corpora.map((c) => [c.name, c]));
+   229→  const out = { ok: false, run6: null, run5: null, notes: [] };
+   230→  // GATE 1 — run-6 corpus under run-6-time state must reproduce the committed
+   231→  // candidates.json BYTE-EXACT (run-6 ran the post-fix matcher).
+   232→  {
+   233→    const hist = historyState('run6');
+   234→    const r = extract(byName['run6-scout'], KEYS_BASELINE, hist);
+   235→    const committed = readFileSync(P.run6_cands, 'utf8');
+   236→    const derivedHist = { markers_n: hist.markers.length, previously_drawn: hist.previously_drawn.map((p) => `${p.run}:${p.id}`) };
+   237→    const committedHist = JSON.parse(readFileSync(P.run6_hist, 'utf8'));
+   238→    const histEqual =
+   239→      derivedHist.markers_n === committedHist.mined_markers.length &&
+   240→      JSON.stringify(derivedHist.previously_drawn) === JSON.stringify(committedHist.previously_drawn.map((p) => `${p.run}:${p.id}`));
+   241→    const exclEqual = JSON.stringify(r.excluded.map((e) => [e.title, e.ref, e.matched])) ===
+   242→      JSON.stringify(committedHist.excluded.map((e) => [e.title, e.ref, e.matched]));
+   243→    const bytesEqual = canonCandidates(r.survivors) === committed;
+   244→    out.run6 = { history_state_matches_committed: histEqual, exclusions_match_committed: exclEqual, survivors_byte_equal_committed: bytesEqual, derived: derivedHist };
+   245→    if (!histEqual || !exclEqual || !bytesEqual) out.notes.push('run-6 replay != committed run-6 receipt');
+   246→  }
+   247→  // GATE 2 — run-5 corpus under run-5-time state must reproduce the committed
+   248→  // candidates.json minus EXACTLY the two receipted post-fix consequences:
+   249→  // the M3 collision card (arxiv 2609.26457) and the M11 URL-form match
+   250→  // (arxiv 2609.34924) — then renumbered.
+   251→  {
+   252→    const hist = historyState('run5');
+   253→    const r = extract(byName['run5-scout'], KEYS_BASELINE, hist);
+   254→    const committedHist = JSON.parse(readFileSync(P.run5_hist, 'utf8'));
+   255→    const derivedHist = { markers_n: hist.markers.length, previously_drawn: hist.previously_drawn.map((p) => `${p.run}:${p.id}`) };
+   256→    const histEqual =
+   257→      derivedHist.previously_drawn.join('|') === committedHist.previously_drawn.map((p) => `${p.run}:${p.id}`).join('|');
+   258→    const committedCands = JSON.parse(readFileSync(P.run5_cands, 'utf8'));
+   259→    const expectedDeltaRefs = ['2609.26457', '2609.34924'];
+   260→    const extra = r.excluded.filter((e) => !committedHist.excluded.some((ce) => ce.title === e.title && ce.matched === e.matched));
+   261→    const deltaOk = extra.length === 2 &&
+   262→      extra.every((e) => expectedDeltaRefs.some((ref) => (e.ref || '').includes(ref))) &&
+   263→      new Set(extra.map((e) => e.matched)).size === 2 &&
+   264→      extra.some((e) => e.matched === 'M3') && extra.some((e) => e.matched === 'M11');
+   265→    const expectedSurvivors = committedCands.filter((c) => !expectedDeltaRefs.some((ref) => (c.ref || '').includes(ref)))
+   266→      .map((c, i) => ({ ...c, id: `c${i + 1}` }));
+   267→    const bytesEqual = canonCandidates(r.survivors) === canonCandidates(expectedSurvivors);
+   268→    out.run5 = { history_prevdrawn_matches_committed: histEqual, exclusion_delta_is_exactly_receipted_fix: deltaOk, survivors_equal_committed_minus_receipted_delta: bytesEqual, extra_exclusions: extra };
+   269→    if (!histEqual || !deltaOk || !bytesEqual) out.notes.push('run-5 replay != committed run-5 receipt modulo the receipted fix');
+   270→  }
+   271→  out.ok = out.notes.length === 0;
+   272→  return out;
+   273→}
+   274→
+   275→// ---------- attestation (baseline diagnostics; used ONLY for the registered
+   276→// dead-slot rule that fixes the substitution slots pre-run) ----------
+   277→function attestation(corpora, KEYS) {
+   278→  const rows = {};
+   279→  for (const k of KEYS) rows[k] = {};
+   280→  for (const c of corpora) {
+   281→    const blobs = c.items.map(({ it }) => JSON.stringify(it).toLowerCase());
+   282→    for (const k of KEYS) rows[k][c.name] = blobs.reduce((a, b) => a + (b.includes(k) ? 1 : 0), 0);
+   283→  }
+   284→  return rows;
+   285→}
+   286→
+   287→// ---------- stages ----------
+   288→const stage = process.argv[2] || '';
+   289→
+   290→function loadRegistration() {
+   291→  const p = join(HERE, 'registration.json');
+   292→  if (!existsSync(p)) throw new Error('registration.json missing — no pin, no run (fail-closed)');
+   293→  return JSON.parse(readFileSync(p, 'utf8'));
+   294→}
+   295→function assertPins(reg) {
+   296→  const bad = [];
+   297→  for (const [k, want] of Object.entries(reg.input_sha256)) {
+   298→    const got = shaFile(P[k]);
+   299→    if (got !== want) bad.push(`${k}: ${got.slice(0, 12)} != pinned ${want.slice(0, 12)}`);
+   300→  }
+   301→  if (bad.length) throw new Error('PIN MISMATCH (inputs drifted from registration):\n' + bad.join('\n'));
+   302→}
+   303→
+   304→if (stage === 'baseline') {
+   305→  const corpora = loadCorpora();
+   306→  const reg = { inputs: Object.fromEntries(corpora.map((c) => [c.name, { file: c.file, sha256: shaFile(c.file), items: c.items.length }])) };
+   307→  const validity = validityGate(corpora);
+   308→  const hist = historyState('current');
+   309→  const base = metric(corpora, KEYS_BASELINE, hist);
+   310→  const att = attestation(corpora, KEYS_BASELINE);
+   311→  const receipt = {
+   312→    kind: 'e6-slice-1-baseline', ts_utc: ts(),
+   313→    stage_note: 'pre-registration diagnostics ONLY: validity gates + baseline pin + per-key attestation. No arms defined, none measured, no external spend.',
+   314→    corpora: reg.inputs,
+   315→    validity, baseline: base, baseline_M: base.M, baseline_totalF: base.totalF, attestation: att,
+   316→  };
+   317→  writeFileSync(join(OUT, 'baseline.json'), JSON.stringify(receipt, null, 1) + '\n');
+   318→  log(`validity: ${validity.ok ? 'OK' : 'FAILED — ' + validity.notes.join('; ')}`);
+   319→  for (const pc of base.per_corpus) log(`baseline ${pc.corpus}: pool=${pc.pool} pre=${pc.pre} survivors=${pc.f} mu=${pc.mu}`);
+   320→  log(`baseline M=${base.M} totalF=${base.totalF}`);
+   321→  log(`corpus items: ${corpora.map((c) => `${c.name}=${c.items.length}`).join(' ')}`);
+   322→  for (const [k, v] of Object.entries(att)) log(`attest ${k}: ${JSON.stringify(v)}`);
+   323→  process.exit(0);
+   324→}
+   325→
+   326→if (stage === 'priors') {
+   327→  const reg = loadRegistration();
+   328→  assertPins(reg);
+   329→  const arms = JSON.parse(readFileSync(join(HERE, 'arms.json'), 'utf8'));
+   330→  const armsSha = sha256(canonCandidates(arms.arms));
+   331→  if (armsSha !== reg.arms_sha256) throw new Error('arms.json != registered arms_sha256 (fail-closed)');
+   332→  const { systemone } = await import(join(FLEET, 'lode', 'engine', 'systemone_client.mjs'));
+   333→  const q = {};
+   334→  for (const a of arms.arms) {
+   335→    q[`p_gain_${a.id}`] = {
+   336→      type: 'noul',
+   337→      instructions: `p = probability that this ONE-KEYWORD mutation of the lode engine's scout→extract keyword lens RAISES the pre-registered composite metric M to >= 1.05 x baseline (baseline M=${reg.baseline_M} pinned) WITHOUT reducing total fresh-candidate count. Metric: over 3 committed replay corpora (run-5 scout, run-6 scout, awesome-rsi catalog; deterministic offline replay, score>=2, top-9 cap, current mine-ledger history conditioning), M = mean over corpora of (mean key_score of surviving fresh candidates + surviving count). Mutation: replace key "${a.old_key}" with "${a.new_key}" (rationale: ${a.note}). Replacing an attested key can lower scores; a dead key slot gains only if the new term actually attests.`,
+   338→    };
+   339→  }
+   340→  q['first_measure'] = {
+   341→    type: 'choice',
+   342→    instructions: 'Which ONE arm would you measure FIRST if measurement were budgeted? (It is not: the certified QRNG draw picks the binding lead and the two top-prior arms fill the bundle; your choice is receipted as a reflective prior and does NOT override the draw.)',
+   343→    criteria: Object.fromEntries(arms.arms.map((a) => [a.id, `replace "${a.old_key}" with "${a.new_key}" — ${a.note}`])),
+   344→  };
+   345→  const at = ts();
+   346→  try {
+   347→    const r = await systemone({
+   348→      state: {
+   349→        battery: 'e6-slice-1-priors',
+   350→        target: 'lode engine scout→extract KEYS lens (fleet-seeds/lode/engine/engine_run.mjs)',
+   351→        arms_sha256: armsSha, arms_n: arms.arms.length, baseline_M: reg.baseline_M, baseline_totalF: reg.baseline_totalF,
+   352→        metric_spec: reg.metric_formula, pass_rule: reg.pass_rule,
+   353→      },
+   354→      questions: q,
+   355→    });
+   356→    const receipt = { kind: 'e6-slice-1-priors', ts_utc: at, ok: true, arms_sha256: armsSha, model: r.model, usage: r.usage, latency_ms: r.latency_ms, answers: r.answers };
+   357→    writeFileSync(join(OUT, 'priors.json'), JSON.stringify(receipt, null, 1) + '\n');
+   358→    appendFileSync(join(OUT, 'usage.jsonl'), JSON.stringify({
+   359→      kind: 'usage-receipt', at_utc: at, service: 'typesafe.ai/v1/systemone', model: r.model, usage: r.usage,
+   360→      latency_ms: r.latency_ms, purpose: 'e6-slice-1 reflective priors (8 noul + 1 choice, ONE call)', questions: Object.keys(q).length,
+   361→    }) + '\n');
+   362→    log(`priors OK model=${r.model} usage=${JSON.stringify(r.usage)} latency=${r.latency_ms}ms`);
+   363→  } catch (e) {
+   364→    const receipt = { kind: 'e6-slice-1-priors', ts_utc: at, ok: false, error: String(e.message || e).replace(/apikey_[A-Za-z0-9_]+/g, 'REDACTED').slice(0, 400) };
+   365→    writeFileSync(join(OUT, 'priors.json'), JSON.stringify(receipt, null, 1) + '\n');
+   366→    log('priors FAILED (honest, fail-closed):', receipt.error);
+   367→    process.exit(1);
+   368→  }
+   369→  process.exit(0);
+   370→}
+   371→
+   372→if (stage === 'draw') {
+   373→  const reg = loadRegistration();
+   374→  assertPins(reg);
+   375→  const arms = JSON.parse(readFileSync(join(HERE, 'arms.json'), 'utf8'));
+   376→  const at = ts();
+   377→  // E6_SEAL_STREAM: 'direct' (default) | 'prf' — moth-seal's own registered
+   378→  // receipted extension mode. First direct attempt fail-closed on the
+   379→  // min-entropy bit budget (job delivered 40 bits < 112 required for pool 8);
+   380→  // proceeding on prf is the tool's declared answer and is receipted by the
+   381→  // seal itself (effectiveEntropyBits declared, never silent).
+   382→  const stream = process.env.E6_SEAL_STREAM === 'prf' ? 'prf' : 'direct';
+   383→  try {
+   384→    const sealPath = join(OUT, 'qrng-seal.json');
+   385→    execFileSync('node', [
+   386→      join(FLEET, 'tools', 'moth-seal.mjs'),
+   387→      '--n=1', `--pool=${arms.arms.length}`, '--label=e6-slice-1-arm-draw',
+   388→      ...(stream === 'prf' ? ['--stream=prf'] : []),
+   389→      `--out=${sealPath}`, '--quiet',
+   390→    ], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, MOTH_KEY: process.env.MOTHQUANTUM_TOKEN || process.env.MOTH_KEY }, timeout: 180000 });
+   391→    const seal = JSON.parse(readFileSync(sealPath, 'utf8'));
+   392→    const sel = seal.chosen?.selected?.[0];
+   393→    const w = {
+   394→      kind: 'e6-slice-1-qrng-witness', ts_utc: at, ok: true, arms_sha256: reg.arms_sha256,
+   395→      drawn_index: sel, drawn_arm: arms.arms[sel]?.id ?? null,
+   396→      stream, stream_note: stream === 'prf' ? 'certified bytes seed the registered SHA-256 counter stream (mothbits STEP 3 semantics); extension declared explicitly, effectiveEntropyBits in the certified receipt' : 'direct certified stream',
+   397→      certifiedBits: seal.certifiedBits ? { deliveredBytes: seal.certifiedBits.deliveredBytes, hBit: seal.certifiedBits.hBit, effectiveEntropyBits: seal.certifiedBits.effectiveEntropyBits, streamKind: seal.certifiedBits.stream } : null,
+   398→      raw_result_sha256: seal.rawResultSha256 ?? null, job: seal.job ?? null,
+   399→      note: 'certified comet-qrng-v1 Fisher-Yates over the frozen arm list; the drawn arm is the BINDING LEAD of the measured bundle (anti-cherry-pick: priors never choose what gets measured). Full certified receipt: qrng-seal.json. Attempt history: qrng-attempts.jsonl (append-only; first direct attempt fail-closed on the bit budget — job consumed, no receipt issued, receipted here).',
+   400→    };
+   401→    writeFileSync(join(OUT, 'witness.json'), JSON.stringify(w, null, 1) + '\n');
+   402→    appendFileSync(join(OUT, 'qrng-attempts.jsonl'), JSON.stringify({ kind: 'qrng-attempt', at_utc: at, ok: true, stream, drawn_index: sel, drawn_arm: w.drawn_arm, jobId: seal.job?.jobId ?? null }) + '\n');
+   403→    log(`QRNG drew arm #${sel} (${w.drawn_arm})`);
+   404→  } catch (e) {
+   405→    const w = { kind: 'e6-slice-1-qrng-witness', ts_utc: at, ok: false, stream, error: String(e.message || e).replace(/moth_[A-Za-z0-9]+/g, 'REDACTED').slice(0, 400) };
+   406→    writeFileSync(join(OUT, 'witness.json'), JSON.stringify(w, null, 1) + '\n');
+   407→    appendFileSync(join(OUT, 'qrng-attempts.jsonl'), JSON.stringify({ kind: 'qrng-attempt', at_utc: at, ok: false, stream, error: w.error }) + '\n');
+   408→    log('QRNG FAILED (honest, fail-closed):', w.error);
+   409→    process.exit(1);
+   410→  }
+   411→  process.exit(0);
+   412→}
+   413→
+   414→if (stage === 'decide') {
+   415→  const check = process.argv.includes('--check');
+   416→  const reg = loadRegistration();
+   417→  assertPins(reg);
+   418→  const arms = JSON.parse(readFileSync(join(HERE, 'arms.json'), 'utf8'));
+   419→  if (sha256(canonCandidates(arms.arms)) !== reg.arms_sha256) throw new Error('arms.json != registered arms_sha256');
+   420→  const corpora = loadCorpora();
+   421→
+   422→  const validity = validityGate(corpora);
+   423→  const hist = historyState('current');
+   424→  const base = metric(corpora, KEYS_BASELINE, hist);
+   425→  const basePinOk = base.M === reg.baseline_M && base.totalF === reg.baseline_totalF;
+   426→
+   427→  const priors = JSON.parse(readFileSync(join(OUT, 'priors.json'), 'utf8'));
+   428→  const witness = JSON.parse(readFileSync(join(OUT, 'witness.json'), 'utf8'));
+   429→  // Registered abort_line: "external channel failure (typesafe/mothquantum
+   430→  // non-2xx or timeout) -> fail-closed honest partial receipted". This branch
+   431→  // WRITES that receipt (repair #3, post-draw: the draw already happened and
+   432→  // failed fail-closed; decision values untouched — additions only here).
+   433→  if (!priors.ok || !witness.ok) {
+   434→    const receipt = {
+   435→      kind: 'e6-slice-1-decide', ts_utc: ts(), check,
+   436→      verdict: 'HONEST-PARTIAL',
+   437→      partial_reason: !witness.ok
+   438→        ? 'qrng-channel-degraded — the certified anti-cherry-pick lead was never drawn (mothquantum comet-qrng-v1: job #1 direct fail-closed on min-entropy bit budget 40<112 bits; job #2 prf fail-closed on incomplete certification payload; both jobs consumed, zero certified seals issued; the <=2-job cap set in the pushed pre-draw repair is CONSUMED). Per the registered abort_line the decision procedure is fail-closed: no bundle, no arms measured, no promotion, NO PASS/FAIL claim on the mutation space. The 8 arms stay frozen-unmeasured for a fresh registration on a recovered channel.'
+   439→        : 'priors channel failed — no reflective priors of record; decision procedure fail-closed per registered abort_line',
+   440→      validity, baseline_pin_ok: basePinOk,
+   441→      baseline: { M: base.M, totalF: base.totalF, per_corpus: base.per_corpus.map(({ corpus, mu, f }) => ({ corpus, mu, f })) },
+   442→      priors: priors.ok ? { ok: true, model: priors.model, usage: priors.usage, answers_note: 'receipted in priors.json; NOT used to select anything (the lead was never drawn)' } : { ok: false, error: priors.error },
+   443→      seal: { ok: witness.ok, attempts_ledger: 'receipts/qrng-attempts.jsonl', stream: witness.stream ?? null, error: witness.error ?? null },
+   444→      arms_frozen_unmeasured: arms.arms.map((a) => a.id),
+   445→      cost_rule: { law: 'M10 (arXiv:2609.24972): added inference cost must be paid for by measured gain', spend: ['1 typesafe systemone battery call (receipted 2808 in / 235 out)', '2 mothquantum comet jobs consumed, 0 certified seals issued (ledgered)'], paid: 'NOT_PAID', settlement_note: 'the added spend bought: a proven-faithful replay instrumentation (validity gates), a receipted reflective-priors battery, and a receipted channel-degradation finding — not measured gain' },
+   446→    };
+   447→    writeFileSync(join(OUT, check ? 'decide-check.json' : 'decide.json'), JSON.stringify(receipt, null, 1) + '\n');
+   448→    log('decide: HONEST-PARTIAL (' + receipt.partial_reason.slice(0, 90) + '…) — nothing measured, nothing promoted, fail-closed per registration');
+   449→    process.exit(1);
+   450→  }
+   451→  if (!validity.ok || !basePinOk) {
+   452→    const receipt = { kind: 'e6-slice-1-decide', ts_utc: ts(), check, verdict: 'INVALID-INSTRUMENTATION', validity, baseline_pin_ok: basePinOk, baseline_M: base.M };
+   453→    writeFileSync(join(OUT, check ? 'decide-check.json' : 'decide.json'), JSON.stringify(receipt, null, 1) + '\n');
+   454→    log('decide: INVALID-INSTRUMENTATION (fail-closed, nothing measured, nothing promoted)');
+   455→    process.exit(1);
+   456→  }
+   457→
+   458→  // M4/M10 budget cap: bundle = QRNG lead + (B-1) top-noul fills. B = max(1,
+   459→  // ceil(B0*ANNEAL^t)), B0=3, ANNEAL=0.7, t=0 prior E6 slices → B=3.
+   460→  const B0 = 3, ANNEAL = 0.7, t = reg.prior_e6_slices;
+   461→  const B = Math.max(1, Math.ceil(B0 * Math.pow(ANNEAL, t)));
+   462→  const noul = (id) => Number(priors.answers?.[`p_gain_${id}`]?.noul) || 0;
+   463→  const lead = witness.drawn_arm;
+   464→  const fills = arms.arms.filter((a) => a.id !== lead).sort((a, b) => (noul(b.id) - noul(a.id)) || (a.index - b.index)).slice(0, B - 1).map((a) => a.id);
+   465→  const bundle = [lead, ...fills];
+   466→
+   467→  const measured = [];
+   468→  for (const a of arms.arms) {
+   469→    if (!bundle.includes(a.id)) continue;
+   470→    const KEYS = KEYS_BASELINE.map((k) => (k === a.old_key ? a.new_key : k));
+   471→    const m = metric(corpora, KEYS, hist);
+   472→    measured.push({ id: a.id, old_key: a.old_key, new_key: a.new_key, lead: a.id === lead, role: a.id === lead ? 'qrng-lead' : 'noul-fill', noul: noul(a.id), M: m.M, totalF: m.totalF, per_corpus: m.per_corpus, KEYS });
+   473→  }
+   474→  const pass = measured.some((m) => m.M >= reg.pass_margin_relative * reg.baseline_M && m.totalF >= reg.baseline_totalF);
+   475→  const eligible = measured.filter((m) => m.M >= reg.pass_margin_relative * reg.baseline_M && m.totalF >= reg.baseline_totalF);
+   476→  const promoted = pass ? [...eligible].sort((a, b) => (b.M - a.M) || (a.id < b.id ? -1 : 1))[0] : null;
+   477→  // descriptive annex ONLY (n=3, non-binding): rank agreement between noul prior and M.
+   478→  const spearmanPairs = measured.map((m) => ({ id: m.id, noul: m.noul, M: m.M })).sort((a, b) => a.noul - b.noul);
+   479→  const receipt = {
+   480→    kind: 'e6-slice-1-decide', ts_utc: ts(), check,
+   481→    verdict: pass ? 'PASS' : 'FAIL',
+   482→    validity, baseline: { M: base.M, totalF: base.totalF, pin_ok: basePinOk, per_corpus: base.per_corpus },
+   483→    budget: { B0, ANNEAL, t, B, law: 'M4/M10: budget cap as selection pressure — only bundle arms measured; unmeasured arms stay frozen (receipted, never peeked)' },
+   484→    bundle: { lead, lead_rule: 'certified comet-qrng-v1 draw (anti-cherry-pick)', fills, fill_rule: 'deterministic descending noul prior, index tie-break', measured_arm_ids: bundle, frozen_unmeasured_arm_ids: arms.arms.map((a) => a.id).filter((id) => !bundle.includes(id)) },
+   485→    measured, pass_rule: reg.pass_rule, pass_margin_relative: reg.pass_margin_relative,
+   486→    promoted: promoted ? { id: promoted.id, old_key: promoted.old_key, new_key: promoted.new_key, M: promoted.M, totalF: promoted.totalF, proposed_KEYS: KEYS_BASELINE.map((k) => (k === promoted.old_key ? promoted.new_key : k)) } : null,
+   487→    cost_rule: { law: 'M10 (arXiv:2609.24972): added inference cost must be paid by measured gain', spend: ['1 typesafe systemone battery call', '1 certified comet-qrng-v1 seal'], paid: pass ? 'PAID' : 'NOT_PAID' },
+   488→    annex_descriptive: { note: 'n=3, non-binding, multiple-comparisons caveat: the full per-arm table over the measured bundle only', pairs: spearmanPairs },
+   489→  };
+   490→  const path = join(OUT, check ? 'decide-check.json' : 'decide.json');
+   491→  writeFileSync(path, JSON.stringify(receipt, null, 1) + '\n');
+   492→  log(`validity ${validity.ok ? 'OK' : 'FAIL'}; baseline M=${base.M} totalF=${base.totalF} (pin ${basePinOk ? 'MATCH' : 'MISMATCH'})`);
+   493→  for (const m of measured) log(`arm ${m.id} (${m.role}, noul=${m.noul}): M=${m.M} totalF=${m.totalF}`);
+   494→  log(`VERDICT: ${receipt.verdict}${promoted ? ` — promote ${promoted.id} (${promoted.old_key} → ${promoted.new_key})` : ''}; cost rule ${receipt.cost_rule.paid}`);
+   495→  process.exit(0);
+   496→}
+   497→
+   498→if (stage === 'determinism') {
+   499→  const a = JSON.parse(readFileSync(join(OUT, 'decide.json'), 'utf8'));
+   500→  const b = JSON.parse(readFileSync(join(OUT, 'decide-check.json'), 'utf8'));
+   501→  const strip = (r) => { const { ts_utc, check, ...rest } = r; return rest; };
+   502→  const sa = sha256(JSON.stringify(strip(a)));
+   503→  const sb = sha256(JSON.stringify(strip(b)));
+   504→  const rec = { kind: 'e6-slice-1-determinism', ts_utc: ts(), decide_sha256: sa, decide_check_sha256: sb, byte_identical_modulo_ts: sa === sb };
+   505→  writeFileSync(join(OUT, 'determinism.json'), JSON.stringify(rec, null, 1) + '\n');
+   506→  log(`determinism: ${rec.byte_identical_modulo_ts ? 'BYTE-IDENTICAL (modulo ts)' : 'DIVERGED — ' + sa.slice(0, 12) + ' vs ' + sb.slice(0, 12)}`);
+   507→  process.exit(rec.byte_identical_modulo_ts ? 0 : 1);
+   508→}
+   509→
+   510→console.error('usage: e6_slice1.mjs baseline|priors|draw|decide [--check]|determinism');
+   511→process.exit(2);
+   512→
