@@ -1,0 +1,10 @@
+{
+  "jobId": "06884e96-1960-44f5-a7a4-3c59f24ad003",
+  "http": 202,
+  "body": {
+    "$schema": "https://api.mothquantum.com/schemas/SubmitJobOutputBody.json",
+    "job_id": "06884e96-1960-44f5-a7a4-3c59f24ad003",
+    "status": "queued",
+    "submitted_at": "2026-10-01T22:59:54Z"
+  }
+}

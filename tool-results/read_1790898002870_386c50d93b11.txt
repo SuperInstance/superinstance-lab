@@ -1,0 +1,573 @@
+     1→#!/usr/bin/env node
+     2→// experiments/e6-slice-2/e6_slice2.mjs — E6 SECOND VERTICAL SLICE: the
+     3→// RE-REGISTRATION of slice-1 on the RECOVERED comet-qrng-v1 channel.
+     4→//
+     5→// Slice-1 (experiments/e6-slice-1/, verdict HONEST-PARTIAL qrng-channel-degraded)
+     6→// sealed everything EXCEPT the draw: same target, same frozen arms (arms.json,
+     7→// sha 23eec18d…), same pinned baseline (M=7.0740740740740735 / totalF=15), same
+     8→// metric/margins — but the certified anti-cherry-pick lead never landed (job #1
+     9→// direct fail-closed 40<112 bits; job #2 prf fail-closed CertError on an
+    10→// incomplete certification payload; <=2-job cap consumed, 0 seals). Its verdict
+    11→// registered this next probe: fresh registration on a RECOVERED channel — same
+    12→// frozen arms, same pinned baseline, same metric/margins; re-seal, draw the
+    13→// lead, measure the B=3 bundle, settle the cost rule.
+    14→//
+    15→// SLICE-2 DELTAS (each a REGISTERED choice, documented in registration.json):
+    16→//   ARMS      : arms.json is a byte-identical copy of slice-1's (canon sha
+    17→//               23eec18d… recomputed and re-pinned — no re-freeze).
+    18→//   PRIORS    : the slice-1 sealed reflective priors of record are REUSED
+    19→//               (pinned by sha; binding check: their arms_sha256 must equal
+    20→//               this slice's arms sha). ZERO fresh typesafe calls — registered
+    21→//               choice with receipted reasoning (identical arms/baseline/metric
+    22→//               => zero marginal information from a re-spend; M10 cost rule).
+    23→//   CAP LAW   : the mothquantum cap is registered in JOBS (<=3), not seals —
+    24→//               wave-62 proved seals-issued accounting under-counts channel
+    25→//               degradation (2 jobs consumed, 0 seals issued).
+    26→//   HEALTH    : registered channel-health precondition = the wave-63 probe
+    27→//               receipt (receipts/channel-health-probe-w63.json); the draw
+    28→//               stage re-verifies it fail-closed before submitting any job.
+    29→//   LADDER    : registered draw ladder — attempt 1 stream=direct; on any
+    30→//               fail-closed, attempt 2 stream=prf; then attempt 3 stream=prf;
+    31→//               stop at the FIRST CERTIFIED SEAL (it binds) or when the <=3-job
+    32→//               cap is consumed. Every attempt append-only ledgered in
+    33→//               receipts/qrng-attempts.jsonl (+ usage.jsonl). No re-draw after
+    34→//               a seal for any reason (singleUse seed law).
+    35→//   MEASURE   : identical to slice-1 — deterministic offline replay of the
+    36→//               engine's extract pipeline over the THREE COMMITTED corpora;
+    37→//               validity gates must reproduce the committed engine receipts
+    38→//               (run-6 byte-exact; run-5 minus the two receipted post-fixer
+    39→//               cards) before any arm is trusted.
+    40→//   METRIC    : M(K) = (1/3) Σ_c [ μ_c(K) + f_c(K) ]; PASS iff a measured
+    41→//               bundle arm has M >= 1.05 x baseline AND totalF >= 15.
+    42→//   B         : bundle = certified QRNG lead + (B-1) top-noul fills;
+    43→//               B = max(1, ceil(3 * 0.7^t)), t = prior_e6_slices = 1 →
+    44→//               ceil(2.1) = 3. Only bundle arms are measured; the other 5 stay
+    45→//               frozen-unmeasured, never peeked.
+    46→//
+    47→// Stages:
+    48→//   node e6_slice2.mjs baseline            — validity gates + baseline metric
+    49→//                                            pin re-derivation (NO arms, $0)
+    50→//   node e6_slice2.mjs draw                — health gate + registered ladder →
+    51→//                                            ONE certified QRNG seal (lead arm)
+    52→//   node e6_slice2.mjs decide [--check]    — measure bundle + verdict;
+    53→//                                            --check re-derives and compares
+    54→//                                            (determinism receipt, ts excluded)
+    55→//   node e6_slice2.mjs determinism         — compare decide vs decide-check
+    56→//
+    57→// Spend caps (registered): typesafe 0 calls (priors reused); mothquantum <=3
+    58→// JOBS total for the draw ladder; $0 other. Abort line: external channel
+    59→// failure -> fail-closed honest partial, receipted (slice-1 precedent: a
+    60→// first-class result).
+    61→
+    62→import { mkdirSync, writeFileSync, readFileSync, existsSync, appendFileSync } from 'node:fs';
+    63→import { dirname, join } from 'node:path';
+    64→import { fileURLToPath } from 'node:url';
+    65→import { createHash } from 'node:crypto';
+    66→import { execFileSync } from 'node:child_process';
+    67→
+    68→const HERE = dirname(fileURLToPath(import.meta.url));
+    69→const FLEET = process.env.FLEET_SEEDS || '/home/z/my-project/fleet-seeds';
+    70→const SLICE1 = process.env.E6_SLICE1_DIR || join(HERE, '..', 'e6-slice-1');
+    71→const OUT = join(HERE, 'receipts');
+    72→mkdirSync(OUT, { recursive: true });
+    73→
+    74→const sha256 = (s) => createHash('sha256').update(s).digest('hex');
+    75→const shaFile = (p) => sha256(readFileSync(p));
+    76→const log = (...a) => console.log(...a);
+    77→const ts = () => new Date().toISOString();
+    78→const ENGINE = join(FLEET, 'lode', 'engine');
+    79→const RECEIPTS = join(ENGINE, 'receipts');
+    80→
+    81→const WITNESS_RUNS = ['2026-09-29-engine-run-1', '2026-09-29-engine-run-2', '2026-09-29-engine-run-3', '2026-09-29-engine-run-4', '2026-09-29-engine-run-5', '2026-09-29-engine-run-6'];
+    82→
+    83→// ---------- pinned inputs (paths; sha pins live in registration.json) ----------
+    84→const P = {
+    85→  engine_run: join(ENGINE, 'engine_run.mjs'),
+    86→  mines: join(FLEET, 'lode', 'mines.jsonl'),
+    87→  run5_raw: join(RECEIPTS, '2026-09-29-engine-run-5', 'scout', 'raw.json'),
+    88→  run6_raw: join(RECEIPTS, '2026-09-29-engine-run-6', 'scout', 'raw.json'),
+    89→  catalog: join(RECEIPTS, '2026-09-29-engine-run-6', 'review-c1-awesome-rsi-raw.md'),
+    90→  run5_cands: join(RECEIPTS, '2026-09-29-engine-run-5', 'candidates.json'),
+    91→  run6_cands: join(RECEIPTS, '2026-09-29-engine-run-6', 'candidates.json'),
+    92→  run5_hist: join(RECEIPTS, '2026-09-29-engine-run-5', 'history.json'),
+    93→  run6_hist: join(RECEIPTS, '2026-09-29-engine-run-6', 'history.json'),
+    94→  priors_slice1: join(SLICE1, 'receipts', 'priors.json'),
+    95→  health_probe: join(OUT, 'channel-health-probe-w63.json'),
+    96→  ...Object.fromEntries(WITNESS_RUNS.map((d, i) => [`witness_run${i + 1}`, join(RECEIPTS, d, 'witness.json')])),
+    97→};
+    98→
+    99→// ---------- corpora (deterministic adapters over COMMITTED receipts) ----------
+   100→// VERBATIM from slice-1 (the proven instrumentation is reused, not reinvented).
+   101→function loadCorpora() {
+   102→  const corpora = [];
+   103→  for (const [name, p] of [['run5-scout', P.run5_raw], ['run6-scout', P.run6_raw]]) {
+   104→    const scouts = JSON.parse(readFileSync(p, 'utf8'));
+   105→    const items = [];
+   106→    for (const s of scouts) {
+   107→      for (const it of (s.hits || s.entries || s.repos || [])) items.push({ src: s.source, it });
+   108→    }
+   109→    corpora.push({ name, kind: 'engine-scout-raw', file: p, items });
+   110→  }
+   111→  const md = readFileSync(P.catalog, 'utf8');
+   112→  const items = [];
+   113→  for (const line of md.split('\n')) {
+   114→    const m = line.match(/^\s*-\s\[([^\]]+)\]\(([^)\s]+)\)(?:\s*-\s*(.+))?\s*$/);
+   115→    if (!m) continue;
+   116→    items.push({ src: 'awesome-rsi-catalog', it: { title: m[1], url: m[2], desc: m[3] || '' } });
+   117→  }
+   118→  corpora.push({ name: 'awesome-rsi-catalog', kind: 'committed-review-corpus', file: P.catalog, items });
+   119→  return corpora;
+   120→}
+   121→
+   122→// ---------- history state (M10 proposal side) — VERBATIM from slice-1 ----------
+   123→const normTitle = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+   124→function minedMarkers() {
+   125→  const markers = [];
+   126→  for (const line of readFileSync(P.mines, 'utf8').split('\n')) {
+   127→    if (!line.trim()) continue;
+   128→    const m = JSON.parse(line);
+   129→    const blob = `${m.source || ''} ${m.claim || ''}`.toLowerCase();
+   130→    const slugs = [...blob.matchAll(/github\.com\/([a-z0-9_.-]+\/[a-z0-9_.-]+)/g)].map((x) => x[1]);
+   131→    const arxivs = [...new Set([
+   132→      ...[...blob.matchAll(/arxiv[:\s]*([0-9]{4}\.[0-9]{4,5})/g)].map((x) => x[1]),
+   133→      ...[...blob.matchAll(/arxiv\.org\/(?:abs|pdf)\/([0-9]{4}\.[0-9]{4,5})/g)].map((x) => x[1]),
+   134→    ])];
+   135→    markers.push({ id: m.id, slugs, arxivs });
+   136→  }
+   137→  return markers;
+   138→}
+   139→function previouslyDrawn(maxRun) {
+   140→  const drawn = [];
+   141→  for (const d of WITNESS_RUNS) {
+   142→    const n = Number(d.slice(-1));
+   143→    if (Number.isFinite(maxRun) && n >= maxRun) continue;
+   144→    try {
+   145→      const w = JSON.parse(readFileSync(join(RECEIPTS, d, 'witness.json'), 'utf8'));
+   146→      if (w.ok && w.drawn_candidate) {
+   147→        const cands = JSON.parse(readFileSync(join(RECEIPTS, d, 'candidates.json'), 'utf8'));
+   148→        const hit = cands.find((c) => c.id === w.drawn_candidate);
+   149→        if (hit) drawn.push({ run: d, id: hit.id, title: hit.title, ref: hit.ref });
+   150→      }
+   151→    } catch { /* a receipt dir without witness/candidates is not history */ }
+   152→  }
+   153→  return drawn;
+   154→}
+   155→function historyState(mode) {
+   156→  return {
+   157→    mode,
+   158→    markers: minedMarkers(),
+   159→    previously_drawn: previouslyDrawn(mode === 'run5' ? 5 : mode === 'run6' ? 6 : Infinity),
+   160→  };
+   161→}
+   162→const cardArxivs = (blob) => new Set([
+   163→  ...[...blob.matchAll(/arxiv[:\s]*([0-9]{4}\.[0-9]{4,5})/g)].map((x) => x[1]),
+   164→  ...[...blob.matchAll(/arxiv\.org\/(?:abs|pdf)\/([0-9]{4}\.[0-9]{4,5})(?:v[0-9]+)?/g)].map((x) => x[1]),
+   165→]);
+   166→function minedMatch(c, hist) {
+   167→  const blob = `${c.title} ${c.ref}`.toLowerCase();
+   168→  const arxivs = cardArxivs(blob);
+   169→  for (const mk of hist.markers) {
+   170→    if (mk.slugs.some((s) => blob.includes(s))) return mk.id;
+   171→    if (mk.arxivs.some((a) => arxivs.has(a))) return mk.id;
+   172→  }
+   173→  for (const pd of hist.previously_drawn) if (normTitle(pd.title) === normTitle(c.title)) return `drawn@${pd.run}`;
+   174→  return null;
+   175→}
+   176→
+   177→// ---------- extract pipeline port — VERBATIM from slice-1 ----------
+   178→function extract(corpus, KEYS, hist) {
+   179→  const cands = [];
+   180→  for (const { src, it } of corpus.items) {
+   181→    const blob = JSON.stringify(it).toLowerCase();
+   182→    const score = KEYS.reduce((a, k) => a + (blob.includes(k) ? 1 : 0), 0);
+   183→    if (score >= 2) {
+   184→      cands.push({
+   185→        id: `c${cands.length + 1}`,
+   186→        source: src,
+   187→        title: (it.title || it.full_name || '').slice(0, 140),
+   188→        ref: it.url || it.id || `https://github.com/${it.full_name}`,
+   189→        stars: it.stars ?? it.points ?? null,
+   190→        date: it.created || it.published || it.created_at || null,
+   191→        key_score: score,
+   192→        gist: (it.desc || it.summary || '').slice(0, 240),
+   193→      });
+   194→    }
+   195→  }
+   196→  const sorted = [...cands].sort((a, b) => b.key_score - a.key_score); // stable
+   197→  const seen = new Map();
+   198→  for (const c of sorted) {
+   199→    const k = c.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
+   200→    if (k && !seen.has(k)) seen.set(k, c);
+   201→  }
+   202→  const pre = [...seen.values()].slice(0, 9);
+   203→  const excluded = [];
+   204→  const survivors = [];
+   205→  for (const c of pre) {
+   206→    const m = minedMatch(c, hist);
+   207→    if (m) { excluded.push({ id: c.id, title: c.title, source: c.source, ref: c.ref, matched: m }); continue; }
+   208→    survivors.push({ ...c, id: `c${survivors.length + 1}` });
+   209→  }
+   210→  return { pool: cands.length, pre: pre.length, excluded, survivors };
+   211→}
+   212→
+   213→// ---------- metric — VERBATIM from slice-1 ----------
+   214→function metric(corpora, KEYS, hist) {
+   215→  let sum = 0, totalF = 0;
+   216→  const per = [];
+   217→  for (const c of corpora) {
+   218→    const r = extract(c, KEYS, hist);
+   219→    const mu = r.survivors.length ? r.survivors.reduce((a, s) => a + s.key_score, 0) / r.survivors.length : 0;
+   220→    const f = r.survivors.length;
+   221→    sum += mu + f; totalF += f;
+   222→    per.push({ corpus: c.name, mu, f, pool: r.pool, pre: r.pre, excluded: r.excluded.length, survivors: r.survivors.map((s) => ({ id: s.id, key_score: s.key_score, title: s.title, ref: s.ref })) });
+   223→  }
+   224→  return { M: sum / corpora.length, totalF, per_corpus: per };
+   225→}
+   226→
+   227→// ---------- baseline KEYS (the pin; verbatim from engine_run.mjs) ----------
+   228→const KEYS_BASELINE = ['self-improv', 'self-evolv', 'recursive', 'meta-learn', 'harness', 'outer loop', 'reward hacking', 'reward-hacking', 'verifier', 'playbook', 'skill librar', 'curriculum', 'map-elites', 'archive'];
+   229→
+   230→// ---------- validity gates — VERBATIM from slice-1 ----------
+   231→function canonCandidates(list) { return JSON.stringify(list, null, 1) + '\n'; }
+   232→function validityGate(corpora) {
+   233→  const byName = Object.fromEntries(corpora.map((c) => [c.name, c]));
+   234→  const out = { ok: false, run6: null, run5: null, notes: [] };
+   235→  {
+   236→    const hist = historyState('run6');
+   237→    const r = extract(byName['run6-scout'], KEYS_BASELINE, hist);
+   238→    const committed = readFileSync(P.run6_cands, 'utf8');
+   239→    const derivedHist = { markers_n: hist.markers.length, previously_drawn: hist.previously_drawn.map((p) => `${p.run}:${p.id}`) };
+   240→    const committedHist = JSON.parse(readFileSync(P.run6_hist, 'utf8'));
+   241→    // LEDGER-EVENT AMENDMENT (pre-draw repair #1, receipted in registration.json):
+   242→    // slice-1's gate assumed the LIVE mines ledger still equals the run-6-time
+   243→    // ledger (11 rows, M1-M11). Mid-session, fleet-seeds engine run-7 (commit
+   244→    // 2bc52a5) appended M12 — a legitimate append-only ledger event that
+   245→    // slice-1's markers_n==11 equality could never survive. The amended check
+   246→    // proves MORE than the original: (a) the committed run-6 marker-id
+   247→    // sequence is a PREFIX of the live sequence (append-only, nothing
+   248→    // rewritten), (b) exactly the appended ids are recorded, and the
+   249→    // substantive replay-fidelity checks are unchanged: exclusions equal +
+   250→    // survivors BYTE-EQUAL committed run-6 under the live state.
+   251→    const committedIds = committedHist.mined_markers.map((m) => m.id);
+   252→    const derivedIds = hist.markers.map((m) => m.id);
+   253→    const ledgerPrefixOk = derivedIds.length >= committedIds.length && committedIds.every((id, i) => derivedIds[i] === id);
+   254→    const appendedIds = derivedIds.slice(committedIds.length);
+   255→    const histEqual =
+   256→      ledgerPrefixOk &&
+   257→      JSON.stringify(derivedHist.previously_drawn) === JSON.stringify(committedHist.previously_drawn.map((p) => `${p.run}:${p.id}`));
+   258→    const exclEqual = JSON.stringify(r.excluded.map((e) => [e.title, e.ref, e.matched])) ===
+   259→      JSON.stringify(committedHist.excluded.map((e) => [e.title, e.ref, e.matched]));
+   260→    const bytesEqual = canonCandidates(r.survivors) === committed;
+   261→    out.run6 = {
+   262→      history_state_matches_committed: histEqual,
+   263→      history_ledger_append_only_prefix: ledgerPrefixOk,
+   264→      history_ledger_committed_rows: committedIds.length,
+   265→      history_ledger_live_rows: derivedIds.length,
+   266→      history_ledger_appended_marker_ids: appendedIds,
+   267→      exclusions_match_committed: exclEqual,
+   268→      survivors_byte_equal_committed: bytesEqual,
+   269→      derived: derivedHist,
+   270→    };
+   271→    if (!histEqual || !exclEqual || !bytesEqual) out.notes.push('run-6 replay != committed run-6 receipt');
+   272→  }
+   273→  {
+   274→    const hist = historyState('run5');
+   275→    const r = extract(byName['run5-scout'], KEYS_BASELINE, hist);
+   276→    const committedHist = JSON.parse(readFileSync(P.run5_hist, 'utf8'));
+   277→    const derivedHist = { markers_n: hist.markers.length, previously_drawn: hist.previously_drawn.map((p) => `${p.run}:${p.id}`) };
+   278→    const histEqual =
+   279→      derivedHist.previously_drawn.join('|') === committedHist.previously_drawn.map((p) => `${p.run}:${p.id}`).join('|');
+   280→    const committedCands = JSON.parse(readFileSync(P.run5_cands, 'utf8'));
+   281→    const expectedDeltaRefs = ['2609.26457', '2609.34924'];
+   282→    const extra = r.excluded.filter((e) => !committedHist.excluded.some((ce) => ce.title === e.title && ce.matched === e.matched));
+   283→    const deltaOk = extra.length === 2 &&
+   284→      extra.every((e) => expectedDeltaRefs.some((ref) => (e.ref || '').includes(ref))) &&
+   285→      new Set(extra.map((e) => e.matched)).size === 2 &&
+   286→      extra.some((e) => e.matched === 'M3') && extra.some((e) => e.matched === 'M11');
+   287→    const expectedSurvivors = committedCands.filter((c) => !expectedDeltaRefs.some((ref) => (c.ref || '').includes(ref)))
+   288→      .map((c, i) => ({ ...c, id: `c${i + 1}` }));
+   289→    const bytesEqual = canonCandidates(r.survivors) === canonCandidates(expectedSurvivors);
+   290→    out.run5 = { history_prevdrawn_matches_committed: histEqual, exclusion_delta_is_exactly_receipted_fix: deltaOk, survivors_equal_committed_minus_receipted_delta: bytesEqual, extra_exclusions: extra };
+   291→    if (!histEqual || !deltaOk || !bytesEqual) out.notes.push('run-5 replay != committed run-5 receipt modulo the receipted fix');
+   292→  }
+   293→  out.ok = out.notes.length === 0;
+   294→  return out;
+   295→}
+   296→
+   297→// ---------- channel-health precondition (registered; fail-closed) ----------
+   298→// Re-verifies the wave-63 probe receipt BEFORE submitting any new job. The
+   299→// checked fields are exactly the certification fields whose absence killed
+   300→// slice-1's job #2 (CertError: entropy_report.budget_bits>0; random.hex).
+   301→function healthGate() {
+   302→  const o = JSON.parse(readFileSync(P.health_probe, 'utf8')).result.output;
+   303→  const er = o.entropy_report || {};
+   304→  const bw = o.bell_witness || {};
+   305→  const rnd = o.random || {};
+   306→  const checks = {
+   307→    health_passed_true: er.health_passed === true,
+   308→    budget_bits_positive: typeof er.budget_bits === 'number' && er.budget_bits > 0,
+   309→    h_bit_positive: typeof er.h_bit === 'number' && er.h_bit > 0,
+   310→    bell_witness_violates_classical: typeof bw.S === 'number' && typeof bw.classical_bound === 'number' && bw.S > bw.classical_bound,
+   311→    extractor_toeplitz: o.extractor && o.extractor.kind === 'toeplitz',
+   312→    random_hex_present: typeof rnd.hex === 'string' && rnd.hex.length >= 2 && rnd.hex.length % 2 === 0 && /^[0-9a-f]+$/.test(rnd.hex),
+   313→    random_bits_positive: Number(rnd.bits) > 0,
+   314→  };
+   315→  const ok = Object.values(checks).every(Boolean);
+   316→  return {
+   317→    ok,
+   318→    checks,
+   319→    receipt: 'receipts/channel-health-probe-w63.json',
+   320→    receipt_sha256: shaFile(P.health_probe),
+   321→    summary: {
+   322→      health_passed: er.health_passed ?? null,
+   323→      budget_bits: er.budget_bits ?? null,
+   324→      h_bit: er.h_bit ?? null,
+   325→      bell_S: bw.S ?? null,
+   326→      classical_bound: bw.classical_bound ?? null,
+   327→      delivered_bytes: rnd.bytes ?? null,
+   328→      delivered_bits: rnd.bits ?? null,
+   329→      requested_bytes: rnd.requested_bytes ?? null,
+   330→    },
+   331→    note: 'wave-63 keeper-lane channel-health probe, job 06884e96-1960-44f5-a7a4-3c59f24ad003 (provenance: channel-health-probe-w63.provenance.md); the probe drew no arm and selected nothing.',
+   332→  };
+   333→}
+   334→
+   335→// ---------- stages ----------
+   336→const stage = process.argv[2] || '';
+   337→
+   338→function loadRegistration() {
+   339→  const p = join(HERE, 'registration.json');
+   340→  if (!existsSync(p)) throw new Error('registration.json missing — no pin, no run (fail-closed)');
+   341→  return JSON.parse(readFileSync(p, 'utf8'));
+   342→}
+   343→function assertPins(reg) {
+   344→  const bad = [];
+   345→  for (const [k, want] of Object.entries(reg.input_sha256)) {
+   346→    const got = shaFile(P[k]);
+   347→    if (got !== want) bad.push(`${k}: ${got.slice(0, 12)} != pinned ${want.slice(0, 12)}`);
+   348→  }
+   349→  if (bad.length) throw new Error('PIN MISMATCH (inputs drifted from registration):\n' + bad.join('\n'));
+   350→}
+   351→function loadArms(reg) {
+   352→  const arms = JSON.parse(readFileSync(join(HERE, 'arms.json'), 'utf8'));
+   353→  if (sha256(canonCandidates(arms.arms)) !== reg.arms_sha256) throw new Error('arms.json != registered arms_sha256 (fail-closed)');
+   354→  return arms;
+   355→}
+   356→
+   357→if (stage === 'baseline') {
+   358→  const corpora = loadCorpora();
+   359→  const validity = validityGate(corpora);
+   360→  const hist = historyState('current');
+   361→  const base = metric(corpora, KEYS_BASELINE, hist);
+   362→  const reg = loadRegistration();
+   363→  const receipt = {
+   364→    kind: 'e6-slice-2-baseline', ts_utc: ts(),
+   365→    stage_note: 'pre-registration diagnostics ONLY: validity gates + baseline pin re-derivation against the slice-1 pin. No arms measured, no external spend. The arms space of record is slice-1\'s frozen arms.json (byte-identical copy in this lane; canon sha pinned in registration.json).',
+   366→    corpora: Object.fromEntries(corpora.map((c) => [c.name, { file: c.file, sha256: shaFile(c.file), items: c.items.length }])),
+   367→    validity, baseline: base, baseline_M: base.M, baseline_totalF: base.totalF,
+   368→    slice1_baseline_pin: { M: reg.baseline_M, totalF: reg.baseline_totalF, pin_match: base.M === reg.baseline_M && base.totalF === reg.baseline_totalF },
+   369→  };
+   370→  writeFileSync(join(OUT, 'baseline.json'), JSON.stringify(receipt, null, 1) + '\n');
+   371→  log(`validity: ${validity.ok ? 'OK' : 'FAILED — ' + validity.notes.join('; ')}`);
+   372→  for (const pc of base.per_corpus) log(`baseline ${pc.corpus}: pool=${pc.pool} pre=${pc.pre} survivors=${pc.f} mu=${pc.mu}`);
+   373→  log(`baseline M=${base.M} totalF=${base.totalF} (slice-1 pin ${receipt.slice1_baseline_pin.pin_match ? 'MATCH' : 'MISMATCH'})`);
+   374→  process.exit(base.ok !== false && validity.ok ? 0 : 1);
+   375→}
+   376→
+   377→if (stage === 'draw') {
+   378→  const reg = loadRegistration();
+   379→  assertPins(reg);
+   380→  const arms = loadArms(reg);
+   381→  const at0 = ts();
+   382→
+   383→  // (1) REGISTERED CHANNEL-HEALTH PRECONDITION — fail-closed before any job.
+   384→  const health = healthGate();
+   385→  if (!health.ok) {
+   386→    const w = { kind: 'e6-slice-2-qrng-witness', ts_utc: at0, ok: false, stage: 'health-precondition', health, error: 'channel-health precondition FAILED on the wave-63 probe receipt (fail-closed; no job submitted, no spend)' };
+   387→    writeFileSync(join(OUT, 'witness.json'), JSON.stringify(w, null, 1) + '\n');
+   388→    log('draw: HEALTH PRECONDITION FAILED (fail-closed, no job submitted, no spend)');
+   389→    process.exit(1);
+   390→  }
+   391→  log(`health precondition OK (probe: health_passed=${health.summary.health_passed} budget=${health.summary.budget_bits} bits, delivered ${health.summary.delivered_bits} bits)`);
+   392→  writeFileSync(join(OUT, 'health-gate.json'), JSON.stringify({ kind: 'e6-slice-2-health-gate', ts_utc: at0, ...health }, null, 1) + '\n');
+   393→
+   394→  // (2) REGISTERED DRAW LADDER — <=3 jobs; direct -> prf -> prf; first
+   395→  // certified seal BINDS; every attempt ledgered. No re-draw after a seal.
+   396→  const LADDER = ['direct', 'prf', 'prf'];
+   397→  const attemptsPath = join(OUT, 'qrng-attempts.jsonl');
+   398→  const usagePath = join(OUT, 'usage.jsonl');
+   399→  const priorAttempts = existsSync(attemptsPath) ? readFileSync(attemptsPath, 'utf8').split('\n').filter((l) => l.trim()) : [];
+   400→  const jobsConsumedPrior = priorAttempts.map((l) => JSON.parse(l)).filter((a) => a.ok === false && a.job_consumed === true).length;
+   401→  const sealedPrior = priorAttempts.map((l) => JSON.parse(l)).some((a) => a.ok === true);
+   402→  if (sealedPrior) { log('draw: a certified seal already exists in this slice (first seal binds) — refusing to re-draw'); process.exit(1); }
+   403→  let sealed = null;
+   404→  for (let i = 0; i < LADDER.length; i++) {
+   405→    const attemptNo = jobsConsumedPrior + i + 1;
+   406→    if (attemptNo > reg.cost_rule.caps.moth_jobs_max) { log(`draw: <=${reg.cost_rule.caps.moth_jobs_max}-JOB cap consumed — stopping fail-closed before attempt ${attemptNo}`); break; }
+   407→    const stream = LADDER[i];
+   408→    const at = ts();
+   409→    try {
+   410→      const sealPath = join(OUT, 'qrng-seal.json');
+   411→      execFileSync('node', [
+   412→        join(FLEET, 'tools', 'moth-seal.mjs'),
+   413→        '--n=1', `--pool=${arms.arms.length}`, '--label=e6-slice-2-arm-draw',
+   414→        ...(stream === 'prf' ? ['--stream=prf'] : []),
+   415→        `--out=${sealPath}`, `--save-raw=${join(OUT, 'qrng-seal-raw.json')}`, '--quiet',
+   416→      ], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, MOTH_KEY: process.env.MOTHQUANTUM_TOKEN || process.env.MOTH_KEY }, timeout: 180000 });
+   417→      const seal = JSON.parse(readFileSync(sealPath, 'utf8'));
+   418→      const sel = seal.chosen?.selected?.[0];
+   419→      const w = {
+   420→        kind: 'e6-slice-2-qrng-witness', ts_utc: at, ok: true, stage: 'seal',
+   421→        arms_sha256: reg.arms_sha256, seal_label: seal.label,
+   422→        drawn_index: sel, drawn_arm: arms.arms[sel]?.id ?? null,
+   423→        stream, ladder: LADDER, attempt_no: attemptNo,
+   424→        stream_note: stream === 'prf'
+   425→          ? 'certified bytes seed the registered SHA-256 counter stream (mothbits STEP 3 semantics); extension declared explicitly, effectiveEntropyBits in the certified receipt'
+   426→          : 'direct certified stream',
+   427→        certifiedBits: seal.certifiedBits ? {
+   428→          deliveredBytes: seal.certifiedBits.deliveredBytes, bits: seal.certifiedBits.bits, hBit: seal.certifiedBits.hBit,
+   429→          effectiveEntropyBits: seal.certifiedBits.effectiveEntropyBits, streamKind: seal.certifiedBits.stream,
+   430→          consumedBits: seal.certifiedBits.consumedBits, requiredBits: seal.certifiedBits.requiredBits,
+   431→        } : null,
+   432→        raw_result_sha256: seal.rawResultSha256 ?? null, job: seal.job ?? null,
+   433→        health_precondition: { ok: health.ok, receipt: health.receipt },
+   434→        note: 'certified comet-qrng-v1 Fisher-Yates over the frozen arm list; the drawn arm is the BINDING LEAD of the measured bundle (anti-cherry-pick: priors never choose what gets measured; THE FIRST CERTIFIED SEAL BINDS — no re-draw). Full certified receipt: qrng-seal.json; redacted raw: qrng-seal-raw.json; attempt history: qrng-attempts.jsonl.',
+   435→      };
+   436→      writeFileSync(join(OUT, 'witness.json'), JSON.stringify(w, null, 1) + '\n');
+   437→      appendFileSync(attemptsPath, JSON.stringify({ kind: 'qrng-attempt', at_utc: at, ok: true, attempt_no: attemptNo, stream, job_consumed: true, seal_issued: true, drawn_index: sel, drawn_arm: w.drawn_arm, jobId: seal.job?.jobId ?? null }) + '\n');
+   438→      appendFileSync(usagePath, JSON.stringify({ kind: 'usage-receipt', at_utc: at, service: 'mothquantum/api/v1/engines/comet-qrng-v1', unit: 'job', jobId: seal.job?.jobId ?? null, outcome: 'completed -> certified seal issued (e6-slice-2-arm-draw, attempt ' + attemptNo + ', stream ' + stream + ')' }) + '\n');
+   439→      log(`QRNG drew arm #${sel} (${w.drawn_arm}) on attempt ${attemptNo} (stream=${stream}) — SEALED, lead BINDS`);
+   440→      sealed = w;
+   441→      break;
+   442→    } catch (e) {
+   443→      const errText = String(e.message || e).replace(/moth_[A-Za-z0-9]+/g, 'REDACTED').slice(0, 400);
+   444→      // job_consumed: any fail-closed AFTER submit consumed a job (bit-budget
+   445→      // fail, CertError on a completed job, poll timeout). Local pre-submit
+   446→      // failures (keyless, usage) consumed nothing — keyed on the error text.
+   447→      const job_consumed = !/no MOTH_KEY/.test(errText);
+   448→      appendFileSync(attemptsPath, JSON.stringify({ kind: 'qrng-attempt', at_utc: at, ok: false, attempt_no: attemptNo, stream, job_consumed, seal_issued: false, error: errText }) + '\n');
+   449→      if (job_consumed) appendFileSync(usagePath, JSON.stringify({ kind: 'usage-receipt', at_utc: at, service: 'mothquantum/api/v1/engines/comet-qrng-v1', unit: 'job', jobId: null, outcome: 'fail-closed after submit, job CONSUMED, no seal issued (e6-slice-2-arm-draw attempt ' + attemptNo + ', stream ' + stream + '): ' + errText.slice(0, 160) }) + '\n');
+   450→      log(`draw attempt ${attemptNo} (stream=${stream}) FAILED fail-closed: ${errText.slice(0, 140)}`);
+   451→      if (!job_consumed) break; // keyless/local — retrying cannot help
+   452→    }
+   453→  }
+   454→  if (!sealed) {
+   455→    const w = { kind: 'e6-slice-2-qrng-witness', ts_utc: at0, ok: false, stage: 'ladder', ladder: LADDER, health: { ok: health.ok }, error: 'registered draw ladder exhausted (or cap consumed) with zero certified seals — fail-closed per the registered abort line; attempts ledgered in qrng-attempts.jsonl' };
+   456→    writeFileSync(join(OUT, 'witness.json'), JSON.stringify(w, null, 1) + '\n');
+   457→    process.exit(1);
+   458→  }
+   459→  process.exit(0);
+   460→}
+   461→
+   462→if (stage === 'decide') {
+   463→  const check = process.argv.includes('--check');
+   464→  const reg = loadRegistration();
+   465→  assertPins(reg);
+   466→  const arms = loadArms(reg);
+   467→  const corpora = loadCorpora();
+   468→
+   469→  const validity = validityGate(corpora);
+   470→  const hist = historyState('current');
+   471→  const base = metric(corpora, KEYS_BASELINE, hist);
+   472→  const basePinOk = base.M === reg.baseline_M && base.totalF === reg.baseline_totalF;
+   473→
+   474→  // Priors of record: slice-1's sealed reflective battery, REUSED by
+   475→  // registration (pinned by sha via assertPins; binding re-asserted here).
+   476→  const priors = JSON.parse(readFileSync(P.priors_slice1, 'utf8'));
+   477→  const priorsBindingOk = priors.ok === true && priors.arms_sha256 === reg.arms_sha256;
+   478→
+   479→  const witness = JSON.parse(readFileSync(join(OUT, 'witness.json'), 'utf8'));
+   480→  const health = healthGate();
+   481→  const attempts = existsSync(join(OUT, 'qrng-attempts.jsonl'))
+   482→    ? readFileSync(join(OUT, 'qrng-attempts.jsonl'), 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l)) : [];
+   483→  const jobsConsumed = attempts.filter((a) => a.job_consumed === true).length;
+   484→  const sealsIssued = attempts.filter((a) => a.seal_issued === true).length;
+   485→
+   486→  // Registered abort line: external channel failure -> fail-closed honest
+   487→  // partial receipted (slice-1 precedent: a first-class result).
+   488→  if (!witness.ok || !priorsBindingOk) {
+   489→    const receipt = {
+   490→      kind: 'e6-slice-2-decide', ts_utc: ts(), check,
+   491→      verdict: 'HONEST-PARTIAL',
+   492→      partial_reason: !witness.ok
+   493→        ? 'qrng-draw-did-not-land on the recovered channel — per the registered abort line the decision procedure is fail-closed: no bundle, no arms measured, no promotion, NO PASS/FAIL claim on the mutation space. The 8 arms stay frozen-unmeasured. Cap accounting: ' + jobsConsumed + ' of <=3 registered JOBS consumed, ' + sealsIssued + ' certified seals issued (JOBS-based cap law — wave-62 lesson).'
+   494→        : 'priors-of-record binding failed (slice-1 priors sha ok but arms_sha256 mismatch or ok=false) — decision procedure fail-closed per registered abort line',
+   495→      validity, baseline_pin_ok: basePinOk, health_precondition: { ok: health.ok, receipt: health.receipt },
+   496→      baseline: { M: base.M, totalF: base.totalF, per_corpus: base.per_corpus.map(({ corpus, mu, f }) => ({ corpus, mu, f })) },
+   497→      priors: priorsBindingOk ? { source: 'slice-1 sealed priors.json (reused by registration)', arms_sha256: priors.arms_sha256 } : { source: 'slice-1 sealed priors.json', binding_ok: priorsBindingOk, error: 'binding failed' },
+   498→      seal: { ok: witness.ok, stream: witness.stream ?? null, stage: witness.stage ?? null, error: witness.error ?? null, attempts_ledger: 'receipts/qrng-attempts.jsonl' },
+   499→      cap_accounting: { law: 'moth cap registered in JOBS (wave-62 lesson: seals-issued accounting under-counts channel degradation)', jobs_consumed: jobsConsumed, jobs_max: reg.cost_rule.caps.moth_jobs_max, seals_issued: sealsIssued },
+   500→      arms_frozen_unmeasured: arms.arms.map((a) => a.id),
+   501→      cost_rule: { law: 'M10 (arXiv:2609.24972): added inference cost must be paid for by measured gain', spend: ['0 typesafe calls (priors of record reused from slice-1 — registered choice)', jobsConsumed + ' mothquantum comet jobs consumed, ' + sealsIssued + ' certified seals issued (ledgered)'], paid: 'NOT_PAID', settlement_note: 'the added spend bought: a receipted channel-recovery probe trail and a sealed fail-closed abort — not measured gain' },
+   502→    };
+   503→    writeFileSync(join(OUT, check ? 'decide-check.json' : 'decide.json'), JSON.stringify(receipt, null, 1) + '\n');
+   504→    log('decide: HONEST-PARTIAL — nothing measured, nothing promoted, fail-closed per registration');
+   505→    process.exit(1);
+   506→  }
+   507→  if (!validity.ok || !basePinOk) {
+   508→    const receipt = { kind: 'e6-slice-2-decide', ts_utc: ts(), check, verdict: 'INVALID-INSTRUMENTATION', validity, baseline_pin_ok: basePinOk, baseline_M: base.M };
+   509→    writeFileSync(join(OUT, check ? 'decide-check.json' : 'decide.json'), JSON.stringify(receipt, null, 1) + '\n');
+   510→    log('decide: INVALID-INSTRUMENTATION (fail-closed, nothing measured, nothing promoted)');
+   511→    process.exit(1);
+   512→  }
+   513→
+   514→  // M4/M10 budget cap: bundle = QRNG lead + (B-1) top-noul fills. B = max(1,
+   515→  // ceil(B0*ANNEAL^t)), B0=3, ANNEAL=0.7, t = prior_e6_slices = 1 → B=3.
+   516→  const B0 = 3, ANNEAL = 0.7, t = reg.prior_e6_slices;
+   517→  const B = Math.max(1, Math.ceil(B0 * Math.pow(ANNEAL, t)));
+   518→  const noul = (id) => Number(priors.answers?.[`p_gain_${id}`]?.noul) || 0;
+   519→  const lead = witness.drawn_arm;
+   520→  const fills = arms.arms.filter((a) => a.id !== lead).sort((a, b) => (noul(b.id) - noul(a.id)) || (a.index - b.index)).slice(0, B - 1).map((a) => a.id);
+   521→  const bundle = [lead, ...fills];
+   522→
+   523→  const measured = [];
+   524→  for (const a of arms.arms) {
+   525→    if (!bundle.includes(a.id)) continue;
+   526→    const KEYS = KEYS_BASELINE.map((k) => (k === a.old_key ? a.new_key : k));
+   527→    const m = metric(corpora, KEYS, hist);
+   528→    measured.push({ id: a.id, old_key: a.old_key, new_key: a.new_key, lead: a.id === lead, role: a.id === lead ? 'qrng-lead' : 'noul-fill', noul: noul(a.id), M: m.M, totalF: m.totalF, per_corpus: m.per_corpus, KEYS });
+   529→  }
+   530→  const pass = measured.some((m) => m.M >= reg.pass_margin_relative * reg.baseline_M && m.totalF >= reg.baseline_totalF);
+   531→  const eligible = measured.filter((m) => m.M >= reg.pass_margin_relative * reg.baseline_M && m.totalF >= reg.baseline_totalF);
+   532→  const promoted = pass ? [...eligible].sort((a, b) => (b.M - a.M) || (a.id < b.id ? -1 : 1))[0] : null;
+   533→  // descriptive annex ONLY (n=3, non-binding): rank agreement between noul prior and M.
+   534→  const spearmanPairs = measured.map((m) => ({ id: m.id, noul: m.noul, M: m.M })).sort((a, b) => a.noul - b.noul);
+   535→  const receipt = {
+   536→    kind: 'e6-slice-2-decide', ts_utc: ts(), check,
+   537→    verdict: pass ? 'PASS' : 'FAIL',
+   538→    lineage: 'slice-2 re-registration of slice-1 (HONEST-PARTIAL qrng-channel-degraded) on the recovered channel — same frozen arms (23eec18d…), same pinned baseline, same metric/margins',
+   539→    validity, baseline: { M: base.M, totalF: base.totalF, pin_ok: basePinOk, per_corpus: base.per_corpus },
+   540→    health_precondition: { ok: health.ok, receipt: health.receipt, summary: health.summary },
+   541→    priors: { source: 'slice-1 sealed priors.json (reused by registration, sha-pinned)', binding_ok: priorsBindingOk, model: priors.model, usage: priors.usage, fresh_calls_this_slice: 0, answers_note: 'reflective priors only — the certified QRNG lead picks what gets measured' },
+   542→    budget: { B0, ANNEAL, t, B, law: 'M4/M10: budget cap as selection pressure — only bundle arms measured; unmeasured arms stay frozen (receipted, never peeked)' },
+   543→    bundle: { lead, lead_rule: 'certified comet-qrng-v1 draw (anti-cherry-pick; FIRST CERTIFIED SEAL BINDS)', fills, fill_rule: 'deterministic descending noul prior (slice-1 sealed priors), index tie-break', measured_arm_ids: bundle, frozen_unmeasured_arm_ids: arms.arms.map((a) => a.id).filter((id) => !bundle.includes(id)) },
+   544→    seal: { jobId: witness.job?.jobId ?? null, stream: witness.stream, attempt_no: witness.attempt_no, certifiedBits: witness.certifiedBits, raw_result_sha256: witness.raw_result_sha256 },
+   545→    measured, pass_rule: reg.pass_rule, pass_margin_relative: reg.pass_margin_relative,
+   546→    promoted: promoted ? { id: promoted.id, old_key: promoted.old_key, new_key: promoted.new_key, M: promoted.M, totalF: promoted.totalF, proposed_KEYS: KEYS_BASELINE.map((k) => (k === promoted.old_key ? promoted.new_key : k)) } : null,
+   547→    cap_accounting: { law: 'moth cap registered in JOBS (wave-62 lesson)', jobs_consumed: jobsConsumed, jobs_max: reg.cost_rule.caps.moth_jobs_max, seals_issued: sealsIssued },
+   548→    cost_rule: { law: 'M10 (arXiv:2609.24972): added inference cost must be paid by measured gain', spend: ['0 typesafe calls (priors of record reused — registered choice)', jobsConsumed + ' mothquantum comet job(s) consumed, ' + sealsIssued + ' certified seal(s) issued'], paid: pass ? 'PAID' : 'NOT_PAID' },
+   549→    annex_descriptive: { note: 'n=3, non-binding, multiple-comparisons caveat: the full per-arm table over the measured bundle only', pairs: spearmanPairs },
+   550→  };
+   551→  const path = join(OUT, check ? 'decide-check.json' : 'decide.json');
+   552→  writeFileSync(path, JSON.stringify(receipt, null, 1) + '\n');
+   553→  log(`validity ${validity.ok ? 'OK' : 'FAIL'}; baseline M=${base.M} totalF=${base.totalF} (pin ${basePinOk ? 'MATCH' : 'MISMATCH'})`);
+   554→  for (const m of measured) log(`arm ${m.id} (${m.role}, noul=${m.noul}): M=${m.M} totalF=${m.totalF}`);
+   555→  log(`VERDICT: ${receipt.verdict}${promoted ? ` — promote ${promoted.id} (${promoted.old_key} → ${promoted.new_key})` : ''}; cost rule ${receipt.cost_rule.paid}`);
+   556→  process.exit(0);
+   557→}
+   558→
+   559→if (stage === 'determinism') {
+   560→  const a = JSON.parse(readFileSync(join(OUT, 'decide.json'), 'utf8'));
+   561→  const b = JSON.parse(readFileSync(join(OUT, 'decide-check.json'), 'utf8'));
+   562→  const strip = (r) => { const { ts_utc, check, ...rest } = r; return rest; };
+   563→  const sa = sha256(JSON.stringify(strip(a)));
+   564→  const sb = sha256(JSON.stringify(strip(b)));
+   565→  const rec = { kind: 'e6-slice-2-determinism', ts_utc: ts(), decide_sha256: sa, decide_check_sha256: sb, byte_identical_modulo_ts: sa === sb };
+   566→  writeFileSync(join(OUT, 'determinism.json'), JSON.stringify(rec, null, 1) + '\n');
+   567→  log(`determinism: ${rec.byte_identical_modulo_ts ? 'BYTE-IDENTICAL (modulo ts)' : 'DIVERGED — ' + sa.slice(0, 12) + ' vs ' + sb.slice(0, 12)}`);
+   568→  process.exit(rec.byte_identical_modulo_ts ? 0 : 1);
+   569→}
+   570→
+   571→console.error('usage: e6_slice2.mjs baseline|draw|decide [--check]|determinism');
+   572→process.exit(2);
+   573→

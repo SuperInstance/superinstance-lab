@@ -1,0 +1,13 @@
+github	OK	532ms login=SuperInstance
+typesafe	FAIL	HTTP 404 in 177ms {"detail":"Not Found"}
+deepseek	OK	146ms models=deepseek-flash,deepseek-v4-pro
+deepinfra	OK	734ms n=185
+groq	FAIL	HTTP 403 in 27ms {"error":{"message":"Forbidden"}}
+kimi-moonshot	OK	77ms n=4
+mothquantum-submit	FAIL	HTTP 404 in 745ms 404 page not found 
+cloudflare	OK	219ms status=active
+typesafe	FAIL	238ms HTTP 422 model=? usage=?
+moth-submit	FAIL	764ms HTTP 405 job=null keys=
+groq-chat	FAIL	27ms HTTP 403 {"error":{"message":"Forbidden"}}
+typesafe	OK	287ms HTTP 200 model=jev-1.13.0 usage={"input_tokens":330,"output_tokens":21} answers=p_ok
+moth-submit	OK	1544ms HTTP 202 job=06884e96-1960-44f5-a7a4-3c59f24ad003

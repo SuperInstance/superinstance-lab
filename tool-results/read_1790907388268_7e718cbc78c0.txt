@@ -1,0 +1,777 @@
+     1→// organ.test.mjs — v0 acceptance suite for the Cell-Organ Snapshot & Boot
+     2→// protocol (lane 63-c). Run: node --test test/
+     3→//
+     4→// Law under test (docs/REVERSE-ACTUALIZED-SPEC.md §4): every failure mode is
+     5→// fail-closed with an exact code; boot never partially succeeds.
+     6→
+     7→import test from "node:test";
+     8→import assert from "node:assert/strict";
+     9→
+    10→import {
+    11→  GENESIS,
+    12→  canonicalJson,
+    13→  computeManifestHash,
+    14→  makeReceipt,
+    15→  receiptHash,
+    16→  validateManifest,
+    17→  verifyChain,
+    18→} from "../src/organ/manifest.mjs";
+    19→import { makeQuilt, quiltApply, applyOp, verifyQuiltLedger } from "../src/organ/toyQuilt.mjs";
+    20→import { snapshot, snapshotOrgan, cellsStateHash, cellStateHash } from "../src/organ/snapshot.mjs";
+    21→import { boot, OrganBootError, verifyBundle } from "../src/organ/boot.mjs";
+    22→import { nestInto, verifyDoubleEntry } from "../src/organ/nest.mjs";
+    23→import { stateAt, rewind, transact, ORGAN_REWIND_TYPE } from "../src/organ/rewind.mjs";
+    24→import { buildGreeterQuilt, GREETER_FINAL_OUT, GREETER_RECEIPTS, GREETER_EDGES } from "../examples/greeter-organ.mjs";
+    25→
+    26→const GREETER_CELLS = ["greeting", "subject", "template", "out"];
+    27→
+    28→function snapshotGreeter(quilt = buildGreeterQuilt(), opts = {}) {
+    29→  return snapshot(quilt.cells, opts.ledger ?? quilt.ledger, {
+    30→    name: "greeter-organ",
+    31→    edges: GREETER_EDGES,
+    32→    cellIds: opts.cellIds,
+    33→    organId: opts.organId,
+    34→    supersedes: opts.supersedes,
+    35→  });
+    36→}
+    37→
+    38→const bootCode = (bundle, opts = {}) => {
+    39→  try {
+    40→    boot(bundle, opts);
+    41→  } catch (e) {
+    42→    if (e instanceof OrganBootError) return e.code;
+    43→    throw e;
+    44→  }
+    45→  return null; // booted — caller asserts otherwise
+    46→};
+    47→
+    48→// ---------------------------------------------------------------------------
+    49→// substrate determinism
+    50→// ---------------------------------------------------------------------------
+    51→
+    52→test("canonicalJson is deterministic and sorted; refuses undefined", () => {
+    53→  assert.equal(canonicalJson({ b: 1, a: { d: [2, 1], c: "x" } }), '{"a":{"c":"x","d":[2,1]},"b":1}');
+    54→  assert.equal(canonicalJson({ a: 1, b: 2 }), canonicalJson({ b: 2, a: 1 }));
+    55→  assert.throws(() => canonicalJson({ a: undefined }), TypeError);
+    56→  assert.throws(() => canonicalJson({ a: () => 1 }), TypeError);
+    57→  assert.throws(() => canonicalJson({ a: NaN }), TypeError);
+    58→});
+    59→
+    60→test("receipt hashing is content-bound: any payload change changes the hash", () => {
+    61→  const r1 = makeReceipt(0, { type: "set", cellId: "x", value: 1 }, GENESIS);
+    62→  const r2 = makeReceipt(0, { type: "set", cellId: "x", value: 2 }, GENESIS);
+    63→  const r3 = makeReceipt(0, { type: "set", cellId: "x", value: 1 }, GENESIS);
+    64→  assert.notEqual(r1.hash, r2.hash);
+    65→  assert.equal(r1.hash, r3.hash);
+    66→  assert.equal(receiptHash(r1), r1.hash);
+    67→});
+    68→
+    69→test("toy quilt: cells only change through receipts; ledger chain verifies", () => {
+    70→  const q = buildGreeterQuilt();
+    71→  const v = verifyQuiltLedger(q);
+    72→  assert.equal(v.ok, true);
+    73→  assert.equal(q.ledger.length, GREETER_RECEIPTS);
+    74→  assert.equal(q.cells.out.value, GREETER_FINAL_OUT);
+    75→  // unknown op refused, ledger untouched
+    76→  assert.throws(() => quiltApply(q, { type: "explode" }));
+    77→  assert.equal(q.ledger.length, GREETER_RECEIPTS);
+    78→});
+    79→
+    80→// ---------------------------------------------------------------------------
+    81→// I1 content addressing
+    82→// ---------------------------------------------------------------------------
+    83→
+    84→test("snapshot is content-addressed: identical inputs → identical manifestHash", () => {
+    85→  const q = buildGreeterQuilt();
+    86→  const b1 = snapshotGreeter(q);
+    87→  const b2 = snapshotGreeter(buildGreeterQuilt());
+    88→  assert.equal(b1.manifest.manifestHash, b2.manifest.manifestHash);
+    89→  assert.equal(b1.manifest.state.cellsSha256, b2.manifest.state.cellsSha256);
+    90→  // any state change → different address
+    91→  const q2 = buildGreeterQuilt();
+    92→  quiltApply(q2, { type: "set", cellId: "subject", value: "changed" });
+    93→  const b3 = snapshotGreeter(q2);
+    94→  assert.notEqual(b1.manifest.state.cellsSha256, b3.manifest.state.cellsSha256);
+    95→  assert.equal(b3.manifest.receiptRange.count, GREETER_RECEIPTS + 1);
+    96→});
+    97→
+    98→test("per-cell stateHashes cover the carried state exactly", () => {
+    99→  const b = snapshotGreeter();
+   100→  assert.deepEqual(b.manifest.cells.map((c) => c.id), [...GREETER_CELLS].sort()); // canonical: sorted ids
+   101→  for (const c of b.manifest.cells) {
+   102→    assert.equal(cellStateHash(b.state.cells[c.id]), c.stateHash); // hash covers {kind,value}; id is the manifest entry's own field
+   103→  }
+   104→  assert.equal(cellsStateHash(b.state.cells), b.manifest.state.cellsSha256);
+   105→});
+   106→
+   107→// ---------------------------------------------------------------------------
+   108→// happy path boot
+   109→// ---------------------------------------------------------------------------
+   110→
+   111→test("happy path: snapshot → boot (no host) → verified organ wakes", () => {
+   112→  const b = snapshotGreeter();
+   113→  const organ = boot(b);
+   114→  assert.equal(organ.cells.out.value, GREETER_FINAL_OUT);
+   115→  assert.equal(organ.organId, b.manifest.organId);
+   116→  assert.equal(organ.ledger.length, GREETER_RECEIPTS);
+   117→  assert.equal(organ.host, null);
+   118→  // a standalone organ can keep appending (no credits, own chain only)
+   119→  const { debit, credit } = organ.append({ type: "set", cellId: "subject", value: "solo" });
+   120→  assert.equal(debit.seq, GREETER_RECEIPTS);
+   121→  assert.equal(credit, null);
+   122→  assert.equal(organ.cells.subject.value, "solo");
+   123→});
+   124→
+   125→test("verifyBundle returns ok with tip hash; matches boot's verdict", () => {
+   126→  const b = snapshotGreeter();
+   127→  const v = verifyBundle(b);
+   128→  assert.equal(v.ok, true);
+   129→  assert.equal(v.tipHash, b.receipts[b.receipts.length - 1].hash);
+   130→});
+   131→
+   132→// ---------------------------------------------------------------------------
+   133→// tamper detection — fail-closed
+   134→// ---------------------------------------------------------------------------
+   135→
+   136→test("tamper: one flipped state byte → STATE_HASH_MISMATCH (fail-closed)", () => {
+   137→  const b = snapshotGreeter();
+   138→  b.state.cells.out.value = GREETER_FINAL_OUT.replace("!", "?");
+   139→  assert.equal(bootCode(b), "STATE_HASH_MISMATCH");
+   140→});
+   141→
+   142→test("tamper: one flipped receipt payload byte → RECEIPT_HASH_MISMATCH", () => {
+   143→  const b = snapshotGreeter();
+   144→  b.receipts[5].op.value = "FL33T";
+   145→  assert.equal(bootCode(b), "RECEIPT_HASH_MISMATCH");
+   146→});
+   147→
+   148→test("tamper: manifest cell hash flip → MANIFEST_INVALID; self-hash flip → MANIFEST_INVALID", () => {
+   149→  const b1 = snapshotGreeter();
+   150→  b1.manifest.cells[0].stateHash = "0".repeat(64);
+   151→  assert.equal(bootCode(b1), "MANIFEST_INVALID");
+   152→
+   153→  const b2 = snapshotGreeter();
+   154→  b2.manifest.manifestHash = "0".repeat(64);
+   155→  assert.equal(bootCode(b2), "MANIFEST_INVALID");
+   156→});
+   157→
+   158→// ---------------------------------------------------------------------------
+   159→// chain gap — fail-closed
+   160→// ---------------------------------------------------------------------------
+   161→
+   162→test("chain gap: deleting one middle receipt refuses boot with CHAIN_GAP", () => {
+   163→  const b = snapshotGreeter();
+   164→  b.receipts.splice(7, 1); // drop seq 7
+   165→  const code = bootCode(b);
+   166→  assert.equal(code, "CHAIN_GAP");
+   167→});
+   168→
+   169→test("chain gap: truncated tail (missing receipts) refuses with CHAIN_GAP", () => {
+   170→  const b = snapshotGreeter();
+   171→  b.receipts.pop(); // range says 12, carried 11
+   172→  assert.equal(bootCode(b), "CHAIN_GAP");
+   173→});
+   174→
+   175→// ---------------------------------------------------------------------------
+   176→// replay divergence — the anti-forgery invariant
+   177→// ---------------------------------------------------------------------------
+   178→
+   179→test("replay divergence: self-consistent forged chain with stale state fails closed", () => {
+   180→  const b = snapshotGreeter();
+   181→  // Forge: change seq 9's payload, then re-hash + re-chain EVERYTHING after —
+   182→  // the receipt chain is now internally perfect, the carried state is stale.
+   183→  b.receipts[9].op.value = "Fleet";
+   184→  for (let i = 9; i < b.receipts.length; i++) {
+   185→    if (i > 9) b.receipts[i].prev = b.receipts[i - 1].hash;
+   186→    b.receipts[i].hash = receiptHash(b.receipts[i]);
+   187→  }
+   188→  // sanity: the forged chain alone verifies
+   189→  assert.equal(verifyChain(b.receipts, { expectedStart: 0, expectedPrev: GENESIS }).ok, true);
+   190→  assert.equal(bootCode(b), "REPLAY_DIVERGENCE");
+   191→});
+   192→
+   193→test("replay divergence: manifest hash untouched, so only replay can catch the forgery", () => {
+   194→  // Same forgery, but manifest.manifestHash also recomputed over forged cells —
+   195→  // STILL refused, because replay (not trust) defines state.
+   196→  const b = snapshotGreeter();
+   197→  b.receipts[9].op.value = "Fleet";
+   198→  for (let i = 9; i < b.receipts.length; i++) {
+   199→    if (i > 9) b.receipts[i].prev = b.receipts[i - 1].hash;
+   200→    b.receipts[i].hash = receiptHash(b.receipts[i]);
+   201→  }
+   202→  b.manifest.manifestHash = computeManifestHash(b.manifest);
+   203→  assert.equal(bootCode(b), "REPLAY_DIVERGENCE");
+   204→});
+   205→
+   206→test("replay invalid op: a receipt referencing a missing cell refuses boot", () => {
+   207→  const b = snapshotGreeter();
+   208→  b.receipts.splice(0, 1); // remove greeting's init; render at seq 4 then breaks
+   209→  // splice shifts seqs → chain gap is detected first (fail-closed, earliest gate)
+   210→  assert.equal(bootCode(b), "CHAIN_GAP");
+   211→});
+   212→
+   213→// ---------------------------------------------------------------------------
+   214→// schema drift — fail-closed
+   215→// ---------------------------------------------------------------------------
+   216→
+   217→test("schema drift: unknown schemaVersion / wrong schema refuses boot", () => {
+   218→  const b1 = snapshotGreeter();
+   219→  b1.manifest.schemaVersion = 2;
+   220→  b1.manifest.manifestHash = computeManifestHash(b1.manifest);
+   221→  assert.equal(bootCode(b1), "SCHEMA_DRIFT");
+   222→
+   223→  const b2 = snapshotGreeter();
+   224→  b2.manifest.schema = "quilt.organ.manifest.pro";
+   225→  b2.manifest.manifestHash = computeManifestHash(b2.manifest);
+   226→  assert.equal(bootCode(b2), "SCHEMA_DRIFT");
+   227→});
+   228→
+   229→// ---------------------------------------------------------------------------
+   230→// custody: GENESIS vs trusted checkpoint
+   231→// ---------------------------------------------------------------------------
+   232→
+   233→test("custody: organ extracted from a shared ledger needs a checkpoint; refuses without", () => {
+   234→  // A shared quilt: 2 unrelated receipts first, then the greeter's 12.
+   235→  const shared = makeQuilt("shared-quilt");
+   236→  quiltApply(shared, { type: "init", cellId: "unrelated", kind: "value", value: "do-not-carry" });
+   237→  quiltApply(shared, { type: "set", cellId: "unrelated", value: "still-unrelated" });
+   238→  const greeter = buildGreeterQuilt();
+   239→  for (const r of greeter.ledger) {
+   240→    quiltApply(shared, r.op); // replay greeter ops onto the shared quilt
+   241→  }
+   242→  assert.equal(shared.ledger.length, 2 + GREETER_RECEIPTS);
+   243→
+   244→  // Extract the organ: state = greeter cells, ledger = seq 2..13 only.
+   245→  const b = snapshot(shared.cells, shared.ledger.slice(2), {
+   246→    name: "greeter-organ",
+   247→    edges: GREETER_EDGES,
+   248→    cellIds: GREETER_CELLS,
+   249→  });
+   250→  assert.equal(b.manifest.receiptRange.start, 2);
+   251→  assert.equal(b.manifest.genesis.seq, 2);
+   252→  assert.equal(b.manifest.genesis.prevHash, shared.ledger[1].hash);
+   253→
+   254→  // No checkpoint → CUSTODY_GAP (an unverifiable prefix is unowned history)
+   255→  assert.equal(bootCode(b), "CUSTODY_GAP");
+   256→
+   257→  // Wrong checkpoint → CUSTODY_CHECKPOINT_MISMATCH
+   258→  assert.equal(bootCode(b, { trustedCheckpoint: { seq: 1, hash: "0".repeat(64) } }), "CUSTODY_CHECKPOINT_MISMATCH");
+   259→  assert.equal(bootCode(b, { trustedCheckpoint: { seq: 5, hash: shared.ledger[1].hash } }), "CUSTODY_CHECKPOINT_MISMATCH");
+   260→
+   261→  // Pinned correctly → boots, state proven by replay from empty cells
+   262→  const organ = boot(b, { trustedCheckpoint: { seq: 1, hash: shared.ledger[1].hash } });
+   263→  assert.equal(organ.cells.out.value, GREETER_FINAL_OUT);
+   264→  assert.equal(organ.ledger[0].seq, 2);
+   265→});
+   266→
+   267→// ---------------------------------------------------------------------------
+   268→// nesting round-trip: snapshot → boot in fresh host → continue → re-snapshot → boot again
+   269→// ---------------------------------------------------------------------------
+   270→
+   271→test("nesting round-trip: organ migrates across two hosts with intact custody", () => {
+   272→  const b1 = snapshotGreeter();
+   273→  const host1 = makeQuilt("host-A");
+   274→  quiltApply(host1, { type: "init", cellId: "host-cell", kind: "value", value: "A" });
+   275→
+   276→  const organ1 = boot(b1, { host: host1 });
+   277→  assert.ok(host1.ledger.some((r) => r.op.type === "organ.nest"));
+   278→
+   279→  // Continue: 4 debits net back to the identical state.
+   280→  organ1.append({ type: "set", cellId: "subject", value: "organ" });
+   281→  organ1.append({ type: "render", cellId: "out", templateId: "template", from: ["greeting", "subject"] });
+   282→  organ1.append({ type: "set", cellId: "subject", value: "SuperInstance" });
+   283→  organ1.append({ type: "render", cellId: "out", templateId: "template", from: ["greeting", "subject"] });
+   284→
+   285→  const de1 = verifyDoubleEntry(host1, organ1);
+   286→  assert.equal(de1.ok, true, JSON.stringify(de1.errors));
+   287→  assert.equal(de1.creditsChecked, 4);
+   288→
+   289→  // Host chain (with organ.* pointer receipts) still verifies and replays.
+   290→  assert.equal(verifyQuiltLedger(host1).ok, true);
+   291→  const replayedHost = {};
+   292→  for (const r of host1.ledger) applyOp(replayedHost, r.op);
+   293→  assert.deepEqual(replayedHost, host1.cells);
+   294→
+   295→  // Re-snapshot: same identity, longer chain, supersedes pinned.
+   296→  const b2 = snapshotOrgan(organ1);
+   297→  assert.equal(b2.manifest.organId, b1.manifest.organId);
+   298→  assert.equal(b2.receipts.length, GREETER_RECEIPTS + 4);
+   299→  assert.equal(b2.manifest.supersedes, b1.manifest.manifestHash);
+   300→
+   301→  // Boot again in a second fresh host — state hash BEFORE == AFTER.
+   302→  const host2 = makeQuilt("host-B");
+   303→  quiltApply(host2, { type: "init", cellId: "host-cell", kind: "value", value: "B" });
+   304→  const organ2 = boot(b2, { host: host2 });
+   305→  assert.equal(cellsStateHash(organ1.cells), cellsStateHash(organ2.cells));
+   306→  assert.equal(cellsStateHash(organ2.cells), b1.manifest.state.cellsSha256);
+   307→  assert.equal(organ2.cells.out.value, GREETER_FINAL_OUT);
+   308→
+   309→  // The second host's double entry is balanced (0 new debits → 0 credits).
+   310→  const de2 = verifyDoubleEntry(host2, organ2);
+   311→  assert.equal(de2.ok, true, JSON.stringify(de2.errors));
+   312→  assert.equal(de2.creditsChecked, 0);
+   313→});
+   314→
+   315→test("nesting: duplicate nest of the same manifest refuses with DUPLICATE_NEST", () => {
+   316→  const b = snapshotGreeter();
+   317→  const host = makeQuilt("host");
+   318→  const organ = boot(b); // no host
+   319→  nestInto(host, b, organ);
+   320→  assert.throws(() => nestInto(host, b, organ), (e) => e.code === "DUPLICATE_NEST");
+   321→});
+   322→
+   323→test("nesting: a forged-but-self-consistent host credit is caught by double-entry", () => {
+   324→  const b = snapshotGreeter();
+   325→  const host = makeQuilt("host");
+   326→  const organ = boot(b, { host });
+   327→  organ.append({ type: "set", cellId: "subject", value: "X" });
+   328→
+   329→  const forged = JSON.parse(JSON.stringify(host));
+   330→  const idx = forged.ledger.findIndex((r) => r.op.type === "organ.credit");
+   331→  forged.ledger[idx].op.stateHashAfter = "f".repeat(64);
+   332→  for (let i = idx; i < forged.ledger.length; i++) {
+   333→    if (i > idx) forged.ledger[i].prev = forged.ledger[i - 1].hash;
+   334→    forged.ledger[i].hash = receiptHash(forged.ledger[i]);
+   335→  }
+   336→  const de = verifyDoubleEntry(forged, { organId: organ.organId, ledger: organ.ledger, nestReceipt: organ.nestReceipt });
+   337→  assert.equal(de.ok, false);
+   338→  assert.ok(de.errors.some((e) => e.code === "DOUBLE_ENTRY_STATE_MISMATCH"));
+   339→});
+   340→
+   341→test("nesting: a dropped host credit is unbalanced (debit without credit)", () => {
+   342→  const b = snapshotGreeter();
+   343→  const host = makeQuilt("host");
+   344→  const organ = boot(b, { host });
+   345→  organ.append({ type: "set", cellId: "subject", value: "X" });
+   346→
+   347→  const robbed = JSON.parse(JSON.stringify(host));
+   348→  robbed.ledger = robbed.ledger.filter((r) => !(r.op.type === "organ.credit"));
+   349→  // seqs now have a hole → host chain itself is broken (also fail-closed)
+   350→  const de = verifyDoubleEntry(robbed, { organId: organ.organId, ledger: organ.ledger, nestReceipt: organ.nestReceipt });
+   351→  assert.equal(de.ok, false);
+   352→  assert.ok(de.errors.some((e) => e.code === "CHAIN_GAP" || e.code === "DOUBLE_ENTRY_UNBALANCED"));
+   353→});
+   354→
+   355→// ---------------------------------------------------------------------------
+   356→// manifest validator details
+   357→// ---------------------------------------------------------------------------
+   358→
+   359→test("validateManifest: edge to unknown cell and range inconsistency are MANIFEST_INVALID", () => {
+   360→  const b = snapshotGreeter();
+   361→  const bad1 = JSON.parse(JSON.stringify(b.manifest));
+   362→  bad1.edges = [{ from: "greeting", to: "ghost" }];
+   363→  bad1.manifestHash = computeManifestHash(bad1);
+   364→  assert.equal(validateManifest(bad1).ok, false);
+   365→
+   366→  const bad2 = JSON.parse(JSON.stringify(b.manifest));
+   367→  bad2.receiptRange.count = 99;
+   368→  bad2.manifestHash = computeManifestHash(bad2);
+   369→  assert.equal(validateManifest(bad2).ok, false);
+   370→  assert.ok(validateManifest(bad2).errors.every((e) => e.code === "MANIFEST_INVALID"));
+   371→});
+   372→
+   373→test("makeReceipt refuses malformed ops (fail-closed at the source)", () => {
+   374→  assert.throws(() => makeReceipt(-1, { type: "set" }, GENESIS));
+   375→  assert.throws(() => makeReceipt(0, { type: "" }, GENESIS));
+   376→  assert.throws(() => makeReceipt(0, { type: "set", value: undefined }, GENESIS), TypeError);
+   377→});
+   378→
+   379→// ===========================================================================
+   380→// v1 (lane 64-a) — the rewind family + write-side transactions
+   381→// ===========================================================================
+   382→
+   383→const v1ErrorCode = (fn) => {
+   384→  try {
+   385→    fn();
+   386→  } catch (e) {
+   387→    if (e instanceof OrganBootError) return e.code;
+   388→    throw e;
+   389→  }
+   390→  return null; // did not throw — caller asserts otherwise
+   391→};
+   392→
+   393→/** Build a fresh greeter bundle advanced by the given extra ops (organ-append
+   394→ *  semantics on a standalone quilt, then re-snapshot). Deterministic. */
+   395→function advancedBundle(extraOps) {
+   396→  const quilt = buildGreeterQuilt();
+   397→  for (const op of extraOps) quiltApply(quilt, op);
+   398→  return snapshot(quilt.cells, quilt.ledger, { name: "greeter-organ", edges: GREETER_EDGES });
+   399→}
+   400→
+   401→const ADVANCE_OPS = [
+   402→  { type: "set", cellId: "greeting", value: "Salutations" },
+   403→  { type: "render", cellId: "out", templateId: "template", from: ["greeting", "subject"] },
+   404→  { type: "set", cellId: "subject", value: "v1" },
+   405→  { type: "render", cellId: "out", templateId: "template", from: ["greeting", "subject"] },
+   406→];
+   407→
+   408→// ---------------------------------------------------------------------------
+   409→// rewind round-trip: boot → advance → rewind to 0 == genesis state (byte-exact)
+   410→// ---------------------------------------------------------------------------
+   411→
+   412→test("v1 rewind round-trip: rewind(bundle, 0) reproduces the genesis state byte-identically", () => {
+   413→  const b0 = snapshotGreeter();
+   414→  const b1 = advancedBundle(ADVANCE_OPS); // 12 + 4 = 16 receipts
+   415→  assert.equal(b1.manifest.receiptRange.count, GREETER_RECEIPTS + ADVANCE_OPS.length);
+   416→
+   417→  // Independent genesis reference: apply ONLY receipt 0's op to empty cells.
+   418→  const genesisRef = {};
+   419→  applyOp(genesisRef, b1.receipts[0].op);
+   420→
+   421→  const view = rewind(b1, 0);
+   422→  assert.equal(view.provenance.start, 0);
+   423→  assert.equal(view.provenance.end, 0);
+   424→  assert.equal(view.provenance.count, 1);
+   425→  assert.equal(view.provenance.tipHash, b1.receipts[0].hash);
+   426→  assert.equal(view.stateHash, cellsStateHash(genesisRef));
+   427→  assert.equal(canonicalJson(view.state), canonicalJson({ cells: genesisRef })); // byte-identical
+   428→  // ...and the input bundle is untouched (pure form)
+   429→  assert.equal(b1.receipts.length, GREETER_RECEIPTS + ADVANCE_OPS.length);
+   430→
+   431→  // rewind to the pre-advance tip == the v0 snapshot's state (cross-check)
+   432→  const backToV0 = rewind(b1, GREETER_RECEIPTS - 1);
+   433→  assert.equal(backToV0.stateHash, b0.manifest.state.cellsSha256);
+   434→  // rewind to tip == carried state (identity)
+   435→  const atTip = rewind(b1, b1.manifest.receiptRange.end);
+   436→  assert.equal(atTip.stateHash, b1.manifest.state.cellsSha256);
+   437→});
+   438→
+   439→test("v1 stateAt: time-travel query == independent prefix replay, pure on bundles and organs", () => {
+   440→  const b1 = advancedBundle(ADVANCE_OPS);
+   441→  for (const seq of [0, 3, 5, GREETER_RECEIPTS - 1, b1.manifest.receiptRange.end]) {
+   442→    const ref = {};
+   443→    for (let i = 0; i <= seq; i++) applyOp(ref, b1.receipts[i].op);
+   444→    const view = stateAt(b1, seq);
+   445→    assert.equal(view.stateHash, cellsStateHash(ref), `seq ${seq}`);
+   446→    assert.equal(canonicalJson(view.state), canonicalJson({ cells: ref }), `seq ${seq}`);
+   447→  }
+   448→
+   449→  // purity: bundle bytes identical before/after; organ untouched
+   450→  const before = canonicalJson(b1);
+   451→  stateAt(b1, 7);
+   452→  assert.equal(canonicalJson(b1), before);
+   453→
+   454→  const organ = boot(b1);
+   455→  const organBefore = canonicalJson({ ledger: organ.ledger, cells: organ.cells });
+   456→  const organView = stateAt(organ, 9);
+   457→  assert.equal(organView.stateHash, stateAt(b1, 9).stateHash);
+   458→  assert.equal(canonicalJson({ ledger: organ.ledger, cells: organ.cells }), organBefore);
+   459→  assert.equal(organ.ledger.length, b1.receipts.length);
+   460→});
+   461→
+   462→test("v1 stateAt determinism: same seq → same hash across independent builds and runs", () => {
+   463→  const a = advancedBundle(ADVANCE_OPS);
+   464→  const bb = advancedBundle(ADVANCE_OPS); // rebuilt from scratch, byte-equal inputs
+   465→  assert.equal(a.manifest.manifestHash, bb.manifest.manifestHash);
+   466→  const seqs = [2, 8, 13, a.manifest.receiptRange.end];
+   467→  for (const s of seqs) {
+   468→    assert.equal(stateAt(a, s).stateHash, stateAt(bb, s).stateHash, `seq ${s}`);
+   469→    assert.equal(rewind(a, s).stateHash, stateAt(a, s).stateHash, `seq ${s}`);
+   470→  }
+   471→});
+   472→
+   473→// ---------------------------------------------------------------------------
+   474→// rewind past a nest boundary: the compensating host-side credit (net zero)
+   475→// ---------------------------------------------------------------------------
+   476→
+   477→test("v1 rewind past nest: host emits organ.rewind compensating receipt; double-entry nets to zero", () => {
+   478→  const b = snapshotGreeter();
+   479→  const host = makeQuilt("host-R");
+   480→  const organ = boot(b, { host });
+   481→  organ.append({ type: "set", cellId: "subject", value: "A" });
+   482→  organ.append({ type: "set", cellId: "subject", value: "B" });
+   483→  organ.append({ type: "set", cellId: "subject", value: "C" });
+   484→  const preTip = organ.ledger[organ.ledger.length - 1].seq; // GREETER_RECEIPTS + 2
+   485→  let de = verifyDoubleEntry(host, organ);
+   486→  assert.equal(de.ok, true);
+   487→  assert.equal(de.creditsChecked, 3);
+   488→
+   489→  // Rewind PAST the nest boundary (nest pinned organSeq = GREETER_RECEIPTS - 1).
+   490→  const nestPinnedSeq = organ.nestReceipt.op.organSeq;
+   491→  const target = 4; // deep in the pre-nest history
+   492→  const result = rewind(organ, target);
+   493→  assert.equal(result.rewoundFrom, preTip);
+   494→  assert.equal(result.provenance.end, target);
+   495→  assert.equal(result.stateHash, stateAt(b, target).stateHash);
+   496→
+   497→  // The compensating receipt: the reverse of the debit/credit pair.
+   498→  const comp = result.compensating;
+   499→  assert.ok(comp, "a rewind that revokes credits must emit a host receipt");
+   500→  assert.equal(comp.op.type, ORGAN_REWIND_TYPE);
+   501→  assert.equal(comp.op.organId, organ.organId);
+   502→  assert.equal(comp.op.fromSeq, preTip);
+   503→  assert.equal(comp.op.toSeq, target);
+   504→  assert.equal(comp.op.stateHashAfter, result.stateHash);
+   505→  assert.equal(comp.op.rewound.length, 3); // the three post-nest credits
+   506→  for (const w of comp.op.rewound) {
+   507→    const credit = host.ledger[w.creditSeq];
+   508→    assert.equal(credit.hash, w.creditHash);
+   509→    assert.equal(credit.op.debitHash, w.debitHash);
+   510→    assert.ok(w.organSeq > nestPinnedSeq, "revoked credits are the post-nest ones");
+   511→  }
+   512→
+   513→  // Append-only: NOTHING was erased from the host ledger.
+   514→  assert.equal(host.ledger.filter((r) => r.op.type === "organ.credit").length, 3);
+   515→  assert.equal(host.ledger.filter((r) => r.op.type === ORGAN_REWIND_TYPE).length, 1);
+   516→  assert.equal(verifyQuiltLedger(host).ok, true);
+   517→
+   518→  // Double-entry now nets to zero: 0 live debits vs 0 live credits (3 revoked).
+   519→  de = verifyDoubleEntry(host, organ);
+   520→  assert.equal(de.ok, true, JSON.stringify(de.errors));
+   521→  assert.equal(de.creditsChecked, 0);
+   522→  assert.equal(de.creditsRevoked, 3);
+   523→  assert.equal(de.rewinds, 1);
+   524→
+   525→  // The organ continues from the rewound tip: next debit is seq target+1.
+   526→  const { debit, credit } = organ.append({ type: "set", cellId: "subject", value: "after-rewind" });
+   527→  assert.equal(debit.seq, target + 1);
+   528→  assert.ok(credit, "post-rewind debits get fresh host credits");
+   529→  de = verifyDoubleEntry(host, organ);
+   530→  assert.equal(de.ok, true, JSON.stringify(de.errors));
+   531→  assert.equal(de.creditsChecked, 1);
+   532→
+   533→  // Re-snapshot the rewound organ → boots fresh, hash-equal to the rewind view.
+   534→  const b2 = snapshotOrgan(organ);
+   535→  assert.equal(b2.receipts.length, target + 2); // seq 0..target + the new debit
+   536→  const organ2 = boot(b2);
+   537→  assert.equal(cellsStateHash(organ2.cells), cellsStateHash(organ.cells));
+   538→});
+   539→
+   540→test("v1 partial rewind (inside post-nest window): remaining credits still pair 1:1", () => {
+   541→  const b = snapshotGreeter();
+   542→  const host = makeQuilt("host-P");
+   543→  const organ = boot(b, { host });
+   544→  organ.append({ type: "set", cellId: "subject", value: "A" }); // debit seq 12
+   545→  organ.append({ type: "set", cellId: "subject", value: "B" }); // debit seq 13
+   546→  organ.append({ type: "set", cellId: "subject", value: "C" }); // debit seq 14
+   547→  const result = rewind(organ, GREETER_RECEIPTS + 1); // toSeq 13: keeps debits 12+13, revokes credit for 14
+   548→  assert.equal(result.compensating.op.rewound.length, 1);
+   549→  const de = verifyDoubleEntry(host, organ);
+   550→  assert.equal(de.ok, true, JSON.stringify(de.errors));
+   551→  assert.equal(de.creditsChecked, 2, "the two kept debits still pair with their credits");
+   552→  assert.equal(de.creditsRevoked, 1);
+   553→  // rewound cells == state as of the kept tip (subject was set A@12, B@13)
+   554→  assert.equal(organ.cells.subject.value, "B");
+   555→});
+   556→
+   557→test("v1 rewind audit is fail-closed: forged rewind receipts are caught", () => {
+   558→  const b = snapshotGreeter();
+   559→  const host = makeQuilt("host-F");
+   560→  const organ = boot(b, { host });
+   561→  organ.append({ type: "set", cellId: "subject", value: "A" });
+   562→  organ.append({ type: "set", cellId: "subject", value: "B" });
+   563→  rewind(organ, GREETER_RECEIPTS); // toSeq 12: revokes the credit for debit 13
+   564→  assert.equal(verifyDoubleEntry(host, organ).ok, true);
+   565→
+   566→  // Forge 1: attacker PADS the evidence list, listing a LIVE credit (whose
+   567→  // debit is still carried) as revoked, then re-hashes the tail. The pairing
+   568→  // law catches it: the debit loses its credit → UNBALANCED.
+   569→  const forged = JSON.parse(JSON.stringify(host));
+   570→  const rIdx = forged.ledger.findIndex((r) => r.op.type === ORGAN_REWIND_TYPE);
+   571→  const liveCredit = forged.ledger.find((r) => r.op.type === "organ.credit" && r.op.organSeq === GREETER_RECEIPTS);
+   572→  forged.ledger[rIdx].op.rewound.push({
+   573→    creditSeq: liveCredit.seq,
+   574→    creditHash: liveCredit.hash,
+   575→    organSeq: liveCredit.op.organSeq,
+   576→    debitHash: liveCredit.op.debitHash,
+   577→  });
+   578→  forged.ledger[rIdx].prev = forged.ledger[rIdx - 1].hash;
+   579→  forged.ledger[rIdx].hash = receiptHash(forged.ledger[rIdx]);
+   580→  const de1 = verifyDoubleEntry(forged, { organId: organ.organId, ledger: organ.ledger, nestReceipt: organ.nestReceipt });
+   581→  assert.equal(de1.ok, false);
+   582→  assert.ok(de1.errors.some((e) => e.code === "DOUBLE_ENTRY_UNBALANCED"), JSON.stringify(de1.errors));
+   583→
+   584→  // Forge 2: bogus stateHashAfter on the rewind receipt. → STATE_MISMATCH.
+   585→  // (In this fixture the rewind receipt is the LAST host receipt, so re-hashing
+   586→  // it alone is enough for a self-consistent forged ledger.)
+   587→  const forged2 = JSON.parse(JSON.stringify(host));
+   588→  const r2 = forged2.ledger.findIndex((r) => r.op.type === ORGAN_REWIND_TYPE);
+   589→  forged2.ledger[r2].op.stateHashAfter = "e".repeat(64);
+   590→  forged2.ledger[r2].prev = forged2.ledger[r2 - 1].hash;
+   591→  forged2.ledger[r2].hash = receiptHash(forged2.ledger[r2]);
+   592→  const de2 = verifyDoubleEntry(forged2, { organId: organ.organId, ledger: organ.ledger, nestReceipt: organ.nestReceipt });
+   593→  assert.equal(de2.ok, false);
+   594→  assert.ok(de2.errors.some((e) => e.code === "DOUBLE_ENTRY_STATE_MISMATCH"), JSON.stringify(de2.errors));
+   595→
+   596→  // Forge 3: evidence list points at a credit that does not exist. → HASH_MISMATCH.
+   597→  const forged3 = JSON.parse(JSON.stringify(host));
+   598→  const r3 = forged3.ledger.findIndex((r) => r.op.type === ORGAN_REWIND_TYPE);
+   599→  forged3.ledger[r3].op.rewound[0].creditSeq = 9999;
+   600→  for (let i = r3; i < forged3.ledger.length; i++) {
+   601→    if (i > r3) forged3.ledger[i].prev = forged3.ledger[i - 1].hash;
+   602→    forged3.ledger[i].hash = receiptHash(forged3.ledger[i]);
+   603→  }
+   604→  const de3 = verifyDoubleEntry(forged3, { organId: organ.organId, ledger: organ.ledger, nestReceipt: organ.nestReceipt });
+   605→  assert.equal(de3.ok, false);
+   606→  assert.ok(de3.errors.some((e) => e.code === "DOUBLE_ENTRY_HASH_MISMATCH"), JSON.stringify(de3.errors));
+   607→});
+   608→
+   609→// ---------------------------------------------------------------------------
+   610→// rewind target bounds — fail-closed
+   611→// ---------------------------------------------------------------------------
+   612→
+   613→test("v1 rewind bounds: beyond tip / non-integer / past custody all refuse with named codes", () => {
+   614→  const b = advancedBundle(ADVANCE_OPS);
+   615→  const tip = b.manifest.receiptRange.end;
+   616→  assert.equal(v1ErrorCode(() => rewind(b, tip + 1)), "REWIND_TARGET_INVALID");
+   617→  assert.equal(v1ErrorCode(() => rewind(b, 1.5)), "REWIND_TARGET_INVALID");
+   618→  assert.equal(v1ErrorCode(() => rewind(b, -1)), "REWIND_PAST_CUSTODY");
+   619→  assert.equal(v1ErrorCode(() => stateAt(b, -3)), "REWIND_PAST_CUSTODY");
+   620→  assert.equal(v1ErrorCode(() => rewind({ nope: true }, 0)), "REWIND_TARGET_INVALID");
+   621→
+   622→  // checkpoint custody: an extracted range cannot rewind below its carried start
+   623→  const shared = makeQuilt("shared-v1");
+   624→  quiltApply(shared, { type: "init", cellId: "pre", kind: "value", value: "prefix" });
+   625→  const greeter = buildGreeterQuilt();
+   626→  for (const r of greeter.ledger) quiltApply(shared, r.op);
+   627→  const extracted = snapshot(shared.cells, shared.ledger.slice(1), { name: "greeter-organ", edges: GREETER_EDGES, cellIds: GREETER_CELLS });
+   628→  assert.equal(extracted.manifest.genesis.seq, 1);
+   629→  // courtroom first: without the pinned checkpoint the extracted bundle refuses outright
+   630→  assert.equal(v1ErrorCode(() => rewind(extracted, 1)), "CUSTODY_GAP");
+   631→  // with the checkpoint, a target BELOW the carried start is unowned history
+   632→  const cp = { seq: 0, hash: shared.ledger[0].hash };
+   633→  assert.equal(v1ErrorCode(() => rewind(extracted, 0, { trustedCheckpoint: cp })), "REWIND_PAST_CUSTODY");
+   634→  const view = rewind(extracted, 1, { trustedCheckpoint: cp });
+   635→  assert.equal(view.provenance.end, 1);
+   636→  // transact on a checkpoint-custody bundle: courtroom needs the checkpoint too
+   637→  assert.equal(v1ErrorCode(() => transact(extracted, [{ type: "set", cellId: "subject", value: "x" }])), "CUSTODY_GAP");
+   638→  const tx = transact(extracted, [{ type: "set", cellId: "subject", value: "x" }], { trustedCheckpoint: cp });
+   639→  assert.equal(tx.ok, true);
+   640→  assert.equal(boot(tx.bundle, { trustedCheckpoint: cp }).cells.subject.value, "x");
+   641→});
+   642→
+   643→// ---------------------------------------------------------------------------
+   644→// write-side transactions: all ops or nothing
+   645→// ---------------------------------------------------------------------------
+   646→
+   647→test("v1 transact success: staged ops commit as one successor bundle that boots", () => {
+   648→  const b = snapshotGreeter();
+   649→  const before = canonicalJson(b);
+   650→  const tx = transact(b, [
+   651→    { type: "set", cellId: "subject", value: "transactional" },
+   652→    { type: "render", cellId: "out", templateId: "template", from: ["greeting", "subject"] },
+   653→    { type: "init", cellId: "txnote", kind: "value", value: "committed" },
+   654→  ]);
+   655→  assert.equal(tx.ok, true);
+   656→  assert.equal(tx.unchanged, false);
+   657→  assert.equal(tx.appliedCount, 3);
+   658→  assert.equal(tx.newReceipts.length, 3);
+   659→  // receipt chain continues the base tip, contiguous and hash-linked
+   660→  assert.equal(tx.newReceipts[0].seq, b.manifest.receiptRange.end + 1);
+   661→  assert.equal(tx.newReceipts[0].prev, b.receipts[b.receipts.length - 1].hash);
+   662→  // identity carries; lineage pins; range extends; state hash moves
+   663→  assert.equal(tx.bundle.manifest.organId, b.manifest.organId);
+   664→  assert.equal(tx.bundle.manifest.supersedes, b.manifest.manifestHash);
+   665→  assert.equal(tx.bundle.receipts.length, b.receipts.length + 3);
+   666→  assert.equal(tx.bundle.manifest.state.cellsSha256, tx.toStateHash);
+   667→  assert.notEqual(tx.toStateHash, tx.fromStateHash);
+   668→  assert.equal(tx.bundle.manifest.cells.some((c) => c.id === "txnote"), true, "init'd cell joins the manifest");
+   669→  // the committed bundle passes the full boot courtroom
+   670→  const organ = boot(tx.bundle);
+   671→  assert.equal(organ.cells.out.value, "Ahoy, transactional!");
+   672→  assert.equal(organ.cells.txnote.value, "committed");
+   673→  // input bundle byte-untouched
+   674→  assert.equal(canonicalJson(b), before);
+   675→  assert.equal(b.receipts.length, GREETER_RECEIPTS);
+   676→});
+   677→
+   678→test("v1 transaction atomicity: fail op 2 of 3 → bundle byte-untouched, failure named", () => {
+   679→  const b = snapshotGreeter();
+   680→  const before = canonicalJson(b);
+   681→  const beforeHash = b.manifest.manifestHash;
+   682→  const result = transact(b, [
+   683→    { type: "set", cellId: "subject", value: "would-be-applied" },
+   684→    { type: "set", cellId: "ghost-cell", value: "boom" }, // op 2 of 3: invalid against post-op state
+   685→    { type: "set", cellId: "subject", value: "never-reached" },
+   686→  ]);
+   687→  assert.equal(result.ok, false);
+   688→  assert.equal(result.phase, "prepare");
+   689→  assert.equal(result.failedOp, 1);
+   690→  assert.equal(result.code, "OP_APPLY_FAILED");
+   691→  assert.equal(result.appliedCount, 1, "op 1 staged but nothing committed");
+   692→  assert.deepEqual(result.errors.map((e) => e.opIndex), [1]);
+   693→  assert.match(result.detail, /ghost-cell/);
+   694→  // THE PROOF: the bundle is byte-identical to before the transaction.
+   695→  assert.equal(canonicalJson(b), before);
+   696→  assert.equal(b.manifest.manifestHash, beforeHash);
+   697→  assert.equal(b.receipts.length, GREETER_RECEIPTS);
+   698→  assert.equal(b.state.cells.subject.value, "SuperInstance", "op 1's staged effect never leaked");
+   699→});
+   700→
+   701→test("v1 transact failure modes: malformed ops, unknown ops, unserializable state, empty ops", () => {
+   702→  const b = snapshotGreeter();
+   703→  const r1 = transact(b, [null]);
+   704→  assert.equal(r1.ok, false);
+   705→  assert.equal(r1.code, "OP_MALFORMED");
+   706→  assert.equal(r1.failedOp, 0);
+   707→
+   708→  const r2 = transact(b, [{ type: "explode" }]);
+   709→  assert.equal(r2.ok, false);
+   710→  assert.equal(r2.code, "OP_APPLY_FAILED");
+   711→  assert.match(r2.detail, /explode/);
+   712→
+   713→  const r3 = transact(b, [{ type: "init", cellId: "subject", kind: "value", value: "dup" }]);
+   714→  assert.equal(r3.ok, false);
+   715→  assert.equal(r3.code, "OP_APPLY_FAILED");
+   716→
+   717→  // chained validation: init then set-on-the-new-cell must validate in sequence
+   718→  const r4 = transact(b, [
+   719→    { type: "init", cellId: "seq-cell", kind: "value", value: 0 },
+   720→    { type: "set", cellId: "seq-cell", value: 1 },
+   721→  ]);
+   722→  assert.equal(r4.ok, true, JSON.stringify(r4.errors));
+   723→  assert.equal(r4.bundle.state.cells["seq-cell"].value, 1);
+   724→
+   725→  // empty transaction: a no-op commit returns the identical custody claim
+   726→  const r5 = transact(b, []);
+   727→  assert.equal(r5.ok, true);
+   728→  assert.equal(r5.unchanged, true);
+   729→  assert.equal(r5.bundle.manifest.manifestHash, b.manifest.manifestHash);
+   730→
+   731→  // transact refuses non-bundles and forged bases with v0's own law
+   732→  const organ = boot(b);
+   733→  assert.equal(v1ErrorCode(() => transact(organ, [{ type: "set", cellId: "subject", value: "x" }])), "TRANSACTION_INVALID");
+   734→  const forged = JSON.parse(JSON.stringify(b));
+   735→  forged.receipts[9].op.value = "Fleet";
+   736→  for (let i = 9; i < forged.receipts.length; i++) {
+   737→    if (i > 9) forged.receipts[i].prev = forged.receipts[i - 1].hash;
+   738→    forged.receipts[i].hash = receiptHash(forged.receipts[i]);
+   739→  }
+   740→  forged.manifest.manifestHash = computeManifestHash(forged.manifest);
+   741→  assert.equal(v1ErrorCode(() => transact(forged, [{ type: "set", cellId: "subject", value: "x" }])), "REPLAY_DIVERGENCE");
+   742→});
+   743→
+   744→// ---------------------------------------------------------------------------
+   745→// replay divergence THROUGH the v1 operations (the anti-forgery law carries over)
+   746→// ---------------------------------------------------------------------------
+   747→
+   748→test("v1 replay divergence: self-consistent forged chains refuse stateAt, rewind AND transact", () => {
+   749→  const b = advancedBundle(ADVANCE_OPS);
+   750→  // NOTE the honest scope of the law: a forgery whose effect later ops fully
+   751→  // overwrite replays to the SAME state and passes (state is DEFINED by replay
+   752→  // — the v0 law, unchanged). The forgeries below all survive to the tip.
+   753→  const forge = (bundle, at) => {
+   754→    const f = JSON.parse(JSON.stringify(bundle));
+   755→    if (f.receipts[at].op.type === "init") f.receipts[at].op.value = "FORGED-TEMPLATE";
+   756→    else f.receipts[at].op.value = "FORGED";
+   757→    for (let i = at; i < f.receipts.length; i++) {
+   758→      if (i > at) f.receipts[i].prev = f.receipts[i - 1].hash;
+   759→      f.receipts[i].hash = receiptHash(f.receipts[i]);
+   760→    }
+   761→    f.manifest.manifestHash = computeManifestHash(f.manifest);
+   762→    return f;
+   763→  };
+   764→  // forged INSIDE the provenance window (template init at seq 2 survives to tip) …
+   765→  assert.equal(v1ErrorCode(() => rewind(forge(b, 2), 5)), "REPLAY_DIVERGENCE");
+   766→  assert.equal(v1ErrorCode(() => stateAt(forge(b, 2), 5)), "REPLAY_DIVERGENCE");
+   767→  // … and forged strictly AFTER it (seq 14 is the last subject set): the full
+   768→  // carried bundle is verified first, so a rewind cannot become a forgery
+   769→  // laundromat for the tail it ignores.
+   770→  assert.equal(v1ErrorCode(() => rewind(forge(b, 14), 5)), "REPLAY_DIVERGENCE");
+   771→  // the organ form refuses too (in-memory courtroom on the organ's own chain)
+   772→  const organ = boot(b);
+   773→  const rogue = { ...organ, cells: JSON.parse(JSON.stringify(organ.cells)) };
+   774→  rogue.cells.subject.value = "tampered-in-memory";
+   775→  assert.equal(v1ErrorCode(() => rewind(rogue, 3)), "REPLAY_DIVERGENCE");
+   776→});
+   777→

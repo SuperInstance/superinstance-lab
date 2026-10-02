@@ -1,0 +1,738 @@
+     1→#!/usr/bin/env node
+     2→// scripts/run1_pipeline.mjs — cot-quilt RUN-1: DeepSeek CoT -> cellular graph
+     3→// (situational learning & development run, lane 63-a, dog-fooding fleet question
+     4→//  FLEET-Q-REWIND-ORGAN; cross-feeds lane 63-c as an organ-candidate spec).
+     5→//
+     6→// PHASES (each call receipted into runs/<run>/seeds/ledger.jsonl — append-only):
+     7→//   0 PROBE     deepseek GET /models + deepinfra GET /models (model-id discovery)
+     8→//   1 COMPOSE   1x deepseek-reasoner (v4-pro class): extended numbered CoT trace
+     9→//   2 DECOMP-F  3x deepseek-flash at temperatures 0.2/0.7/1.1 (seeds recorded;
+    10→//               identical prefix for prompt-cache hits, diversity via temperature)
+    11→//   3 DECOMP-T  1x typesafe jev-1.13.0 systemone battery: per-point noul load
+    12→//               probabilities -> the second, independent decomposer arm
+    13→//   4 MERGE     LOCAL deterministic cluster-merge + diff of the two arms (no call);
+    14→//               DAG repair receipted; then 1x flash cross-review of typesafe-only
+    15→//               nodes (compose/test separation: no model judges its own nodes)
+    16→//   5 JUDGE     (a) 1x typesafe noul probability battery on the merged graph,
+    17→//               (b) 1x deepinfra Hermes-3-405B adversarial attack (missing/faulty
+    18→//               nodes) -> judges/verdict.json + judges/adversarial.md; critique
+    19→//               folded back as origin='adversarial-critique' cells
+    20→//   6 EXPORT    graph.json + exports/organ-candidate-rewind.json + cot_raw.md
+    21→//               + README/RUN-REPORT scaffolding with the run's real numbers
+    22→//
+    23→// BUDGET: <= ~20 provider calls total (planned 10, reserves for JSON repair).
+    24→// Resume-safe: each phase writes state/<phase>.json atomically; re-run skips done.
+    25→//
+    26→// RUN:  set -a; . /home/z/my-project/.env.keys; set +a
+    27→//       node scripts/run1_pipeline.mjs [--run runs/2026-10-01-run1]
+    28→
+    29→import fs from 'node:fs';
+    30→import path from 'node:path';
+    31→import { fileURLToPath } from 'node:url';
+    32→import {
+    33→  deepseekChat, deepseekModels, systemone, deepinfraChat, deepinfraModels, sha256,
+    34→} from './clients.mjs';
+    35→
+    36→const HERE = path.dirname(fileURLToPath(import.meta.url));
+    37→const REPO = path.resolve(HERE, '..');
+    38→const argv = process.argv.slice(2);
+    39→const getArg = (flag, dflt) => {
+    40→  const i = argv.indexOf(flag);
+    41→  return i >= 0 && argv[i + 1] ? argv[i + 1] : dflt;
+    42→};
+    43→const RUN = path.resolve(REPO, getArg('--run', 'runs/2026-10-01-run1'));
+    44→const LEDGER = path.join(RUN, 'seeds', 'ledger.jsonl');
+    45→const STATE = path.join(RUN, 'state');
+    46→for (const d of [RUN, path.join(RUN, 'seeds'), STATE, path.join(RUN, 'judges'), path.join(REPO, 'exports')]) {
+    47→  fs.mkdirSync(d, { recursive: true });
+    48→}
+    49→
+    50→// ------------------------- atomic write (fleet lesson) -------------------------
+    51→function writeAtomic(file, text) {
+    52→  const tmp = `${file}.tmp-${process.pid}`;
+    53→  fs.writeFileSync(tmp, text);
+    54→  fs.renameSync(tmp, file);
+    55→}
+    56→const loadState = (name) => {
+    57→  const f = path.join(STATE, `${name}.json`);
+    58→  return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
+    59→};
+    60→const saveState = (name, obj) => writeAtomic(path.join(STATE, `${name}.json`), JSON.stringify(obj, null, 1));
+    61→
+    62→// ------------------------- the receipted ledger -------------------------
+    63→let callCounter = 0;
+    64→function receipt(row) {
+    65→  callCounter += 1;
+    66→  const rec = {
+    67→    row: callCounter,
+    68→    ts_utc: new Date().toISOString(),
+    69→    run: path.basename(RUN),
+    70→    ...row,
+    71→  };
+    72→  fs.appendFileSync(LEDGER, JSON.stringify(rec) + '\n');
+    73→  console.log(`  receipt #${rec.row}: ${rec.phase} ${rec.service}/${rec.model_requested} status=${rec.status} ${rec.usage_summary ?? ''}`);
+    74→  return rec;
+    75→}
+    76→
+    77→// ------------------------- the fleet question (verbatim) -------------------------
+    78→export const QUESTION_ID = 'FLEET-Q-REWIND-ORGAN';
+    79→export const QUESTION = 'How should a quilt system use its cells\' double-entry book-keeping (receipt chains) to rewind, snapshot, and save the state of individual cells, groups of cells (organs), or an entire quilt, so the saved state is a bootable drop-in that can nest inside another program or quilt? Specify the mechanisms, invariants, and failure modes.';
+    80→
+    81→const SEEDS = [
+    82→  { temperature: 0.2, label: 't02' },
+    83→  { temperature: 0.7, label: 't07' },
+    84→  { temperature: 1.1, label: 't11' },
+    85→];
+    86→
+    87→// Seed derivation: deterministic from the CoT content hash. HONESTY NOTE
+    88→// (receipted): NOT certified quantum entropy (mothquantum is outside this lane's
+    89→// budget envelope); the deepseek endpoint ignores `seed` anyway (receipted fleet
+    90→// finding) — seeds are book-keeping, temperature is the diversity mechanism.
+    91→function deriveSeeds(cotSha) {
+    92→  const h = sha256(`cot-quilt-run1-seeds:${cotSha}`);
+    93→  return SEEDS.map((s, i) => ({
+    94→    ...s,
+    95→    seed_int: parseInt(h.slice(i * 4, i * 4 + 4), 16),
+    96→    seed_hex: h.slice(i * 4, i * 4 + 4),
+    97→    source: 'sha256-derived (non-quantum, receipted)',
+    98→  }));
+    99→}
+   100→
+   101→async function callAndReceipt(phase, service, model, fn, extra = {}) {
+   102→  try {
+   103→    const r = await fn();
+   104→    receipt({
+   105→      phase, service, model_requested: model, model_served: r.model_served ?? null,
+   106→      seed: extra.seed ?? null, temperature: extra.temperature ?? null,
+   107→      purpose: extra.purpose ?? phase, status: 'OK',
+   108→      latency_ms: r.latency_ms, usage: r.usage ?? null,
+   109→      usage_summary: r.usage ? `in=${r.usage.prompt_tokens ?? r.usage.input_tokens ?? '?'} out=${r.usage.completion_tokens ?? r.usage.output_tokens ?? '?'}` : '',
+   110→      finish: r.finish ?? null,
+   111→      cost_usd_declared: r.cost_usd_declared ?? null,
+   112→      cost_basis: r.cost_basis ?? null,
+   113→      request_sha256: extra.request_sha256 ?? null,
+   114→      notes: extra.notes ?? null,
+   115→    });
+   116→    return r;
+   117→  } catch (e) {
+   118→    receipt({
+   119→      phase, service, model_requested: model, model_served: null,
+   120→      seed: extra.seed ?? null, temperature: extra.temperature ?? null,
+   121→      purpose: extra.purpose ?? phase, status: 'FAIL', error: String(e.message || e).slice(0, 300),
+   122→      cost_usd_declared: null, cost_basis: 'failed call — still a row (honest failures receipted)',
+   123→      notes: extra.notes ?? null,
+   124→    });
+   125→    throw e;
+   126→  }
+   127→}
+   128→
+   129→// =========================================================================
+   130→const log = (...a) => console.log(new Date().toISOString().slice(11, 19), '-', ...a);
+   131→
+   132→// ------------------------- PHASE 0: PROBE -------------------------
+   133→async function phaseProbe() {
+   134→  let st = loadState('probe');
+   135→  if (st) { log('probe: cached'); return st; }
+   136→  log('phase 0 PROBE (model-id discovery)');
+   137→  const ds = await callAndReceipt('probe', 'deepseek', 'GET /models', () => deepseekModels(), { purpose: 'model-id discovery' });
+   138→  const di = await callAndReceipt('probe', 'deepinfra', 'GET /models', () => deepinfraModels(), { purpose: 'model-id discovery' });
+   139→  const pick = (ids, prefs) => prefs.map((p) => ids.find((id) => p.test(id))).find(Boolean) ?? null;
+   140→  st = {
+   141→    ts_utc: new Date().toISOString(),
+   142→    deepseek_ids: ds.ids,
+   143→    deepinfra_id_count: di.ids.length,
+   144→    compose_model: pick(ds.ids, [/^deepseek-reasoner$/]) ?? pick(ds.ids, [/reasoner/, /v4-pro/]),
+   145→    flash_model: pick(ds.ids, [/^deepseek-chat$/]) ?? pick(ds.ids, [/flash/]),
+   146→    hermes_model: pick(di.ids, [/hermes-3.*405b/i, /hermes.*405b/i]),
+   147→    deepinfra_sample_ids: di.ids.slice(0, 40),
+   148→  };
+   149→  if (!st.compose_model || !st.flash_model) throw new Error(`fail-closed: deepseek models list lacks reasoner/flash ids: ${JSON.stringify(ds.ids)}`);
+   150→  if (!st.hermes_model) throw new Error(`fail-closed: no hermes-3-405b-class model on deepinfra (sample: ${JSON.stringify(st.deepinfra_sample_ids)})`);
+   151→  saveState('probe', st);
+   152→  log(`probe: compose=${st.compose_model} flash=${st.flash_model} hermes=${st.hermes_model}`);
+   153→  return st;
+   154→}
+   155→
+   156→// ------------------------- PHASE 1: COMPOSE -------------------------
+   157→async function phaseCompose(probe) {
+   158→  let st = loadState('compose');
+   159→  if (st) { log('compose: cached'); return st; }
+   160→  log('phase 1 COMPOSE (1x v4-pro class CoT)');
+   161→  const system = `You are the CoT composer of the cot-quilt pipeline (SuperInstance fleet). Produce an EXTENDED chain-of-thought reasoning trace on the fleet question below. The trace itself is the deliverable: it will be decomposed point-by-point into a cellular graph by cheaper models, so it must be:
+   162→(1) EXTENDED: 22-30 numbered reasoning points, written as "P1." .. "Pn.", each 2-6 sentences, one idea per point;
+   163→(2) MECHANISM-FIRST: every mechanism is named with its concrete book-keeping — the actual fields, ledger rows, hashes, journal records, file formats — never vibes;
+   164→(3) COMPLETE over the three asked dimensions — mechanisms, invariants, failure modes — for each of: rewind, snapshot, save-as-bootable-drop-in, and nesting; at each of the three granularities: single cell, organ (named group of cells), whole quilt;
+   165→(4) HONEST: where a mechanism has a cost or a failure mode, say it in the SAME point;
+   166→(5) SELF-CONTAINED: no references to any conversation, no meta-commentary.
+   167→
+   168→Fleet context (true; cite freely): a quilt is a reactive spreadsheet-like runtime whose state lives in CELLS. Each cell keeps DOUBLE-ENTRY BOOK-KEEPING: every state transition appends a receipt to that cell's hash-chained receipt log (the receipt chain); a receipt records what changed (before/after images), why (the triggering input or the exact dependency versions observed), and the hash of the previous receipt. Organs are named groups of cells acting as one unit; a quilt can nest inside another program or inside a larger quilt as a sub-quilt with its own exposed cells.`;
+   169→  const user = `FLEET QUESTION (answer it via the numbered reasoning trace):\n${QUESTION}\n\nBegin now. Format: a heading line "TRACE", then the numbered points P1..Pn, then a heading line "ANSWER" with a compact summary (<=200 words).`;
+   170→  const r = await callAndReceipt('compose', 'deepseek', probe.compose_model,
+   171→    () => deepseekChat({ model: probe.compose_model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], max_tokens: 16384, timeout_ms: 540_000 }),
+   172→    { purpose: 'extended CoT on FLEET-Q-REWIND-ORGAN', notes: 'requested model name deepseek-v4-pro; api id per probe' });
+   173→  if (!r.content || r.finish === 'length') {
+   174→    // burn-guard (receipted finding: reasoner can spend the whole budget on reasoning)
+   175→    const r2 = await callAndReceipt('compose-retry', 'deepseek', probe.compose_model,
+   176→      () => deepseekChat({ model: probe.compose_model, messages: [{ role: 'system', content: system }, { role: 'user', content: user + '\n\nBUDGET GUARD: the trace must fit; be concise per point.' }], max_tokens: 24000, timeout_ms: 540_000 }),
+   177→      { purpose: 'burn-guard retry at 2x budget' });
+   178→    st = { r: r2, system_sha256: sha256(system), user_sha256: sha256(user) };
+   179→  } else {
+   180→    st = { r, system_sha256: sha256(system), user_sha256: sha256(user) };
+   181→  }
+   182→  saveState('compose', st);
+   183→  log(`compose: served=${st.r.model_served} finish=${st.r.finish} cot_chars=${(st.r.content ?? '').length} reasoning_chars=${(st.r.reasoning_content ?? '').length}`);
+   184→  return st;
+   185→}
+   186→
+   187→// ------------------------- PHASE 2: DECOMPOSE-FLASH -------------------------
+   188→const FLASH_SYSTEM = `You are the flash decomposer of the cot-quilt pipeline. Input: an extended numbered chain-of-thought (points P1..Pn) answering a fleet question about cell rewind/snapshot/save via receipt chains. Output: STRICT JSON array decomposing it point-by-point into ATOMIC cellular nodes.
+   189→Schema per node: {"point":"P7","title":"<=6 words","content":"1-3 sentences, atomic, self-contained, faithful to the CoT","weight":0.75,"deps":["P3","P7"]}
+   190→- "weight" = how load-bearing this node is for the QUESTION's answer (0..1).
+   191→- "deps" = the points this node's correctness depends on (subset of points at or before its own point; DAG; no self-dependency).
+   192→Rules:
+   193→- ATOMIC: one mechanism / invariant / failure-mode per node; split compound points into multiple nodes.
+   194→- COVERAGE: every point P1..Pn yields at least one node (a purely transitional point may yield one node with weight < 0.2 saying it is transitional bookkeeping).
+   195→- BUDGET: 20-26 nodes total; each "content" <= 20 words, compressed to the mechanical essence (do NOT restate the CoT verbatim); NEVER use the double-quote character (") inside any string value; the JSON array MUST be complete — truncation is a failure.
+   196→- Output COMPACT JSON (no spaces/newlines between tokens), ONLY the array, no fences or prose.`;
+   197→
+   198→function parseJsonArray(raw) {
+   199→  const attempt = (txt) => {
+   200→    const s = txt.indexOf('['); const e = txt.lastIndexOf(']');
+   201→    if (s < 0 || e <= s) throw new Error('no JSON array found');
+   202→    return JSON.parse(txt.slice(s, e + 1));
+   203→  };
+   204→  try { return attempt(raw); } catch {}
+   205→  // tolerant repair: smart quotes, control chars, trailing commas, stray escapes
+   206→  const fixed = raw
+   207→    .replace(/[\u201c\u201d\u201e]/g, "'").replace(/[\u2018\u2019]/g, "'")
+   208→    // eslint-disable-next-line no-control-regex
+   209→    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' ')
+   210→    .replace(/,\s*(\]|\})/g, '$1');
+   211→  try { return attempt(fixed); } catch {}
+   212→  // last resort: cut at the last complete object and close the array
+   213→  const objs = [];
+   214→  const re = /\{[^{}]*\}/g; let m;
+   215→  while ((m = re.exec(fixed)) !== null) {
+   216→    try { objs.push(JSON.parse(m[0])); } catch {}
+   217→  }
+   218→  if (objs.length) return objs;
+   219→  throw new Error('no JSON array found');
+   220→}
+   221→
+   222→async function phaseDecomposeFlash(probe, compose, seeds) {
+   223→  let st = loadState('decompose_flash');
+   224→  if (st) { log('decompose_flash: cached'); return st; }
+   225→  log('phase 2 DECOMPOSE-FLASH (3 seeds, cache-friendly identical prefix)');
+   226→  const cot = compose.r.content ?? '';
+   227→  const userBase = `FLEET QUESTION:\n${QUESTION}\n\nCHAIN-OF-THOUGHT (verbatim):\n${cot}\n`;
+   228→  st = { model: probe.flash_model, system_sha256: sha256(FLASH_SYSTEM), runs: [] };
+   229→  for (const s of seeds) {
+   230→    const user = `${userBase}(seed book-keeping: temperature=${s.temperature}, seed=${s.seed_int}; decomposition diversity comes from temperature; stay faithful to the CoT.)`;
+   231→    let raw, r, repaired = false;
+   232→    try {
+   233→      r = await callAndReceipt('decompose_flash', 'deepseek', probe.flash_model,
+   234→        () => deepseekChat({ model: probe.flash_model, messages: [{ role: 'system', content: FLASH_SYSTEM }, { role: 'user', content: user }], temperature: s.temperature, seed: s.seed_int, max_tokens: 16384 }),
+   235→        { seed: s.seed_int, temperature: s.temperature, purpose: `flash decomposition seed t=${s.temperature}`, request_sha256: sha256(user), notes: 'identical prefix across seeds for prompt-cache hits' });
+   236→      raw = r.content;
+   237→      st.runs.push({ ...s, nodes: parseJsonArray(raw), raw_len: raw.length, repaired });
+   238→    } catch (e) {
+   239→      // JSON repair loop: one receipted retry (a dead call is still a row);
+   240→      // the failed raw is persisted beside the ledger for post-mortem (never delete)
+   241→      if (r?.content) writeAtomic(path.join(RUN, 'seeds', `flash-raw-${s.label}-failed.txt`), r.content);
+   242→      log(`  seed ${s.temperature}: parse/HTTP issue -> receipted repair retry (${String(e.message).slice(0, 80)})`);
+   243→      r = await callAndReceipt('decompose_flash_repair', 'deepseek', probe.flash_model,
+   244→        () => deepseekChat({ model: probe.flash_model, messages: [{ role: 'user', content: `The following was supposed to be a STRICT JSON array of decomposition nodes but is broken or empty. Return the repaired STRICT JSON array ONLY. Constraints: 20-26 nodes; content <= 20 words; no double-quote characters inside string values; complete the array.\n\n=== broken output ===\n${(r?.content ?? String(e.message)).slice(0, 6000)}\n\nSchema reminder: {"point","title","content","weight","deps"}.` }], temperature: 0.0, max_tokens: 16384 }),
+   245→        { seed: s.seed_int, temperature: 0.0, purpose: `JSON repair for seed t=${s.temperature}` });
+   246→      repaired = true;
+   247→      st.runs.push({ ...s, nodes: parseJsonArray(r.content), raw_len: r.content.length, repaired });
+   248→    }
+   249→    log(`  seed t=${s.temperature}: ${st.runs.at(-1).nodes.length} nodes`);
+   250→  }
+   251→  saveState('decompose_flash', st);
+   252→  return st;
+   253→}
+   254→
+   255→// ------------------------- PHASE 3: DECOMPOSE-TYPESAFE -------------------------
+   256→function splitPoints(cot) {
+   257→  const lines = cot.split('\n');
+   258→  const marks = [];
+   259→  for (let i = 0; i < lines.length; i++) {
+   260→    const m = lines[i].match(/^\s*P(\d+)[\.\):]/);
+   261→    if (m) marks.push({ n: Number(m[1]), line: i });
+   262→  }
+   263→  const points = [];
+   264→  for (let k = 0; k < marks.length; k++) {
+   265→    const end = k + 1 < marks.length ? marks[k + 1].line : lines.length;
+   266→    const text = lines.slice(marks[k].line, end).join('\n').trim();
+   267→    if (text.length > 0) points.push({ n: marks[k].n, text });
+   268→  }
+   269→  return points;
+   270→}
+   271→
+   272→async function phaseDecomposeTypesafe(probe, compose) {
+   273→  let st = loadState('decompose_typesafe');
+   274→  if (st) { log('decompose_typesafe: cached'); return st; }
+   275→  log('phase 3 DECOMP-TYPESAFE (1x jev-1.13.0 noul battery: per-point load probabilities)');
+   276→  const cot = compose.r.content ?? '';
+   277→  const points = splitPoints(cot).slice(0, 48); // battery cap receipted in notes
+   278→  if (!points.length) throw new Error('fail-closed: no P<n> points found in CoT for typesafe decomposition');
+   279→  const questions = {};
+   280→  for (const p of points) {
+   281→    questions[`p_load_P${p.n}`] = {
+   282→      type: 'noul',
+   283→      instructions: `p = probability that CoT point P${p.n} (see STATE) states a load-bearing mechanism, invariant, or failure mode that MUST become a cell in the cellular graph (as opposed to transitional bookkeeping or repetition of an earlier point). Consider the full STATE. Reply with the probability only.`,
+   284→    };
+   285→  }
+   286→  const r = await callAndReceipt('decompose_typesafe', 'typesafe', 'jev-1.13.0',
+   287→    () => systemone({
+   288→      model: 'jev-1.13.0',
+   289→      state: { battery: 'cot-quilt-run1-decompose', topic: QUESTION, cot: cot.slice(0, 20000) },
+   290→      questions,
+   291→    }),
+   292→    { purpose: 'independent decomposer arm: per-point load-bearing noul probabilities', notes: `questions=${points.length}; state.cot truncated to 20000 chars (fleet precedent)` });
+   293→  st = { model: r.model_served, points, answers: r.answers, usage: r.usage };
+   294→  saveState('decompose_typesafe', st);
+   295→  const kept = points.filter((p) => (r.answers?.[`p_load_P${p.n}`]?.noul ?? 0) >= 0.5);
+   296→  log(`  typesafe arm: ${points.length} points scored, ${kept.length} kept at noul>=0.5`);
+   297→  return st;
+   298→}
+   299→
+   300→// ------------------------- PHASE 4: MERGE (local, deterministic) -------------------------
+   301→const STOP = new Set('the a an and or of to in on for with by is are be as that this it its from at into not can must should when then if each per any all you your we they their will would could may might one two use used using via how what which who whose why where'.split(' '));
+   302→function tokens(s) {
+   303→  return String(s).toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/)
+   304→    .filter((w) => w.length > 2 && !STOP.has(w));
+   305→}
+   306→function jaccard(a, b) {
+   307→  const A = new Set(a); const B = new Set(b);
+   308→  const inter = [...A].filter((x) => B.has(x)).length;
+   309→  const uni = new Set([...A, ...B]).size;
+   310→  return uni ? inter / uni : 0;
+   311→}
+   312→const SIM_THRESHOLD = 0.42;
+   313→
+   314→function clusterFlash(runs) {
+   315→  const items = [];
+   316→  runs.forEach((run, si) => {
+   317→    run.nodes.forEach((n, ni) => {
+   318→      items.push({
+   319→        seed: run.temperature, si, ni,
+   320→        point: String(n.point ?? '?').toUpperCase().replace(/^P?(\d+).*$/, 'P$1'),
+   321→        title: String(n.title ?? ''), content: String(n.content ?? ''),
+   322→        weight: Math.min(1, Math.max(0, Number(n.weight) || 0)),
+   323→        deps: Array.isArray(n.deps) ? n.deps.map(String) : [],
+   324→        toks: tokens(`${n.title} ${n.content}`),
+   325→      });
+   326→    });
+   327→  });
+   328→  // single-linkage, deterministic order
+   329→  const clusters = [];
+   330→  for (const it of items) {
+   331→    let best = null; let bestSim = 0;
+   332→    for (const c of clusters) {
+   333→      const samePoint = c.point === it.point ? 1.15 : 0.9;
+   334→      const sim = jaccard(c.toks, it.toks) * samePoint;
+   335→      if (sim > bestSim) { bestSim = sim; best = c; }
+   336→    }
+   337→    if (best && bestSim >= SIM_THRESHOLD) { best.members.push(it); }
+   338→    else clusters.push({ point: it.point, toks: it.toks, members: [it] });
+   339→  }
+   340→  return clusters;
+   341→}
+   342→
+   343→function mergeArm(clusters, tsState) {
+   344→  const merged = clusters.map((c, i) => {
+   345→    const members = c.members;
+   346→    const top = [...members].sort((a, b) => b.weight - a.weight || b.content.length - a.content.length)[0];
+   347→    const seedSet = [...new Set(members.map((m) => m.seed))];
+   348→    const m = {
+   349→      id: `N${String(i + 1).padStart(2, '0')}`,
+   350→      point: c.point,
+   351→      title: top.title || `cell from ${c.point}`,
+   352→      content: top.content,
+   353→      weight: Math.round((members.reduce((s, x) => s + x.weight, 0) / members.length) * 1000) / 1000,
+   354→      seed_votes: seedSet.length,
+   355→      seeds: seedSet,
+   356→      composers: seedSet.map((t) => `flash@${t}`),
+   357→      stability: seedSet.length === 3 ? 'core' : seedSet.length === 2 ? 'stable' : 'volatile',
+   358→      origin: 'flash-decompose',
+   359→      status: 'active',
+   360→      _members: members,
+   361→      _toks: c.toks,
+   362→    };
+   363→    return m;
+   364→  });
+   365→
+   366→  // typesafe arm folded in (independent decomposer, jev-1.13.0)
+   367→  const tsOnly = [];
+   368→  if (tsState) {
+   369→    for (const p of tsState.points) {
+   370→      const pLoad = tsState.answers?.[`p_load_P${p.n}`]?.noul;
+   371→      if (pLoad === undefined) continue;
+   372→      const first3 = p.text.split(/(?<=\.)\s+/).slice(0, 3).join(' ');
+   373→      const node = {
+   374→        id: `TS-P${p.n}`,
+   375→        point: `P${p.n}`,
+   376→        title: `point P${p.n} (jev load ${(Math.round(pLoad * 100) / 100)})`,
+   377→        content: first3,
+   378→        weight: Math.round(pLoad * 1000) / 1000,
+   379→        deps: [...p.text.matchAll(/P(\d+)/g)].map((m) => `P${m[1]}`)
+   380→          .filter((x) => Number(x.slice(1)) < p.n),
+   381→        seed_votes: 0,
+   382→        seeds: [],
+   383→        composers: ['typesafe@jev-1.13.0'],
+   384→        stability: 'typesafe-only',
+   385→        origin: 'typesafe-decompose',
+   386→        status: 'active',
+   387→        _toks: tokens(first3),
+   388→        _text: p.text,
+   389→      };
+   390→      const samePoint = merged.filter((m) => m.point === node.point);
+   391→      let best = null; let bestSim = 0;
+   392→      for (const m of samePoint) {
+   393→        const sim = jaccard(m._toks, node._toks);
+   394→        if (sim > bestSim) { bestSim = sim; best = m; }
+   395→      }
+   396→      if (best && bestSim >= SIM_THRESHOLD) {
+   397→        best.composers.push('typesafe@jev-1.13.0');
+   398→        best.weight = Math.round(((best.weight + node.weight) / 2) * 1000) / 1000;
+   399→        best.ts_load = node.weight;
+   400→      } else {
+   401→        tsOnly.push(node);
+   402→      }
+   403→    }
+   404→  }
+   405→  return { merged, tsOnly };
+   406→}
+   407→
+   408→function resolveEdges(nodes, notes) {
+   409→  const byId = new Map(nodes.map((n) => [n.id, n]));
+   410→  const edges = new Map();
+   411→  for (const n of nodes) {
+   412→    const depPoints = [...new Set((n.deps ?? []).map((d) => String(d).toUpperCase().replace(/^P?(\d+).*$/, 'P$1')))];
+   413→    for (const dp of depPoints) {
+   414→      if (dp === n.point) continue; // no self-edge
+   415→      let target = nodes.filter((m) => m.id !== n.id && m.point === dp)
+   416→        .sort((a, b) => (b.weight + (b.seed_votes ?? 0) * 0.1) - (a.weight + (a.seed_votes ?? 0) * 0.1))[0];
+   417→      if (!target) {
+   418→        // inferred-chain fallback: depend on the strongest node of the numerically
+   419→        // previous point (receipted as inferred, not asserted)
+   420→        const prevNum = Number(n.point.slice(1)) - 1;
+   421→        target = nodes.filter((m) => m.point === `P${prevNum}` && m.id !== n.id)
+   422→          .sort((a, b) => b.weight - a.weight)[0];
+   423→        if (target) notes.push(`inferred-chain edge ${target.id}->${n.id} (dep point ${dp} had no node)`);
+   424→      }
+   425→      if (!target) { notes.push(`dropped dep ${dp} of ${n.id}: no target`); continue; }
+   426→      const k = `${target.id}->${n.id}`;
+   427→      if (!edges.has(k)) edges.set(k, { from: target.id, to: n.id, asserted_by: [] });
+   428→      edges.get(k).asserted_by.push(n.composers[0]);
+   429→    }
+   430→  }
+   431→  const list = [...edges.values()].map((e) => ({
+   432→    ...e,
+   433→    weight: Math.round((e.asserted_by.length / Math.max(1, byId.get(e.to).composers.length)) * 1000) / 1000,
+   434→  }));
+   435→  // DAG repair: Kahn's algorithm; break cycles at the lowest-weight edge
+   436→  const adj = new Map(list.map((e) => [e.from, []]));
+   437→  list.forEach((e) => adj.get(e.from).push(e));
+   438→  const indeg = new Map(nodes.map((n) => [n.id, 0]));
+   439→  list.forEach((e) => indeg.set(e.to, indeg.get(e.to) + 1));
+   440→  const q = nodes.filter((n) => indeg.get(n.id) === 0).map((n) => n.id);
+   441→  const seen = new Set();
+   442→  while (q.length) {
+   443→    const u = q.shift();
+   444→    seen.add(u);
+   445→    for (const e of (adj.get(u) ?? [])) {
+   446→      indeg.set(e.to, indeg.get(e.to) - 1);
+   447→      if (indeg.get(e.to) === 0) q.push(e.to);
+   448→    }
+   449→  }
+   450→  const cyc = nodes.filter((n) => !seen.has(n.id)).map((n) => n.id);
+   451→  if (cyc.length) {
+   452→    const cycSet = new Set(cyc);
+   453→    const back = list.filter((e) => cycSet.has(e.from) && cycSet.has(e.to))
+   454→      .sort((a, b) => a.weight - b.weight)[0];
+   455→    if (back) {
+   456→      list.splice(list.indexOf(back), 1);
+   457→      notes.push(`DAG repair: dropped lowest-weight cycle edge ${back.from}->${back.to} (w=${back.weight})`);
+   458→    }
+   459→  }
+   460→  return list;
+   461→}
+   462→
+   463→async function phaseMerge(probe, flashState, tsState) {
+   464→  let st = loadState('merge');
+   465→  if (st) { log('merge: cached'); return st; }
+   466→  log('phase 4 MERGE (local deterministic clustering + flash cross-review of the other arm)');
+   467→  const notes = [];
+   468→  const { merged, tsOnly } = mergeArm(clusterFlash(flashState.runs), tsState);
+   469→
+   470→  // --- compose/test separation guard: flash cross-reviews typesafe's own nodes ---
+   471→  let xreview = null;
+   472→  if (tsOnly.length) {
+   473→    const existing = merged.map((m) => `${m.id} [${m.point}] ${m.title}`).join('\n');
+   474→    const cands = tsOnly.map((t) => `${t.id} [${t.point}] ${t.content}`).join('\n');
+   475→    const sys = 'You are the cross-reviewer of the cot-quilt pipeline. Another model (typesafe jev-1.13.0) extracted candidate nodes point-wise from the same CoT. Adjudicate each candidate against the EXISTING nodes of the merged graph: is it genuinely new, a duplicate, or salvageable with a fix? Output STRICT JSON only.';
+   476→    const usr = `EXISTING NODES:\n${existing}\n\nCANDIDATES:\n${cands}\n\nReturn STRICT JSON array: [{"id":"TS-P12","verdict":"keep|duplicate|fix","duplicate_of":"N07","corrected_content":"..."}] — duplicate_of only for duplicates, corrected_content only for fixes.`;
+   477→    const r = await callAndReceipt('merge_xreview', 'deepseek', probe.flash_model,
+   478→      () => deepseekChat({ model: probe.flash_model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }], temperature: 0.0, max_tokens: 3000 }),
+   479→      { purpose: 'cross-model adjudication of typesafe-only nodes (compose/test separation)' });
+   480→    let verdicts = [];
+   481→    try { verdicts = parseJsonArray(r.content); } catch (e) {
+   482→      notes.push(`xreview parse failed (${String(e.message).slice(0, 60)}) — candidates kept with status 'unadjudicated'`);
+   483→    }
+   484→    xreview = { verdicts, model: r.model_served };
+   485→    for (const v of verdicts) {
+   486→      const t = tsOnly.find((x) => x.id === v.id);
+   487→      if (!t) continue;
+   488→      if (v.verdict === 'duplicate' && v.duplicate_of) {
+   489→        t.status = 'dropped-duplicate';
+   490→        t.duplicate_of = v.duplicate_of;
+   491→        const m = merged.find((x) => x.id === v.duplicate_of);
+   492→        if (m) m.composers.push('typesafe@jev-1.13.0(dup)');
+   493→      } else if (v.verdict === 'fix' && v.corrected_content) {
+   494→        t.content = String(v.corrected_content);
+   495→        t.xreview = 'fixed by flash cross-review';
+   496→      } else {
+   497→        t.xreview = 'kept';
+   498→      }
+   499→    }
+   500→  }
+   501→  const active = [...merged, ...tsOnly.filter((t) => t.status === 'active')];
+   502→  const edges = resolveEdges(active, notes);
+   503→  // clean internal fields
+   504→  const clean = (n) => {
+   505→    const { _members, _toks, _text, ...rest } = n;
+   506→    return rest;
+   507→  };
+   508→  st = {
+   509→    nodes: active.map(clean),
+   510→    edges,
+   511→    rejected: tsOnly.filter((t) => t.status !== 'active').map(clean),
+   512→    notes,
+   513→    xreview,
+   514→    sim_threshold: SIM_THRESHOLD,
+   515→  };
+   516→  saveState('merge', st);
+   517→  log(`merge: ${st.nodes.length} active nodes (${st.nodes.filter((n) => n.stability === 'core').length} core), ${st.edges.length} edges, ${st.rejected.length} rejected`);
+   518→  return st;
+   519→}
+   520→
+   521→// ------------------------- PHASE 5: JUDGE -------------------------
+   522→async function phaseJudgeTypesafe(probe, mergeState) {
+   523→  let st = loadState('judge_typesafe');
+   524→  if (st) { log('judge_typesafe: cached'); return st; }
+   525→  log('phase 5a JUDGE-typesafe (noul probability battery on the merged graph)');
+   526→  const gsum = mergeState.nodes.map((n) => `${n.id} [${n.point}] w=${n.weight} ${n.stability}: ${n.title}`).join('\n');
+   527→  const questions = {
+   528→    p_complete: { type: 'noul', instructions: 'p = probability that this cellular graph covers the chain-of-thought completely enough to implement the rewind/snapshot/save mechanisms from it (see STATE: the node list; the CoT is in the state).' },
+   529→    p_implementable: { type: 'noul', instructions: 'p = probability that a zero-shot agent, given ONLY these nodes+edges (no CoT), can implement a bootable drop-in save format for cells, organs, and whole quilts.' },
+   530→    p_missing_major: { type: 'noul', instructions: 'p = probability that at least one load-bearing mechanism of the CoT has NO corresponding node in the graph.' },
+   531→    p_faulty: { type: 'noul', instructions: 'p = probability that at least one node in the graph contradicts the CoT or states a wrong invariant.' },
+   532→  };
+   533→  const r = await callAndReceipt('judge_typesafe', 'typesafe', 'jev-1.13.0',
+   534→    () => systemone({
+   535→      model: 'jev-1.13.0',
+   536→      state: { battery: 'cot-quilt-run1-judge', topic: QUESTION, graph: gsum, cot: (loadState('compose').r.content ?? '').slice(0, 20000) },
+   537→      questions,
+   538→    }),
+   539→    { purpose: 'adversarial-adjacent probability battery on merged graph (judge != any composer of a given node set)' });
+   540→  st = { answers: r.answers, usage: r.usage, model: r.model_served, graph_summary_sha256: sha256(gsum) };
+   541→  saveState('judge_typesafe', st);
+   542→  log(`  typesafe verdicts: ${JSON.stringify(r.answers)}`);
+   543→  return st;
+   544→}
+   545→
+   546→async function phaseJudgeHermes(probe, compose, mergeState) {
+   547→  let st = loadState('judge_hermes');
+   548→  if (st) { log('judge_hermes: cached'); return st; }
+   549→  log('phase 5b JUDGE-hermes (deepinfra Hermes-3-405B adversarial attack)');
+   550→  const sys = `You are the ADVERSARIAL judge of the cot-quilt pipeline. The graph's composers never judge their own work; you attack it. Find: (a) MISSING load-bearing nodes — mechanisms/invariants/failure-modes present in the CoT but absent from the graph; (b) FAULTY nodes — nodes that contradict the CoT, state wrong invariants, or would mislead a zero-shot implementer; (c) an overall verdict. Be hostile and specific; quote point ids (P1..Pn).`;
+   551→  const graphCompact = JSON.stringify({
+   552→    nodes: mergeState.nodes.map(({ id, point, title, content, weight, stability, origin }) => ({ id, point, title, content, weight, stability, origin })),
+   553→    edges: mergeState.edges.map((e) => ({ from: e.from, to: e.to, weight: e.weight })),
+   554→  });
+   555→  const usr = `FLEET QUESTION:\n${QUESTION}\n\nCHAIN-OF-THOUGHT (verbatim, authoritative):\n${(compose.r.content ?? '').slice(0, 30000)}\n\nCELLULAR GRAPH UNDER REVIEW (JSON):\n${graphCompact}\n\nReturn STRICT JSON ONLY:\n{"missing":[{"point":"P12","title":"<=6 words","content":"1-2 sentences","weight":0.8}],"faulty":[{"id":"N07","problem":"what is wrong","severity":"major|minor"}],"verdict":{"pass":true,"completeness":0.82,"rationale":"<=80 words"}}`;
+   556→  let r = await callAndReceipt('judge_hermes', 'deepinfra', probe.hermes_model,
+   557→    () => deepinfraChat({ model: probe.hermes_model, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }], temperature: 0.4, max_tokens: 4096 }),
+   558→    { purpose: 'adversarial completeness/quality attack on merged graph' });
+   559→  let parsed;
+   560→  try { parsed = JSON.parse(r.content.slice(r.content.indexOf('{'), r.content.lastIndexOf('}') + 1)); } catch {
+   561→    r = await callAndReceipt('judge_hermes_repair', 'deepinfra', probe.hermes_model,
+   562→      () => deepinfraChat({ model: probe.hermes_model, messages: [{ role: 'user', content: `Repair to STRICT JSON matching the schema (missing/faulty/verdict). Broken output was:\n${(r?.content ?? '').slice(0, 4000)}` }], temperature: 0.0, max_tokens: 4096 }),
+   563→      { purpose: 'JSON repair of adversarial verdict' });
+   564→    parsed = JSON.parse(r.content.slice(r.content.indexOf('{'), r.content.lastIndexOf('}') + 1));
+   565→  }
+   566→  st = { verdict: parsed, model: r.model_served, usage: r.usage, graph_sha256: sha256(graphCompact) };
+   567→  saveState('judge_hermes', st);
+   568→  log(`  hermes verdict: pass=${parsed?.verdict?.pass} completeness=${parsed?.verdict?.completeness} missing=${parsed?.missing?.length ?? 0} faulty=${parsed?.faulty?.length ?? 0}`);
+   569→  return st;
+   570→}
+   571→
+   572→// ------------------------- PHASE 6: EXPORT -------------------------
+   573→async function phaseExport(probe, compose, flashState, tsState, mergeState, jt, jh, seeds) {
+   574→  const cot = compose.r.content ?? '';
+   575→  const cotSha = sha256(cot);
+   576→  // fold adversarial critique back in as new cells (fleet pattern), never delete
+   577→  const nodes = [...mergeState.nodes];
+   578→  const notes = [];
+   579→  for (const m of (jh.verdict?.missing ?? [])) {
+   580→    const id = `C${String(nodes.filter((n) => n.origin === 'adversarial-critique').length + 1).padStart(2, '0')}`;
+   581→    nodes.push({
+   582→      id, point: String(m.point ?? '?').toUpperCase(), title: String(m.title ?? 'gap'),
+   583→      content: String(m.content ?? ''), weight: Math.round((Number(m.weight) || 0.5) * 0.8 * 1000) / 1000,
+   584→      deps: [], seed_votes: 0, seeds: [], composers: [`judge@${jh.model}`],
+   585→      stability: 'critique', origin: 'adversarial-critique', status: 'active',
+   586→    });
+   587→    notes.push(`folded critique node ${id} from hermes missing-list (${m.point})`);
+   588→  }
+   589→  for (const f of (jh.verdict?.faulty ?? [])) {
+   590→    const n = nodes.find((x) => x.id === f.id);
+   591→    if (n) { n.faulty_note = `${f.severity}: ${f.problem}`; notes.push(`flagged faulty node ${f.id}`); }
+   592→  }
+   593→  const edges = resolveEdges(nodes, notes);
+   594→  const active = nodes.filter((n) => n.status === 'active');
+   595→  const core = active.filter((n) => n.stability === 'core');
+   596→  const stable = active.filter((n) => n.stability === 'stable');
+   597→  const volatile = active.filter((n) => n.stability === 'volatile');
+   598→  const tsOnly = active.filter((n) => n.stability === 'typesafe-only');
+   599→  const crit = active.filter((n) => n.stability === 'critique');
+   600→  const flashDerived = core.length + stable.length + volatile.length;
+   601→
+   602→  const graph = {
+   603→    run: path.basename(RUN),
+   604→    generated_at_utc: new Date().toISOString(),
+   605→    question: { id: QUESTION_ID, text: QUESTION },
+   606→    cot_sha256: cotSha,
+   607→    pipeline: {
+   608→      composer: `${probe.compose_model} (deepseek-v4-pro class)`,
+   609→      decomposers: [`deepseek-flash x3 seeds (${flashState.runs.map((r) => r.temperature).join('/')})`, 'typesafe jev-1.13.0 (per-point noul load battery)'],
+   610→      judges: [`typesafe jev-1.13.0 noul battery`, `${jh.model} (deepinfra, adversarial)`],
+   611→      compose_test_separation: 'no model judges a node set it composed; flash cross-reviewed typesafe-only nodes; typesafe+hermes judged flash-merged nodes',
+   612→    },
+   613→    seeds,
+   614→    nodes,
+   615→    edges,
+   616→    stability_map: {
+   617→      core: core.map((n) => n.id),
+   618→      stable: stable.map((n) => n.id),
+   619→      volatile: volatile.map((n) => n.id),
+   620→      typesafe_only: tsOnly.map((n) => n.id),
+   621→      critique: crit.map((n) => n.id),
+   622→    },
+   623→    rejected: mergeState.rejected,
+   624→    merge_notes: [...mergeState.notes, ...notes],
+   625→    stats: {
+   626→      nodes_total: active.length,
+   627→      edges_total: edges.length,
+   628→      flash_derived_nodes: flashDerived,
+   629→      seed_stability_pct: flashDerived ? Math.round(((core.length + stable.length) / flashDerived) * 1000) / 10 : 0,
+   630→      core_pct: flashDerived ? Math.round((core.length / flashDerived) * 1000) / 10 : 0,
+   631→      counts: { core: core.length, stable: stable.length, volatile: volatile.length, typesafe_only: tsOnly.length, critique: crit.length },
+   632→    },
+   633→    judges: {
+   634→      typesafe: jt.answers,
+   635→      hermes: { pass: jh.verdict?.verdict?.pass ?? null, completeness: jh.verdict?.verdict?.completeness ?? null, rationale: jh.verdict?.verdict?.rationale ?? null, missing_count: jh.verdict?.missing?.length ?? 0, faulty_count: jh.verdict?.faulty?.length ?? 0 },
+   636→    },
+   637→    ledger_sha256: sha256(fs.readFileSync(LEDGER, 'utf8')),
+   638→  };
+   639→  writeAtomic(path.join(RUN, 'graph.json'), JSON.stringify(graph, null, 1) + '\n');
+   640→
+   641→  // organ-candidate export for lane 63-c (bootable drop-in spec consumer)
+   642→  const organIds = new Set([...core, ...stable, ...crit].map((n) => n.id));
+   643→  const organ = {
+   644→    organ_candidate: 'cell-rewind-organ',
+   645→    exported_at_utc: new Date().toISOString(),
+   646→    source: { repo: 'SuperInstance/cot-quilt', run: graph.run, question_id: QUESTION_ID, graph_sha256: sha256(JSON.stringify(graph)) },
+   647→    consumer_lane: '63-c',
+   648→    drop_in_contract: {
+   649→      node_semantics: 'each node = a cell; content = the mechanism/invariant/failure-mode the cell must implement or assert',
+   650→      edge_semantics: 'from -> to = dependency; weight = asserted-by fraction of composers',
+   651→      inclusion_rule: 'core+stable flash-consensus nodes plus adversarial-critique cells (gaps the judges demanded)',
+   652→    },
+   653→    nodes: nodes.filter((n) => organIds.has(n.id)),
+   654→    edges: edges.filter((e) => organIds.has(e.from) && organIds.has(e.to)),
+   655→    judges: graph.judges,
+   656→  };
+   657→  writeAtomic(path.join(REPO, 'exports', 'organ-candidate-rewind.json'), JSON.stringify(organ, null, 1) + '\n');
+   658→
+   659→  // cot_raw.md (verbatim AS SAID)
+   660→  const cotMd = [
+   661→    `# cot_raw — run ${path.basename(RUN)}`,
+   662→    `- composed by: ${compose.r.model_served} (requested: ${probe.compose_model} = deepseek-v4-pro class)`,
+   663→    `- finish: ${compose.r.finish}; usage: ${JSON.stringify(compose.r.usage)}`,
+   664→    `- content sha256: ${cotSha}`,
+   665→    `- reasoning_content (provider-native hidden trace) sha256: ${sha256(compose.r.reasoning_content ?? '')}`,
+   666→    '',
+   667→    '## QUESTION (verbatim)',
+   668→    QUESTION,
+   669→    '',
+   670→    '## TRACE + ANSWER (verbatim `content`)',
+   671→    cot,
+   672→    '',
+   673→    '## REASONING_CONTENT (provider-native, verbatim, included per never-delete-data)',
+   674→    compose.r.reasoning_content ?? '(none returned)',
+   675→    '',
+   676→  ].join('\n');
+   677→  writeAtomic(path.join(RUN, 'cot_raw.md'), cotMd);
+   678→
+   679→  // judges artifacts
+   680→  writeAtomic(path.join(RUN, 'judges', 'verdict.json'), JSON.stringify({
+   681→    run: path.basename(RUN),
+   682→    judges_used: { typesafe: 'jev-1.13.0 noul battery', adversarial: jh.model },
+   683→    separation_receipt: graph.pipeline.compose_test_separation,
+   684→    typesafe_battery: { answers: jt.answers, usage: jt.usage },
+   685→    hermes: jh.verdict,
+   686→    numbers: {
+   687→      p_complete: jt.answers?.p_complete?.noul ?? null,
+   688→      p_implementable: jt.answers?.p_implementable?.noul ?? null,
+   689→      p_missing_major: jt.answers?.p_missing_major?.noul ?? null,
+   690→      p_faulty: jt.answers?.p_faulty?.noul ?? null,
+   691→      hermes_pass: jh.verdict?.verdict?.pass ?? null,
+   692→      hermes_completeness: jh.verdict?.verdict?.completeness ?? null,
+   693→    },
+   694→  }, null, 1) + '\n');
+   695→
+   696→  const adv = [
+   697→    `# adversarial.md — Hermes-3-405B attack on run ${path.basename(RUN)}`,
+   698→    '',
+   699→    `Judge model: ${jh.model} (deepinfra). Composers (flash x3 + typesafe) never judged their own nodes.`,
+   700→    '',
+   701→    '## Verdict',
+   702→    `pass=${jh.verdict?.verdict?.pass} completeness=${jh.verdict?.verdict?.completeness}`,
+   703→    `rationale: ${jh.verdict?.verdict?.rationale}`,
+   704→    '',
+   705→    '## Missing nodes (folded back as critique cells)',
+   706→    ...(jh.verdict?.missing ?? []).map((m, i) => `- C${i + 1} [${m.point}] w=${m.weight} ${m.title} — ${m.content}`),
+   707→    '',
+   708→    '## Faulty nodes (flagged in graph.json, never deleted)',
+   709→    ...(jh.verdict?.faulty ?? []).map((f) => `- ${f.id} (${f.severity}): ${f.problem}`),
+   710→    '',
+   711→    '## typesafe noul battery (same-phase judge, probability channel)',
+   712→    JSON.stringify(jt.answers, null, 1),
+   713→    '',
+   714→  ].join('\n');
+   715→  writeAtomic(path.join(RUN, 'judges', 'adversarial.md'), adv);
+   716→  return graph;
+   717→}
+   718→
+   719→// ------------------------- main -------------------------
+   720→(async () => {
+   721→  const t0 = Date.now();
+   722→  log(`run1 pipeline start -> ${path.relative(REPO, RUN)}`);
+   723→  const probe = await phaseProbe();
+   724→  const compose = await phaseCompose(probe);
+   725→  const cotSha = sha256(compose.r.content ?? '');
+   726→  const seeds = deriveSeeds(cotSha);
+   727→  const flashState = await phaseDecomposeFlash(probe, compose, seeds);
+   728→  const tsState = await phaseDecomposeTypesafe(probe, compose);
+   729→  const mergeState = await phaseMerge(probe, flashState, tsState);
+   730→  const jt = await phaseJudgeTypesafe(probe, mergeState);
+   731→  const jh = await phaseJudgeHermes(probe, compose, mergeState);
+   732→  const graph = await phaseExport(probe, compose, flashState, tsState, mergeState, jt, jh, seeds);
+   733→  log(`DONE in ${Math.round((Date.now() - t0) / 1000)}s: nodes=${graph.stats.nodes_total} edges=${graph.stats.edges_total} seed-stability=${graph.stats.seed_stability_pct}% core=${graph.stats.counts.core}`);
+   734→})().catch((e) => {
+   735→  console.error('PIPELINE FAIL-CLOSED:', String(e.message || e));
+   736→  process.exit(1);
+   737→});
+   738→

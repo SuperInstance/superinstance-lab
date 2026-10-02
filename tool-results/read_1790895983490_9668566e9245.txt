@@ -1,0 +1,302 @@
+  2159→}
+  2160→// R4: twin determinism + cross-round/probe bit-identity
+  2161→{
+  2162→  const carriedPairs = Object.keys(run4.metrics).map((k) => [k, r1.metrics[k], run4.metrics[k]]);
+  2163→  const carriedBad = carriedPairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run5: a, run4: b }));
+  2164→  const probePairs = [
+  2165→    ['ladder.0.z', r1.metrics.r3l_z_0, design5.partA_ladder['0'].v1_z_ratio],
+  2166→    ['ladder.0.1.z', r1.metrics.r3l_z_0_1, design5.partA_ladder['0.1'].v1_z_ratio],
+  2167→    ['ladder.0.2.z', r1.metrics.r3l_z_0_2, design5.partA_ladder['0.2'].v1_z_ratio],
+  2168→    ['ladder.0.3.z', r1.metrics.r3l_z_0_3, design5.partA_ladder['0.3'].v1_z_ratio],
+  2169→    ['ladder.0.45.z', r1.metrics.r3l_z_0_45, design5.partA_ladder['0.45'].v1_z_ratio],
+  2170→    ['ladder.0.6.z', r1.metrics.r3l_z_0_6, design5.partA_ladder['0.6'].v1_z_ratio],
+  2171→    ['ladder.0.75.z', r1.metrics.r3l_z_0_75, design5.partA_ladder['0.75'].v1_z_ratio],
+  2172→    ['ladder.0.9.z', r1.metrics.r3l_z_0_9, design5.partA_ladder['0.9'].v1_z_ratio],
+  2173→    ['ladder.1.2.z', r1.metrics.r3l_z_1_2, design5.partA_ladder['1.2'].v1_z_ratio],
+  2174→    ['ladder.0.9.raw', r1.metrics.r3l_raw_0_9, design5.partA_ladder['0.9'].v0_raw_ratio],
+  2175→    ['ladder.1.2.raw', r1.metrics.r3l_raw_1_2, design5.partA_ladder['1.2'].v0_raw_ratio],
+  2176→    ['ladder.0.9.mad', r1.metrics.r3l_mad_0_9, design5.partA_ladder['0.9'].v3_mad_ratio],
+  2177→    ['ladder.1.2.mad', r1.metrics.r3l_mad_1_2, design5.partA_ladder['1.2'].v3_mad_ratio],
+  2178→    ['ladder.0.9.var', r1.r3l['0.9'].var, design5.partA_ladder['0.9'].var_ratio_trained_over_init_target],
+  2179→    ['xpace.0.15.tau', r1.metrics.r2x_0_15_tau, design5.partB_xpace['0.15'].tau],
+  2180→    ['xpace.0.15.drift', r1.metrics.r2x_0_15_drift, design5.partB_xpace['0.15'].r2_drift_ratio],
+  2181→    ['xpace.0.15.g', r1.metrics.r2x_0_15_g, design5.partB_xpace['0.15'].g_ratio],
+  2182→    ['xpace.0.15.r1', r1.metrics.r2x_0_15_r1, design5.partB_xpace['0.15'].r1_ratio],
+  2183→    ['xpace.0.15.z', r1.metrics.r2x_0_15_z, design5.partB_xpace['0.15'].z_ratio_at_registered_amp],
+  2184→    ['xpace.0.15.var', r1.metrics.r2x_0_15_var, design5.partB_xpace['0.15'].var_ratio],
+  2185→    ['xpace.0.15.wcdisp', r1.metrics.r2x_0_15_wcdisp, design5.partB_xpace['0.15'].wc_disp_200_400_rel],
+  2186→    ['xpace.0.15.wtmove', r1.metrics.r2x_0_15_wtmove, design5.partB_xpace['0.15'].wt_total_move_rel_400],
+  2187→    ['xpace.0.5.tau', r1.metrics.r2x_0_5_tau, design5.partB_xpace['0.5'].tau],
+  2188→    ['xpace.0.5.drift', r1.metrics.r2x_0_5_drift, design5.partB_xpace['0.5'].r2_drift_ratio],
+  2189→    ['xpace.0.5.g', r1.metrics.r2x_0_5_g, design5.partB_xpace['0.5'].g_ratio],
+  2190→    ['xpace.0.5.r1', r1.metrics.r2x_0_5_r1, design5.partB_xpace['0.5'].r1_ratio],
+  2191→    ['xpace.0.5.z', r1.metrics.r2x_0_5_z, design5.partB_xpace['0.5'].z_ratio_at_registered_amp],
+  2192→    ['xpace.0.5.var', r1.metrics.r2x_0_5_var, design5.partB_xpace['0.5'].var_ratio],
+  2193→    ['xpace.0.5.wcdisp', r1.metrics.r2x_0_5_wcdisp, design5.partB_xpace['0.5'].wc_disp_200_400_rel],
+  2194→    ['xpace.0.5.wtmove', r1.metrics.r2x_0_5_wtmove, design5.partB_xpace['0.5'].wt_total_move_rel_400],
+  2195→    ['horizon.D', r1.metrics.rhor_D, design5.partC_horizon.D],
+  2196→    ['horizon.executed_to', r1.metrics.rhor_executed_to, design5.partC_horizon.executed_to],
+  2197→    ['horizon.D_mod80', r1.metrics.rhor_D_mod80, design5.partC_horizon.D_mod80],
+  2198→    ['horizon.loss_finite_again', r1.metrics.rhor_loss_finite_again, design5.partC_horizon.loss_finite_again_count],
+  2199→    ['horizon.all_nan_step', r1.metrics.rhor_all_nan_step, design5.partC_horizon.all_weights_nan_step],
+  2200→    ['horizon.nan_absorbing', r1.metrics.rhor_nan_absorbing, design5.partC_horizon.weights_nan_absorbing],
+  2201→    ['horizon.weights_all_nan_at_end', r1.metrics.rhor_weights_all_nan_at_end, design5.partC_horizon.weights_all_nan_at_end],
+  2202→    ['horizon.slow_rate', r1.metrics.rhor_slow_rate, design5.partC_horizon.slow_inflation_rate],
+  2203→    ['horizon.runaway_rate', r1.metrics.rhor_runaway_rate, design5.partC_horizon.blowup_rate_last200],
+  2204→    ['horizon.rate_ratio', r1.metrics.rhor_rate_ratio, design5.partC_horizon.rate_ratio_runaway_over_slow],
+  2205→    ['horizon.wc_norm_last', r1.metrics.rhor_wc_norm_last, design5.partC_horizon.wc_norm_at_last_finite],
+  2206→    ['horizon.drift_last200', r1.metrics.rhor_drift_last200, design5.partC_horizon.drift_last200],
+  2207→    ['horizon.first10', r1.metrics.rhor_first10, design5.partC_horizon.first10],
+  2208→    ['horizon.ckpt400.wt', r1.metrics.rhor_ckpt_400_wt, design5.partC_horizon.checkpoints['400'].wt_move_rel],
+  2209→    ['horizon.ckpt400.wcnorm', r1.metrics.rhor_ckpt_400_wcnorm, design5.partC_horizon.checkpoints['400'].wc_norm],
+  2210→    ['horizon.ckpt400.loss500', r1.metrics.rhor_ckpt_400_loss500, design5.partC_horizon.checkpoints['400'].loss_mean_500],
+  2211→    ['horizon.ckpt1000.loss500', r1.metrics.rhor_ckpt_1000_loss500, design5.partC_horizon.checkpoints['1000'].loss_mean_500],
+  2212→    ['horizon.ckpt5000.wcnorm', r1.metrics.rhor_ckpt_5000_wcnorm, design5.partC_horizon.checkpoints['5000'].wc_norm],
+  2213→    ['horizon.ckpt5000.loss500', r1.metrics.rhor_ckpt_5000_loss500, design5.partC_horizon.checkpoints['5000'].loss_mean_500],
+  2214→    ['horizon.ckpt10000.wcnorm', r1.metrics.rhor_ckpt_10000_wcnorm, design5.partC_horizon.checkpoints['10000'].wc_norm],
+  2215→    ['horizon.ckpt20000.wcnorm', r1.metrics.rhor_ckpt_20000_wcnorm, design5.partC_horizon.checkpoints['20000'].wc_norm],
+  2216→    ['horizon.ckpt20000.loss500', r1.metrics.rhor_ckpt_20000_loss500, design5.partC_horizon.checkpoints['20000'].loss_mean_500],
+  2217→    ['horizon.ckpt30000.wcnorm', r1.metrics.rhor_ckpt_30000_wcnorm, design5.partC_horizon.checkpoints['30000'].wc_norm],
+  2218→    ['horizon.depth2000.drift', r1.metrics.rhor_depth2000_drift, design5.partC_horizon.drift_at_depth_2000],
+  2219→    ['horizon.depth2000.var', r1.metrics.rhor_depth2000_var, design5.partC_horizon.var_ratio_after_depth_2000],
+  2220→    ['horizon.depth2000.z', r1.metrics.rhor_depth2000_z, design5.partC_horizon.z_ratio_after_depth_2000],
+  2221→    ['horizon.depth2000.wcdisp', r1.metrics.rhor_depth2000_wcdisp, design5.partC_horizon.wc_disp_at_depth_2000],
+  2222→    ['contrast.tau999.D', r1.metrics.rhor_c_tau999_D, design5.partC_horizon.contrasts['tau0.999_lr0.3'].D],
+  2223→    ['contrast.lr015.D', r1.metrics.rhor_c_lr015_D, design5.partC_horizon.contrasts['lr0.15_tau_law'].D],
+  2224→    ['contrast.lr05.D', r1.metrics.rhor_c_lr05_D, design5.partC_horizon.contrasts['lr0.5_tau_law'].D],
+  2225→    ['contrast.trivial.D', r1.metrics.rhor_c_trivial_D, design5.partC_horizon.contrasts['trivial_lr0.3'].D],
+  2226→    ['contrast.lr015.slow', r1.metrics.rhor_c_lr015_slow, design5.partC_horizon.contrasts['lr0.15_tau_law'].slow_inflation_rate],
+  2227→    ['contrast.trivial.slow', r1.metrics.rhor_c_trivial_slow, design5.partC_horizon.contrasts['trivial_lr0.3'].slow_inflation_rate]
+  2228→  ];
+  2229→  const probeBad = probePairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, design5: b }));
+  2230→  // round-5 receipt of record: every run5.json metric must reproduce bit-exactly (92/92)
+  2231→  const run5Receipt = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run5.json'), 'utf8'));
+  2232→  const run5Pairs = Object.keys(run5Receipt.metrics).map((k) => [k, r1.metrics[k], run5Receipt.metrics[k]]);
+  2233→  const run5Bad = run5Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run5: b }));
+  2234→  // round-6 receipt: every new metric must equal design6.json bit-exactly (probe == run == run-twin)
+  2235→  const d6 = design6; const m6 = q1.metrics;
+  2236→  const d6a = d6.partA_longevity, d6b = d6.partB_depth_window, d6c = d6.partC_gwindow;
+  2237→  const probe6Pairs = [
+  2238→    ['id.weights_sha', m6.id_weights_sha, d6a.identity_jepa4_wd0.weights_sha_jepa4_wd0],
+  2239→    ['rlong.anchor.D', m6.rlong_D_wd0, d6a.arms['wd0_anchor'].D],
+  2240→    ['rlong.anchor.exec', m6.rlong_exec_wd0, d6a.arms['wd0_anchor'].executed_to],
+  2241→    ['rlong.anchor.slow', m6.rlong_slow_wd0, d6a.arms['wd0_anchor'].slow_inflation_rate],
+  2242→    ['rlong.anchor.runaway', m6.rlong_runaway_wd0, d6a.arms['wd0_anchor'].blowup_rate_last200],
+  2243→    ['rlong.anchor.drift200', m6.rlong_drift_last200_wd0, d6a.arms['wd0_anchor'].drift_last200],
+  2244→    ['rlong.anchor.first10', m6.rlong_first10_wd0, d6a.arms['wd0_anchor'].first10],
+  2245→    ['rlong.main.D', m6.rlong_D_main, d6a.arms['wd3e-4_main'].D],
+  2246→    ['rlong.main.exec', m6.rlong_exec_main, d6a.arms['wd3e-4_main'].executed_to],
+  2247→    ['rlong.main.slow', m6.rlong_slow_main, d6a.arms['wd3e-4_main'].slow_inflation_rate],
+  2248→    ['rlong.main.slow100k', m6.rlong_slow_main_100k, d6a.arms['wd3e-4_main'].slow_inflation_rate_100k],
+  2249→    ['rlong.main.first10', m6.rlong_first10_main, d6a.arms['wd3e-4_main'].first10],
+  2250→    ['rlong.main.wc400', m6.rlong_main_wc_400, d6a.arms['wd3e-4_main'].checkpoints['400'].wc_norm],
+  2251→    ['rlong.main.wc20000', m6.rlong_main_wc_20000, d6a.arms['wd3e-4_main'].checkpoints['20000'].wc_norm],
+  2252→    ['rlong.main.wc100000', m6.rlong_main_wc_100000, d6a.arms['wd3e-4_main'].checkpoints['100000'].wc_norm],
+  2253→    ['rlong.main.wc500000', m6.rlong_main_wc_500000, d6a.arms['wd3e-4_main'].checkpoints['500000'].wc_norm],
+  2254→    ['rlong.main.wp400', m6.rlong_main_wp_400, d6a.arms['wd3e-4_main'].checkpoints['400'].wp_norm],
+  2255→    ['rlong.main.wp20000', m6.rlong_main_wp_20000, d6a.arms['wd3e-4_main'].checkpoints['20000'].wp_norm],
+  2256→    ['rlong.wd1e4.D', m6.rlong_D_wd1e4, d6a.arms['wd1e-4'].D],
+  2257→    ['rlong.wd1e4.exec', m6.rlong_exec_wd1e4, d6a.arms['wd1e-4'].executed_to],
+  2258→    ['rlong.wd1e4.slow', m6.rlong_slow_wd1e4, d6a.arms['wd1e-4'].slow_inflation_rate],
+  2259→    ['rlong.wd1e4.runaway', m6.rlong_runaway_wd1e4, d6a.arms['wd1e-4'].blowup_rate_last200],
+  2260→    ['rlong.wd1e4.rr', m6.rlong_rr_wd1e4, d6a.arms['wd1e-4'].rate_ratio_runaway_over_slow],
+  2261→    ['rlong.wd1e3.D', m6.rlong_D_wd1e3, d6a.arms['wd0.001'].D],
+  2262→    ['rlong.wd1e3.exec', m6.rlong_exec_wd1e3, d6a.arms['wd0.001'].executed_to],
+  2263→    ['rlong.wd1e3.slow', m6.rlong_slow_wd1e3, d6a.arms['wd0.001'].slow_inflation_rate],
+  2264→    ['rlong.g_wd', m6.rlong_g_wd, d6a.guards_wd3e4.g_gate_trivial_100.g_ratio],
+  2265→    ['rlong.r1_wd', m6.rlong_r1_wd, d6a.guards_wd3e4.r1_world2_400.r1_ratio],
+  2266→    ['rlong.drift_wd', m6.rlong_drift_wd, d6a.guards_wd3e4.r2_drift_200_400.r2_drift_ratio],
+  2267→    ['rlong.g_wd1e4', m6.rlong_g_wd1e4, d6a.guards_wd1e4.g_gate_trivial_100.g_ratio],
+  2268→    ['rlong.r1_wd1e4', m6.rlong_r1_wd1e4, d6a.guards_wd1e4.r1_world2_400.r1_ratio],
+  2269→    ['rlong.drift_wd1e4', m6.rlong_drift_wd1e4, d6a.guards_wd1e4.r2_drift_200_400.r2_drift_ratio],
+  2270→    ['rlong.g_wd0', m6.rlong_g_wd0, d6a.guards_wd0.g_gate_trivial_100.g_ratio],
+  2271→    ['rlong.r1_wd0', m6.rlong_r1_wd0, d6a.guards_wd0.r1_world2_400.r1_ratio],
+  2272→    ['rlong.drift_wd0', m6.rlong_drift_wd0, d6a.guards_wd0.r2_drift_200_400.r2_drift_ratio]
+  2273→  ];
+  2274→  for (const dep of DEPTHS6.map(String)) {
+  2275→    probe6Pairs.push(
+  2276→      ['r3d.z_carried.' + dep, m6['r3d_z_carried_' + dep], d6b.depths[dep].carried.z_ratio],
+  2277→      ['r3d.sd_sum.' + dep, m6['r3d_sd_sum_' + dep], d6b.depths[dep].carried.sd_sum],
+  2278→      ['r3d.raw_gap.' + dep, m6['r3d_raw_gap_' + dep], d6b.depths[dep].carried.raw_gap],
+  2279→      ['r3d.var_carried.' + dep, m6['r3d_var_carried_' + dep], d6b.depths[dep].carried.var_ratio],
+  2280→      ['r3d.candD.z.' + dep, m6['r3d_candD_z_' + dep], d6b.depths[dep].candD.z_ratio],
+  2281→      ['r3d.candD.n.' + dep, m6['r3d_candD_n_' + dep], d6b.depths[dep].candD.baseline_n],
+  2282→      ['r3d.candD.var.' + dep, m6['r3d_candD_var_' + dep], d6b.depths[dep].candD.var_ratio],
+  2283→      ['r3d.candA.z.' + dep, m6['r3d_candA_z_' + dep], d6b.depths[dep].candA.z_ratio],
+  2284→      ['r3d.candA.var.' + dep, m6['r3d_candA_var_' + dep], d6b.depths[dep].candA.var_ratio],
+  2285→      ['r3d.multiplier.' + dep, m6['r3d_multiplier_' + dep], d6b.candS[dep].multiplier],
+  2286→      ['r3d.z_anchored.' + dep, m6['r3d_z_anchored_' + dep], d6b.candS[dep].z_ratio_corrected],
+  2287→      ['r3d.deficit.' + dep, m6['r3d_deficit_' + dep], d6b.mechanism_law.deficit_factor[dep]],
+  2288→      ['r3d.sdcollapse.' + dep, m6['r3d_sdcollapse_' + dep], d6b.mechanism_law.sd_collapse_factor[dep]],
+  2289→      ['r3d.gapcollapse.' + dep, m6['r3d_gapcollapse_' + dep], d6b.mechanism_law.raw_gap_collapse_factor[dep]]
+  2290→    );
+  2291→  }
+  2292→  probe6Pairs.push(
+  2293→    ['r3d.candD_round_z_2200', m6.r3d_candD_round_z_2200, d6b.depths['2200'].candD_round_rule ? d6b.depths['2200'].candD_round_rule.z_ratio : null],
+  2294→    ['gwin.g_anchor', m6.gwin_g_anchor, d6c.anchor_lr0_3_w100.g_ratio],
+  2295→    ['gwin.g_anchor_first10', m6.gwin_g_anchor_first10, d6c.anchor_lr0_3_w100.g_first10],
+  2296→    ['gwin.g_anchor_last10', m6.gwin_g_anchor_last10, d6c.anchor_lr0_3_w100.g_last10],
+  2297→    ['gwin.g_015', m6.gwin_g_015, d6c.lr0_15_w200.g_ratio],
+  2298→    ['gwin.g_015_first10', m6.gwin_g_015_first10, d6c.lr0_15_w200.g_first10],
+  2299→    ['gwin.g_015_last10', m6.gwin_g_015_last10, d6c.lr0_15_w200.g_last10],
+  2300→    ['gwin.g_05', m6.gwin_g_05, d6c.lr0_5_w60.g_ratio],
+  2301→    ['gwin.g_05_first10', m6.gwin_g_05_first10, d6c.lr0_5_w60.g_first10],
+  2302→    ['gwin.g_05_last10', m6.gwin_g_05_last10, d6c.lr0_5_w60.g_last10]
+  2303→  );
+  2304→  const probe6Bad = probe6Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, design6: b }));
+  2305→  // round-6 receipt of record: run6.json (metrics AND metrics_round6) must reproduce bit-exactly
+  2306→  const run6Receipt = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run6.json'), 'utf8'));
+  2307→  const run6CarriedPairs = Object.keys(run6Receipt.metrics).map((k) => [k, r1.metrics[k], run6Receipt.metrics[k]]);
+  2308→  const run6CarriedBad = run6CarriedPairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run6: b }));
+  2309→  const run6Pairs = Object.keys(run6Receipt.metrics_round6).map((k) => [k, q1.metrics[k], run6Receipt.metrics_round6[k]]);
+  2310→  const run6Bad = run6Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run6: b }));
+  2311→  // round-7 disclosed pipeline values (design7 I1) must equal the run bit-exactly
+  2312→  const design7Pairs = [
+  2313→    ['plast.ratio20k', q1.metrics7.plast_ratio_20k, design7.identities.I1_continuation_reconstruction.trivial_continuation_ratio],
+  2314→    ['plast.wc20k', q1.metrics7.plast_snapshot_wc_20000, design7.identities.I1_continuation_reconstruction.snapshot_wc_norm]
+  2315→  ];
+  2316→  const design7Bad = design7Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, design7: b }));
+  2317→  // ROUND-8: the round-7 receipt of record — run7.json's THREE metric layers must reproduce
+  2318→  // bit-exactly (carried, round-6, round-7), plus the SHA-LEVEL chain extension: the run's
+  2319→  // metric shas equal run7.json's R4 row shas (the r4..r7 chain extends to r8).
+  2320→  const run7CarriedPairs = Object.keys(run7Receipt.metrics).map((k) => [k, r1.metrics[k], run7Receipt.metrics[k]]);
+  2321→  const run7CarriedBad = run7CarriedPairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run7: b }));
+  2322→  const run7R6Pairs = Object.keys(run7Receipt.metrics_round6).map((k) => [k, q1.metrics[k], run7Receipt.metrics_round6[k]]);
+  2323→  const run7R6Bad = run7R6Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run7: b }));
+  2324→  const run7R7Pairs = Object.keys(run7Receipt.metrics_round7).map((k) => [k, q1.metrics7[k], run7Receipt.metrics_round7[k]]);
+  2325→  const run7R7Bad = run7R7Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, run7: b }));
+  2326→  const run7R4row = run7Receipt.chain.find((r) => r.type === 'R4_determinism').payload;
+  2327→  const shaChainOk = r1.metricsSha === run7R4row.sha_carried_run1 && r2.metricsSha === run7R4row.sha_carried_run2
+  2328→    && q1.metricsSha === run7R4row.sha_round6_run1 && q2.metricsSha === run7R4row.sha_round6_run2
+  2329→    && q1.metrics7Sha === run7R4row.sha_round7_run1 && q2.metrics7Sha === run7R4row.sha_round7_run2;
+  2330→  // ROUND-8: the disclosed design8 pipeline values must equal the run bit-exactly (probe == run)
+  2331→  const design8Pairs = [
+  2332→    ['probe2.stage1.control', q1.metrics8.r8_stage1_control, design8.disclosed_pipeline_values.control_first_switch_ratio],
+  2333→    ['probe2.stage1.decayed', q1.metrics8.r8_stage1_decayed, design7.identities.I1_continuation_reconstruction.trivial_continuation_ratio],
+  2334→    ['probe2.ratio2.control', q1.metrics8.r8_ratio2_wd0, design8.disclosed_pipeline_values.control_second_switch_ratio]
+  2335→  ];
+  2336→  const design8Bad = design8Pairs.filter(([k, a, b]) => a !== b).map(([k, a, b]) => ({ key: k, run: a, design8: b }));
+  2337→  const shaAll1 = sha(JSON.stringify({ carried: r1.metrics, round6: q1.metrics, round7: q1.metrics7, round8: q1.metrics8 }));
+  2338→  const shaAll2 = sha(JSON.stringify({ carried: r2.metrics, round6: q2.metrics, round7: q2.metrics7, round8: q2.metrics8 }));
+  2339→  chain.add('R4_determinism', {
+  2340→    claim: 'two FULL executions byte-identical (carried + round-6 + round-7 + round-8 metric layers) AND every round-4 metric bit-equal to run4.json (29/29) AND every round-5 metric bit-equal to run5.json (92/92) AND every round-5 probe pair bit-equal to design5.json AND every round-6 metric bit-equal to design6.json AND run6.json AND every round-7 metric bit-equal to run7.json (all three layers, SHA-LEVEL chain to run7.json\'s R4 row shas) AND every disclosed round-8 pipeline value bit-equal to design8.json — probe == run == run-twin == round-4-run == round-5-run == round-6-run == round-7-run, the chain EIGHT rounds deep',
+  2341→    pass: r1.metricsSha === r2.metricsSha && q1.metricsSha === q2.metricsSha && q1.metrics7Sha === q2.metrics7Sha && q1.metrics8Sha === q2.metrics8Sha && shaAll1 === shaAll2
+  2342→      && carriedBad.length === 0 && probeBad.length === 0 && run5Bad.length === 0 && probe6Bad.length === 0 && run6CarriedBad.length === 0 && run6Bad.length === 0 && design7Bad.length === 0
+  2343→      && run7CarriedBad.length === 0 && run7R6Bad.length === 0 && run7R7Bad.length === 0 && shaChainOk && design8Bad.length === 0,
+  2344→    sha_carried_run1: r1.metricsSha, sha_carried_run2: r2.metricsSha,
+  2345→    sha_round6_run1: q1.metricsSha, sha_round6_run2: q2.metricsSha,
+  2346→    sha_round7_run1: q1.metrics7Sha, sha_round7_run2: q2.metrics7Sha,
+  2347→    sha_round8_run1: q1.metrics8Sha, sha_round8_run2: q2.metrics8Sha,
+  2348→    sha_all_run1: shaAll1, sha_all_run2: shaAll2,
+  2349→    sha_chain_to_run7: { sha_carried_run1: run7R4row.sha_carried_run1, sha_round6_run1: run7R4row.sha_round6_run1, sha_round7_run1: run7R4row.sha_round7_run1, bound: shaChainOk },
+  2350→    carried_cross_check: { shared: carriedPairs.length, mismatches: carriedBad },
+  2351→    run5_cross_check: { shared: run5Pairs.length, mismatches: run5Bad },
+  2352→    probe_cross_check: { shared: probePairs.length, mismatches: probeBad },
+  2353→    probe6_cross_check: { shared: probe6Pairs.length, mismatches: probe6Bad },
+  2354→    run6_cross_check: { shared: run6Pairs.length, mismatches: run6Bad },
+  2355→    run6_carried_cross_check: { shared: run6CarriedPairs.length, mismatches: run6CarriedBad },
+  2356→    design7_cross_check: { shared: design7Pairs.length, mismatches: design7Bad },
+  2357→    run7_carried_cross_check: { shared: run7CarriedPairs.length, mismatches: run7CarriedBad },
+  2358→    run7_round6_cross_check: { shared: run7R6Pairs.length, mismatches: run7R6Bad },
+  2359→    run7_round7_cross_check: { shared: run7R7Pairs.length, mismatches: run7R7Bad },
+  2360→    design8_cross_check: { shared: design8Pairs.length, mismatches: design8Bad }
+  2361→  });
+  2362→}
+  2363→chain.add('R5_mesh_conservation', {
+  2364→  total_drift_rel: r1.r5_total_drift_rel, variance_non_increasing: r1.r5_variance_non_increasing, first_violating: r1.r5_first_violating,
+  2365→  claim: 'total conserved within 1e-6 rel AND variance non-increasing over 100 steps (carried)',
+  2366→  pass: r1.r5_total_drift_rel <= 1e-6 && r1.r5_variance_non_increasing
+  2367→});
+  2368→chain.add('R6v4_impact_sensitive_no_repair', {
+  2369→  corr_mean: r1.r6_corr_mean, corr_min: r1.r6_corr_min,
+  2370→  jump: r1.r6_jump, loss_pre: r1.r6_loss_pre, loss_corrupted: r1.r6_loss_corrupted,
+  2371→  sha_invariant: r1.r6_sha_invariant, recheck_delta: r1.r6_recheck_delta,
+  2372→  flipped: r1.r6_flipped, top26: r1.r6_top26,
+  2373→  claim: 'L3 precondition corr > 0.3 AND jump > 1.5 AND corrected frozen-state invariant AND |recheck - corrupted| <= 1e-9 (carried)',
+  2374→  pass: r1.r6_corr_mean > 0.3 && r1.r6_jump > 1.5 && r1.r6_sha_invariant && r1.r6_recheck_delta <= 1e-9,
+  2375→  void_as_gated: !gPass
+  2376→});
+  2377→
+  2378→const verdicts = {};
+  2379→for (const row of chain.rows) if (/^(G|L2|R|PLAST|MECH|REDOSE|OVERDECAY)/.test(row.type)) verdicts[row.type] = row.payload.pass;
+  2380→const nPass = Object.values(verdicts).filter(Boolean).length;
+  2381→
+  2382→const outDoc = {
+  2383→  schema: 'quilt-jepa/run-receipt-v8',
+  2384→  seed_u32: seedU32,
+  2385→  seed_b: parseInt(sha(selJson + R8_SEEDB_SUFFIX).slice(0, 8), 16) >>> 0,
+  2386→  lr_registered: LR3,
+  2387→  tau_registered: TAU4,
+  2388→  K4_registered: K4,
+  2389→  amp_registered: AMP0,
+  2390→  round6_constants: { wd_main: WD_MAIN, rlong_ckpts: RLONG_CKPTS, depths: DEPTHS6, horizon_T: T_HORIZON, contrast_cap: CONTRAST_CAP },
+  2391→  round7_constants: { wd_arms: WD_ARMS7, plast_main_capture: PLAST_MAIN_CAPTURE, plast_steps: PLAST_STEPS, plast_probe_value_disclosed: PLAST_PROBE_VALUE_DISCLOSED },
+  2392→  round8_constants: { dose_grid: R8_DOSE_GRID, gwin_lr: R8_GWIN_LR, gwin_W: R8_GWIN_W, capture_1e3: R8_CAPTURE_1E3, seedB_suffix: R8_SEEDB_SUFFIX },
+  2393→  operating_point_note: 'UNCHANGED from round 4/5/6/7 (core/ byte-untouched) — round 8 adds MECH/GWIN8/REDOSE/OVERDECAY at the same operating point; carried claims must reproduce run4.json (29/29) AND run5.json (92/92) bit-exactly; round-6 claims must reproduce design6.json AND run6.json bit-exactly; round-7 claims must reproduce run7.json (all three layers, sha-level chain to its R4 row) bit-exactly; the disclosed design8 pipeline values bind bit-exactly; runner-level additions only: trivialSwitchProbe2 (stage-1 arithmetic identity to the carried probe, design8 I-C), read-only captureAt extensions (design8 I-A identity class), Spearman helper (average ranks on ties)',
+  2394→  seal_verified_at_startup: { masked_sha: storedMasked, mtime: storedMtime },
+  2395→  claims_passed: nPass,
+  2396→  claims_total: Object.keys(verdicts).length,
+  2397→  verdicts,
+  2398→  metrics: r1.metrics,
+  2399→  metrics_round6: q1.metrics,
+  2400→  metrics_round7: q1.metrics7,
+  2401→  metrics_round8: q1.metrics8,
+  2402→  chain: chain.rows,
+  2403→  tip: chain.tip()
+  2404→};
+  2405→fs.writeFileSync(path.join(RECEIPTS, 'run8.json'), JSON.stringify(outDoc, null, 1));
+  2406→fs.rmSync(STAGING, { force: true }); // receipt of record written — staging consumed
+  2407→console.log('claims:', nPass + '/' + Object.keys(verdicts).length, JSON.stringify(verdicts));
+  2408→console.log('tip:', chain.tip());
+  2409→const r4row = chain.rows.find((r) => r.type === 'R4_determinism').payload;
+  2410→console.log('carried cross-check vs run4.json:', r4row.carried_cross_check.shared + '/' + r4row.carried_cross_check.shared, 'mismatches:', r4row.carried_cross_check.mismatches.length);
+  2411→console.log('run5 receipt cross-check (92/92):', r4row.run5_cross_check.shared + '/' + r4row.run5_cross_check.shared, 'mismatches:', r4row.run5_cross_check.mismatches.length);
+  2412→console.log('probe cross-check vs design5.json:', r4row.probe_cross_check.shared + '/' + r4row.probe_cross_check.shared, 'mismatches:', r4row.probe_cross_check.mismatches.length);
+  2413→console.log('probe6 cross-check vs design6.json:', r4row.probe6_cross_check.shared + '/' + r4row.probe6_cross_check.shared, 'mismatches:', r4row.probe6_cross_check.mismatches.length);
+  2414→console.log('run7 carried cross-check:', r4row.run7_carried_cross_check.shared + '/' + r4row.run7_carried_cross_check.shared, 'mismatches:', r4row.run7_carried_cross_check.mismatches.length);
+  2415→console.log('run7 round-6 cross-check:', r4row.run7_round6_cross_check.shared + '/' + r4row.run7_round6_cross_check.shared, 'mismatches:', r4row.run7_round6_cross_check.mismatches.length);
+  2416→console.log('run7 round-7 cross-check:', r4row.run7_round7_cross_check.shared + '/' + r4row.run7_round7_cross_check.shared, 'mismatches:', r4row.run7_round7_cross_check.mismatches.length);
+  2417→console.log('sha-chain to run7 R4 row bound:', r4row.sha_chain_to_run7.bound);
+  2418→console.log('design8 disclosed cross-check:', r4row.design8_cross_check.shared + '/' + r4row.design8_cross_check.shared, 'mismatches:', r4row.design8_cross_check.mismatches.length);
+  2419→console.log('detail: G=' + r1.g_ratio.toFixed(4) + ' r2v4drift=' + r1.r2_drift_ratio.toExponential(2)
+  2420→  + ' zconc=' + r1.r3v4.v1_z_ratio.toFixed(3)
+  2421→  + ' R3L: z(0)=' + r1.r3l['0'].z.toFixed(4) + ' z(0.75)=' + r1.r3l['0.75'].z.toFixed(3) + ' sat=' + r1.r3l_sat_bit_exact
+  2422→  + ' R2x: drift(0.15)=' + r1.r2x['0.15'].r2_drift_ratio.toExponential(2) + ' g(0.15)=' + r1.r2x['0.15'].g_ratio.toFixed(4) + ' drift(0.5)=' + r1.r2x['0.5'].r2_drift_ratio.toExponential(2)
+  2423→  + ' RHOR: D=' + r1.rhor.D + ' slow=' + r1.rhor.slow_inflation_rate.toExponential(3) + ' ratio=' + r1.rhor.rate_ratio_runaway_over_slow.toFixed(1)
+  2424→  + ' depth2000: drift=' + r1.rhor.drift_at_depth_2000.toExponential(2) + ' z=' + r1.rhor.z_ratio_after_depth_2000.toFixed(3));
+  2425→const mA = q1.arms;
+  2426→console.log('RLONG: wd0 D=' + mA['wd0_anchor'].D
+  2427→  + ' | main wd3e-4: D=' + mA['wd3e-4_main'].D + ' exec=' + mA['wd3e-4_main'].executed_to + ' diverged=' + mA['wd3e-4_main'].diverged
+  2428→  + ' censor_floor=' + (500000 / 30174).toFixed(4) + 'x'
+  2429→  + ' | wd1e-4: D=' + mA['wd1e-4'].D + ' (1.5938x) runaway=' + mA['wd1e-4'].blowup_rate_last200.toExponential(3) + ' ratio=' + mA['wd1e-4'].rate_ratio_runaway_over_slow.toFixed(1)
+  2430→  + ' | wd1e-3: D=' + mA['wd0.001'].D + ' exec=' + mA['wd0.001'].executed_to
+  2431→  + ' | guards wd3e-4: g=' + mA.guards_wd3e4.g_gate_trivial_100.g_ratio.toFixed(4) + ' r1=' + mA.guards_wd3e4.r1_world2_400.r1_ratio.toFixed(4) + ' drift=' + mA.guards_wd3e4.r2_drift_200_400.r2_drift_ratio.toExponential(2));
+  2432→for (const dep of DEPTHS6.map(String)) {
+  2433→  const x = q1.partB.depths[dep];
+  2434→  console.log('R3D depth ' + dep + ': carried z=' + x.carried.z_ratio.toFixed(4) + ' sd_sum=' + x.carried.sd_sum.toFixed(5) + ' raw_gap=' + x.carried.raw_gap.toFixed(5)
+  2435→    + ' -> anchored z=' + q1.partB.candS[dep].z_ratio_corrected.toFixed(4) + ' (mult ' + q1.partB.candS[dep].multiplier.toFixed(6) + ')'
+  2436→    + ' | candD ' + x.candD.z_ratio.toFixed(4) + ' candA ' + x.candA.z_ratio.toFixed(4));
+  2437→}
+  2438→console.log('GWIN: anchor(0.3,100)=' + q1.partC.anchor_lr0_3_w100.g_ratio.toFixed(4)
+  2439→  + ' | (0.15,W=200)=' + q1.partC.lr0_15_w200.g_ratio.toFixed(4) + ' | (0.5,W=60)=' + q1.partC.lr0_5_w60.g_ratio.toFixed(4)
+  2440→  + ' | pace-lock reference 0.5693 @ (0.15,W=100)');
+  2441→console.log('ROUND-8 detail: spearman=' + q1.metrics8.r8_spearman_ratio_wc.toFixed(4)
+  2442→  + ' | dose ratios: 0=' + q1.metrics8.r8_dose_ratio_0.toFixed(4) + ' 1e-4=' + q1.metrics8.r8_dose_ratio_1e4.toFixed(4)
+  2443→  + ' 1.5e-4=' + q1.metrics8.r8_dose_ratio_1_5e4.toFixed(4) + ' 2e-4=' + q1.metrics8.r8_dose_ratio_2e4.toFixed(4)
+  2444→  + ' 2.5e-4=' + q1.metrics8.r8_dose_ratio_2_5e4.toFixed(4) + ' 3e-4=' + q1.metrics8.r8_dose_ratio_3e4.toFixed(4)
+  2445→  + ' 1e-3=' + q1.metrics8.r8_dose_ratio_1e3.toFixed(4));
+  2446→console.log('  dose wc20k: 0=' + q1.metrics8.r8_dose_wc_0.toFixed(4) + ' 1e-4=' + q1.metrics8.r8_dose_wc_1e4.toFixed(4)
+  2447→  + ' 1.5e-4=' + q1.metrics8.r8_dose_wc_1_5e4.toFixed(4) + ' 2e-4=' + q1.metrics8.r8_dose_wc_2e4.toFixed(4)
+  2448→  + ' 2.5e-4=' + q1.metrics8.r8_dose_wc_2_5e4.toFixed(4) + ' 3e-4=' + q1.metrics8.r8_dose_wc_3e4.toFixed(4)
+  2449→  + ' 1e-3=' + q1.metrics8.r8_dose_wc_1e3.toFixed(4));
+  2450→console.log('  second switch: ratio2(3e-4)=' + q1.metrics8.r8_ratio2_3e4.toFixed(6) + ' ratio2(wd0)=' + q1.metrics8.r8_ratio2_wd0.toFixed(6)
+  2451→  + ' rho20_1=' + q1.metrics8.r8_rho20_1.toFixed(6) + ' rho20_2=' + q1.metrics8.r8_rho20_2.toFixed(6) + ' (seedB=' + q1.metrics8.r8_seed_b + ')');
+  2452→console.log('  REDOSE: rate(2e-4)=' + q1.metrics8.r8_rate_wd2e4.toExponential(3) + ' D=' + q1.metrics8.r8_D_wd2e4
+  2453→  + ' guards: g=' + q1.metrics8.r8_g_wd2e4.toFixed(4) + ' r1=' + q1.metrics8.r8_r1_wd2e4.toFixed(4) + ' drift=' + q1.metrics8.r8_drift_wd2e4.toExponential(2)
+  2454→  + ' | 2.5e-4 guards: g=' + q1.metrics8.r8_g_wd2_5e4.toFixed(4) + ' r1=' + q1.metrics8.r8_r1_wd2_5e4.toFixed(4) + ' drift=' + q1.metrics8.r8_drift_wd2_5e4.toExponential(2));
+  2455→console.log('  OVERDECAY: ratio(1e-3,20k)=' + q1.metrics8.r8_ratio_1e3_20k.toFixed(6) + ' ratio(1e-3,100k)=' + q1.metrics8.r8_ratio_1e3_100k.toFixed(6)
+  2456→  + ' | wc20k=' + q1.metrics8.r8_snapshot_wc_1e3_20000.toFixed(4) + ' wc100k=' + q1.metrics8.r8_snapshot_wc_1e3_100000.toFixed(4));
+  2457→console.log('  GWIN8: g(0.1,W300)=' + q1.metrics8.r8_g_01.toFixed(4) + ' vs g(0.2,W150)=' + q1.metrics8.r8_g_02.toFixed(4)
+  2458→  + ' | dip magnitude=' + q1.metrics8.r8_dip_magnitude.toFixed(4));
+
+[showing lines 2159-2458 of 2459; use offset=2459 with limit to continue reading]

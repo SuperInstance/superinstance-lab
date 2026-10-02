@@ -1,0 +1,2002 @@
+     1→{
+     2→ "schema": "quilt-jepa/run-receipt-v9",
+     3→ "seed_u32": 2133245488,
+     4→ "seed_b": 1657638767,
+     5→ "seed_c": 2856986428,
+     6→ "lr_registered": 0.3,
+     7→ "tau_registered": 0.99998,
+     8→ "K4_registered": 0.0000015,
+     9→ "amp_registered": 0.9,
+    10→ "round6_constants": {
+    11→  "wd_main": 0.0003,
+    12→  "rlong_ckpts": [
+    13→   400,
+    14→   1000,
+    15→   5000,
+    16→   10000,
+    17→   20000,
+    18→   30000,
+    19→   40000,
+    20→   50000,
+    21→   75000,
+    22→   100000,
+    23→   150000,
+    24→   200000,
+    25→   300000,
+    26→   400000,
+    27→   500000
+    28→  ],
+    29→  "depths": [
+    30→   400,
+    31→   1200,
+    32→   2000,
+    33→   2200
+    34→  ],
+    35→  "horizon_T": 500000,
+    36→  "contrast_cap": 100000
+    37→ },
+    38→ "round7_constants": {
+    39→  "wd_arms": [
+    40→   0.00015,
+    41→   0.0002,
+    42→   0.00025
+    43→  ],
+    44→  "plast_main_capture": [
+    45→   20000,
+    46→   100000,
+    47→   500000
+    48→  ],
+    49→  "plast_steps": 400,
+    50→  "plast_probe_value_disclosed": 0.6644108562180416
+    51→ },
+    52→ "round8_constants": {
+    53→  "dose_grid": [
+    54→   0,
+    55→   0.0001,
+    56→   0.00015,
+    57→   0.0002,
+    58→   0.00025,
+    59→   0.0003,
+    60→   0.001
+    61→  ],
+    62→  "gwin_lr": 0.1,
+    63→  "gwin_W": 300,
+    64→  "capture_1e3": [
+    65→   20000,
+    66→   100000
+    67→  ],
+    68→  "seedB_suffix": "|round8-worldB"
+    69→ },
+    70→ "round9_constants": {
+    71→  "seedC_suffix": "|round9-worldC",
+    72→  "main_capture": [
+    73→   20000,
+    74→   75000,
+    75→   100000,
+    76→   500000
+    77→  ],
+    78→  "cure_capture": [
+    79→   20000,
+    80→   75000
+    81→  ],
+    82→  "dip_lr": [
+    83→   0.15,
+    84→   0.2,
+    85→   0.25
+    86→  ],
+    87→  "dip_W_scalings": {
+    88→   "0.5x": {
+    89→    "0.15": 100,
+    90→    "0.2": 75,
+    91→    "0.25": 60
+    92→   },
+    93→   "2x": {
+    94→    "0.15": 400,
+    95→    "0.2": 300,
+    96→    "0.25": 240
+    97→   }
+    98→  },
+    99→  "cure_D_ratio_band": [
+   100→   2.5,
+   101→   3.2
+   102→  ]
+   103→ },
+   104→ "operating_point_note": "UNCHANGED from round 4/5/6/7/8 (core/ byte-untouched) — ROUND 9 THE CURED-DOSE ROUND adds CURE9/SAT9/DIP9 at the same operating point; carried claims must reproduce run4.json (29/29) AND run5.json (92/92) bit-exactly; round-6 claims design6.json AND run6.json AND run7.json AND run8.json bit-exactly; round-7 claims run7.json AND run8.json bit-exactly; round-8 claims run8.json bit-exactly; the SHA-LEVEL chain extends to run8.json's R4 row (ff60c211/7a20e613/30657dbe/34ec241a); the disclosed design8 AND design9 pipeline values bind bit-exactly; runner-level additions only: captureAt extensions ([20000, 75000] on the 2e-4 arm; 75000 on the main arm — design9 I-A9 identity class), trivialSwitchProbe3 (stage-1/2 arithmetic identity to the carried probe2, design9 I-B9, re-bound on both arms), six DIP9 gGateFlex points (the 1x row receipted, design9 I-F9)",
+   105→ "seal_verified_at_startup": {
+   106→  "masked_sha": "4802bc85f67d90eade29e7f291780a5ed34540ae7197e387ac7c933b31b51a09",
+   107→  "mtime": 1791100000000
+   108→ },
+   109→ "claims_passed": 22,
+   110→ "claims_total": 28,
+   111→ "verdicts": {
+   112→  "G_learning_sanity_gate": true,
+   113→  "L2_difficulty_meter": true,
+   114→  "R1_hard_world_learning": true,
+   115→  "R2v4_pace_aware_ema": true,
+   116→  "R3v4_percentile_normalized_surprise": true,
+   117→  "R3L_ladder_saturation": true,
+   118→  "R2x_k4_cross_pace": true,
+   119→  "RHOR_finite_horizon_divergence": true,
+   120→  "RLONG_longevity_law": true,
+   121→  "R3D_depth_window_law": true,
+   122→  "GWIN_g_window_law": true,
+   123→  "RLONG7_dose_response": true,
+   124→  "PLAST_plasticity_cost": true,
+   125→  "R3DxR3L_composition": true,
+   126→  "GWIN7_full_grid": true,
+   127→  "MECH_plasticity_advantage_mechanism": false,
+   128→  "GWIN8_low_pace_dip": true,
+   129→  "REDOSE_main_dose_reregistration": true,
+   130→  "OVERDECAY_over_decay_plasticity": true,
+   131→  "CURE9_cured_dose_reregistration": false,
+   132→  "SAT9_saturation_successor": true,
+   133→  "DIP9_dip_law_window_scaling": false,
+   134→  "DOSE10_dose_decision_depth_ladder": false,
+   135→  "SAT10_fourth_switch_plateau": false,
+   136→  "DIP10_dip_w_domain": false,
+   137→  "R4_determinism": true,
+   138→  "R5_mesh_conservation": true,
+   139→  "R6v4_impact_sensitive_no_repair": true
+   140→ },
+   141→ "metrics": {
+   142→  "g_ratio": 0.34923244770336087,
+   143→  "g_last10": 0.002753790128275017,
+   144→  "l2_floor_trivial": 0.0002696956247429777,
+   145→  "l2_floor_hard": 0.0004284808386273881,
+   146→  "l2_ratio_trivial": 0.029520126256367397,
+   147→  "l2_ratio_hard": 0.04325338123347421,
+   148→  "r1_ratio": 0.1693138758473519,
+   149→  "r1_first10": 0.008204023586316903,
+   150→  "r1_last10": 0.0013890550309424068,
+   151→  "r2_drift_ratio": 0.0026397133338834375,
+   152→  "r2v4_wc_disp_200_400_rel": 0.16056800416046071,
+   153→  "r2v4_wt_total_move_rel_400": 0.004258257316654435,
+   154→  "r2v4_var_ratio": 1.0024850692069596,
+   155→  "r3v4_z_ratio": 3.540717612984098,
+   156→  "r3v4_z_anomaly_mean": 14.076616731036117,
+   157→  "r3v4_z_sample_mean": 3.9756394803742676,
+   158→  "r3v4_raw_ratio": 1.8496141357514475,
+   159→  "r3v4_mad_ratio": 3.6111297062612198,
+   160→  "r3v4_rank_ratio_selfsel": 1.0099090538889643,
+   161→  "r3v4_rank_ratio_rawsel": 1.0368760515984299,
+   162→  "r3v4_own_max_anomaly": 6.666666666666667,
+   163→  "r3v4_own_max_sample": 2.9,
+   164→  "r3v4_rank_excess_diff": 0.035349462365591555,
+   165→  "r6_corr_mean": 0.6342727488089809,
+   166→  "r6_jump": 2.7548573357019737,
+   167→  "r6_sha_invariant": true,
+   168→  "r6_recheck_delta": 0,
+   169→  "r5_total_drift_rel": 9.468186588477004e-9,
+   170→  "r5_variance_non_increasing": true,
+   171→  "r3l_z_0": 1.0342504185275474,
+   172→  "r3l_z_0_1": 1.0677299242125713,
+   173→  "r3l_z_0_2": 1.2323130172135066,
+   174→  "r3l_z_0_3": 1.687135333362526,
+   175→  "r3l_z_0_45": 2.5305055451148752,
+   176→  "r3l_z_0_6": 3.166808736910162,
+   177→  "r3l_z_0_75": 3.501945930078974,
+   178→  "r3l_z_0_9": 3.540717612984098,
+   179→  "r3l_z_1_2": 3.540717612984098,
+   180→  "r3l_raw_0_9": 1.8496141357514475,
+   181→  "r3l_raw_1_2": 1.8496141357514475,
+   182→  "r3l_mad_0_9": 3.6111297062612198,
+   183→  "r3l_mad_1_2": 3.6111297062612198,
+   184→  "r3l_sat_bit_exact": true,
+   185→  "r2x_0_15_tau": 0.99996,
+   186→  "r2x_0_15_drift": 0.004428545205078809,
+   187→  "r2x_0_15_g": 0.5692660186806099,
+   188→  "r2x_0_15_r1": 0.21237181800862215,
+   189→  "r2x_0_15_z": 3.879667500687105,
+   190→  "r2x_0_15_var": 1.0034723082456949,
+   191→  "r2x_0_15_wcdisp": 0.15586912091252547,
+   192→  "r2x_0_15_wtmove": 0.006584278355008626,
+   193→  "r2x_0_5_tau": 0.999988,
+   194→  "r2x_0_5_drift": 0.0017608179568816096,
+   195→  "r2x_0_5_g": 0.2286213846892445,
+   196→  "r2x_0_5_r1": 0.14567856315712555,
+   197→  "r2x_0_5_z": 3.43008622021181,
+   198→  "r2x_0_5_var": 1.0016584413577045,
+   199→  "r2x_0_5_wcdisp": 0.18841066172555032,
+   200→  "r2x_0_5_wtmove": 0.002928149913162613,
+   201→  "rhor_D": 30174,
+   202→  "rhor_executed_to": 32174,
+   203→  "rhor_D_mod80": 14,
+   204→  "rhor_loss_finite_again": 21,
+   205→  "rhor_all_nan_step": null,
+   206→  "rhor_nan_absorbing": false,
+   207→  "rhor_weights_all_nan_at_end": false,
+   208→  "rhor_slow_rate": 0.000019382458307633484,
+   209→  "rhor_runaway_rate": 0.07290041942913189,
+   210→  "rhor_rate_ratio": 3761.1544558525466,
+   211→  "rhor_wc_norm_last": 55374836904458270000,
+   212→  "rhor_drift_last200": 0.9999976213398036,
+   213→  "rhor_first10": 0.008204023586316903,
+   214→  "rhor_ckpt_400_wt": 0.004258257316654435,
+   215→  "rhor_ckpt_400_wcnorm": 12.17949620862212,
+   216→  "rhor_ckpt_400_loss500": 0.0024915332105346646,
+   217→  "rhor_ckpt_1000_loss500": 0.0007844690561419031,
+   218→  "rhor_ckpt_5000_wcnorm": 15.439670506486136,
+   219→  "rhor_ckpt_5000_loss500": 0.0004440682122302101,
+   220→  "rhor_ckpt_10000_wcnorm": 16.24302570594884,
+   221→  "rhor_ckpt_20000_wcnorm": 17.808040736570447,
+   222→  "rhor_ckpt_20000_loss500": 0.0004675783274632795,
+   223→  "rhor_ckpt_30000_wcnorm": 53514577209592.18,
+   224→  "rhor_depth2000_drift": 0.0038874393945087246,
+   225→  "rhor_depth2000_var": 1.0217532266155713,
+   226→  "rhor_depth2000_z": 2.5480705541027127,
+   227→  "rhor_depth2000_wcdisp": 0.03541951624868526,
+   228→  "rhor_c_tau999_D": 9653,
+   229→  "rhor_c_lr015_D": 68434,
+   230→  "rhor_c_lr05_D": 13052,
+   231→  "rhor_c_trivial_D": 30562,
+   232→  "rhor_c_lr015_slow": 0.000022099921843162118,
+   233→  "rhor_c_trivial_slow": 0.00001795598361529933
+   234→ },
+   235→ "metrics_round6": {
+   236→  "id_losses_bit_exact": true,
+   237→  "id_weights_bit_exact": true,
+   238→  "id_weights_sha": "c8c3c06bf3d6dfb5ab230da65c8c9222864df62783e4649312c53e52c590dd8b",
+   239→  "rlong_D_wd0": 30174,
+   240→  "rlong_exec_wd0": 30174,
+   241→  "rlong_slow_wd0": 0.000019382458307633484,
+   242→  "rlong_runaway_wd0": 0.07290041942913189,
+   243→  "rlong_drift_last200_wd0": 0.9999976213398036,
+   244→  "rlong_first10_wd0": 0.008204023586316903,
+   245→  "rlong_D_main": null,
+   246→  "rlong_exec_main": 500000,
+   247→  "rlong_slow_main": -0.000010025999770806105,
+   248→  "rlong_slow_main_100k": -0.0000076771378118419,
+   249→  "rlong_first10_main": 0.008204165043600227,
+   250→  "rlong_main_wc_400": 11.891085783057619,
+   251→  "rlong_main_wc_20000": 9.769638164817229,
+   252→  "rlong_main_wc_100000": 5.535301850188262,
+   253→  "rlong_main_wc_500000": 0.7387048214166075,
+   254→  "rlong_main_wp_400": 12.090201573925834,
+   255→  "rlong_main_wp_20000": 22.660694952763663,
+   256→  "rlong_main_wc_last": null,
+   257→  "rlong_D_wd1e4": 48091,
+   258→  "rlong_exec_wd1e4": 50091,
+   259→  "rlong_slow_wd1e4": 0.0000053037500730242976,
+   260→  "rlong_runaway_wd1e4": 0.07922435292937978,
+   261→  "rlong_rr_wd1e4": 14937.421982292723,
+   262→  "rlong_D_wd1e3": null,
+   263→  "rlong_exec_wd1e3": 100000,
+   264→  "rlong_slow_wd1e3": -0.000028887182146357943,
+   265→  "rlong_g_wd": 0.35080207176693745,
+   266→  "rlong_r1_wd": 0.17081682633549816,
+   267→  "rlong_drift_wd": 0.0026070231808889704,
+   268→  "rlong_g_wd1e4": 0.34975524165223104,
+   269→  "rlong_r1_wd1e4": 0.1698125845205748,
+   270→  "rlong_drift_wd1e4": 0.002628327812371415,
+   271→  "rlong_g_wd0": 0.34923244770336087,
+   272→  "rlong_r1_wd0": 0.1693138758473519,
+   273→  "rlong_drift_wd0": 0.0026397133338834375,
+   274→  "r3d_z_carried_400": 3.540717612984098,
+   275→  "r3d_z_carried_1200": 1.5918769063530553,
+   276→  "r3d_z_carried_2000": 2.204604995230523,
+   277→  "r3d_z_carried_2200": 2.5480705541027127,
+   278→  "r3d_sd_sum_400": 1.7285097927065063,
+   279→  "r3d_sd_sum_1200": 1.2167723140024025,
+   280→  "r3d_sd_sum_2000": 1.1181032626432044,
+   281→  "r3d_sd_sum_2200": 1.379490620635662,
+   282→  "r3d_raw_gap_400": 0.05630991760796557,
+   283→  "r3d_raw_gap_1200": 0.030802329598615563,
+   284→  "r3d_raw_gap_2000": -0.00458782812735687,
+   285→  "r3d_raw_gap_2200": 0.02984016308716187,
+   286→  "r3d_var_carried_400": 1.0024850692069596,
+   287→  "r3d_var_carried_1200": 1.010308878291164,
+   288→  "r3d_var_carried_2000": 1.0194662895305606,
+   289→  "r3d_var_carried_2200": 1.0217532266155713,
+   290→  "r3d_candD_z_400": 3.540717612984098,
+   291→  "r3d_candD_z_1200": 2.5781352264121717,
+   292→  "r3d_candD_z_2000": 4.805173316853757,
+   293→  "r3d_candD_z_2200": 1.218740343695452,
+   294→  "r3d_candD_n_400": 124,
+   295→  "r3d_candD_n_1200": 384,
+   296→  "r3d_candD_n_2000": 644,
+   297→  "r3d_candD_n_2200": 709,
+   298→  "r3d_candD_var_400": 1.0024850692069596,
+   299→  "r3d_candD_var_1200": 1.0102647582866313,
+   300→  "r3d_candD_var_2000": 1.0191647172912754,
+   301→  "r3d_candD_var_2200": 1.0215642663755673,
+   302→  "r3d_candA_z_400": 3.540717612984098,
+   303→  "r3d_candA_z_1200": 1.536115986942694,
+   304→  "r3d_candA_z_2000": 1.4771704795932012,
+   305→  "r3d_candA_z_2200": 3.341289039384384,
+   306→  "r3d_candA_var_400": 1.0024850692069596,
+   307→  "r3d_candA_var_1200": 1.0101769074410945,
+   308→  "r3d_candA_var_2000": 1.0194009478093757,
+   309→  "r3d_candA_var_2200": 1.0212971158254596,
+   310→  "r3d_candD_round_z_2200": 2.1827599553158157,
+   311→  "r3d_assert_candD400_bitexact": true,
+   312→  "r3d_multiplier_400": 1,
+   313→  "r3d_multiplier_1200": 1.4205696273782027,
+   314→  "r3d_multiplier_2000": 1.5459303719589337,
+   315→  "r3d_multiplier_2200": 1.2530058318990367,
+   316→  "r3d_z_anchored_400": 3.540717612984098,
+   317→  "r3d_z_anchored_1200": 2.261371983689926,
+   318→  "r3d_z_anchored_2000": 3.4081658202992458,
+   319→  "r3d_z_anchored_2200": 3.192747264380909,
+   320→  "r3d_deficit_400": 1,
+   321→  "r3d_deficit_1200": 0.44959160270661347,
+   322→  "r3d_deficit_2000": 0.6226435531447236,
+   323→  "r3d_deficit_2200": 0.7196480579978284,
+   324→  "r3d_sdcollapse_400": 1,
+   325→  "r3d_sdcollapse_1200": 0.7039429681779104,
+   326→  "r3d_sdcollapse_2000": 0.6468596633707667,
+   327→  "r3d_sdcollapse_2200": 0.7980808824204872,
+   328→  "r3d_gapcollapse_400": 1,
+   329→  "r3d_gapcollapse_1200": 0.5470142899704453,
+   330→  "r3d_gapcollapse_2000": -0.08147460202832686,
+   331→  "r3d_gapcollapse_2200": 0.5299273086299224,
+   332→  "gwin_g_anchor": 0.34923244770336087,
+   333→  "gwin_g_anchor_first10": 0.00788526423127239,
+   334→  "gwin_g_anchor_last10": 0.002753790128275017,
+   335→  "gwin_g_015": 0.30409957215062605,
+   336→  "gwin_g_015_first10": 0.008413473279370472,
+   337→  "gwin_g_015_last10": 0.0025585336245572852,
+   338→  "gwin_g_05": 0.43412447386917424,
+   339→  "gwin_g_05_first10": 0.007267738349647025,
+   340→  "gwin_g_05_last10": 0.0031551030872593354
+   341→ },
+   342→ "metrics_round7": {
+   343→  "r7_rate_wd1_5e4": 2.982035306975962e-7,
+   344→  "r7_rate_wd2e4": -0.000003778708210171146,
+   345→  "r7_rate_wd2_5e4": -0.000007163695533815242,
+   346→  "r7_D_wd1_5e4": 62383,
+   347→  "r7_D_wd2e4": 85387,
+   348→  "r7_D_wd2_5e4": null,
+   349→  "r7_exec_wd1_5e4": 62383,
+   350→  "r7_exec_wd2e4": 85387,
+   351→  "r7_exec_wd2_5e4": 100000,
+   352→  "r7_runaway_wd1_5e4": 0.0709951983727395,
+   353→  "r7_runaway_wd2e4": 0.07013985167825404,
+   354→  "r7_runaway_wd2_5e4": null,
+   355→  "r7_monotone_seven": true,
+   356→  "r7_bracket": true,
+   357→  "r7_g_wd1_5e4": 0.35001678597797703,
+   358→  "r7_r1_wd1_5e4": 0.17006279337297014,
+   359→  "r7_drift_wd1_5e4": 0.002622817157509699,
+   360→  "plast_ratio_20k": 0.6644108562180416,
+   361→  "plast_ratio_100k": 0.5957770637776008,
+   362→  "plast_ratio_500k": 0.5864036049443728,
+   363→  "plast_ratio_ctrl20k": 0.7135257300287862,
+   364→  "plast_ratio_wd1e4_20k": 0.7017204255152192,
+   365→  "plast_first10_20k": 0.0004499849251276307,
+   366→  "plast_first10_100k": 0.0002193773365421421,
+   367→  "plast_first10_500k": 0.000004074230277196593,
+   368→  "plast_first10_ctrl20k": 0.0006501350887065685,
+   369→  "plast_first10_wd1e4_20k": 0.0005449883696688159,
+   370→  "plast_last10_20k": 0.0002989748693892605,
+   371→  "plast_last10_100k": 0.00013069998542442797,
+   372→  "plast_last10_500k": 0.0000023891433219215935,
+   373→  "plast_last10_ctrl20k": 0.00046388811378668393,
+   374→  "plast_last10_wd1e4_20k": 0.00038242947066484704,
+   375→  "plast_rho20": 0.9311659387409014,
+   376→  "plast_snapshot_wc_20000": 9.769638164817229,
+   377→  "plast_snapshot_wc_100000": 5.535301850188262,
+   378→  "plast_snapshot_wc_500000": 0.7387048214166075,
+   379→  "plast_all_finite": true,
+   380→  "plat_sd_eq_400": true,
+   381→  "plat_sd_eq_1200": true,
+   382→  "plat_sd_eq_2000": true,
+   383→  "plat_sd_eq_2200": true,
+   384→  "plat_z_eq_400": true,
+   385→  "plat_z_eq_1200": true,
+   386→  "plat_z_eq_2000": true,
+   387→  "plat_z_eq_2200": true,
+   388→  "plat_anch_eq_400": true,
+   389→  "plat_anch_eq_1200": true,
+   390→  "plat_anch_eq_2000": true,
+   391→  "plat_anch_eq_2200": true,
+   392→  "plat_var_eq_400": true,
+   393→  "plat_var_eq_1200": true,
+   394→  "plat_var_eq_2000": true,
+   395→  "plat_var_eq_2200": true,
+   396→  "plat_rawgap_eq_400": true,
+   397→  "plat_rawgap_eq_1200": true,
+   398→  "plat_rawgap_eq_2000": true,
+   399→  "plat_rawgap_eq_2200": true,
+   400→  "plat_mult400_12": 1,
+   401→  "plat_mult400_09": 1,
+   402→  "plat_anch12_400": 3.540717612984098,
+   403→  "plat_anch12_1200": 2.261371983689926,
+   404→  "plat_anch12_2000": 3.4081658202992458,
+   405→  "plat_anch12_2200": 3.192747264380909,
+   406→  "plat_sd12_400": 1.7285097927065063,
+   407→  "plat_sd12_1200": 1.2167723140024025,
+   408→  "plat_sd12_2000": 1.1181032626432044,
+   409→  "plat_sd12_2200": 1.379490620635662,
+   410→  "plat_z12_400": 3.540717612984098,
+   411→  "plat_z12_1200": 1.5918769063530553,
+   412→  "plat_z12_2000": 2.204604995230523,
+   413→  "plat_z12_2200": 2.5480705541027127,
+   414→  "plat_var12_400": 1.0024850692069596,
+   415→  "plat_var12_1200": 1.010308878291164,
+   416→  "plat_var12_2000": 1.0194662895305606,
+   417→  "plat_var12_2200": 1.0217532266155713,
+   418→  "gwin7_g_02": 0.25369541417668573,
+   419→  "gwin7_g_025": 0.3505612327666269,
+   420→  "gwin7_g_04": 0.4033493702247352,
+   421→  "gwin7_g_06": 0.42714909329375844,
+   422→  "gwin7_g_02_first10": 0.008229716585739082,
+   423→  "gwin7_g_025_first10": 0.00805400146468142,
+   424→  "gwin7_g_04_first10": 0.0075658968242045335,
+   425→  "gwin7_g_06_first10": 0.006988677844943382,
+   426→  "gwin7_g_02_last10": 0.0020878413577758164,
+   427→  "gwin7_g_025_last10": 0.002823420682162937,
+   428→  "gwin7_g_04_last10": 0.0030516997192282227,
+   429→  "gwin7_g_06_last10": 0.0029852074047897435
+   430→ },
+   431→ "metrics_round8": {
+   432→  "r8_rate_wd2e4": -0.000003778708210171146,
+   433→  "r8_D_wd2e4": 85387,
+   434→  "r8_exec_wd2e4": 85387,
+   435→  "r8_runaway_wd2e4": 0.07013985167825404,
+   436→  "r8_g_wd2e4": 0.3502784478845342,
+   437→  "r8_r1_wd2e4": 0.1703136029297766,
+   438→  "r8_drift_wd2e4": 0.002617433483223252,
+   439→  "r8_g_wd2_5e4": 0.35054021030750215,
+   440→  "r8_r1_wd2_5e4": 0.170564930215658,
+   441→  "r8_drift_wd2_5e4": 0.002612163631139878,
+   442→  "r8_spearman_ratio_wc": 1,
+   443→  "r8_dose_ratio_0": 0.7135257300287862,
+   444→  "r8_dose_ratio_1e4": 0.7017204255152192,
+   445→  "r8_dose_ratio_1_5e4": 0.6932745971950486,
+   446→  "r8_dose_ratio_2e4": 0.6841500024733943,
+   447→  "r8_dose_ratio_2_5e4": 0.6744102403950979,
+   448→  "r8_dose_ratio_3e4": 0.6644108562180416,
+   449→  "r8_dose_ratio_1e3": 0.570098169081971,
+   450→  "r8_dose_first10_1_5e4": 0.000511141223855861,
+   451→  "r8_dose_first10_2e4": 0.0004852947458951283,
+   452→  "r8_dose_first10_2_5e4": 0.00046545433678845587,
+   453→  "r8_dose_first10_1e3": 0.00037838955043814745,
+   454→  "r8_dose_last10_1_5e4": 0.0003543612260784562,
+   455→  "r8_dose_last10_2e4": 0.0003320144016044773,
+   456→  "r8_dose_last10_2_5e4": 0.00031390717116644337,
+   457→  "r8_dose_last10_1e3": 0.00021571918990453796,
+   458→  "r8_dose_wc_0": 17.808040736570447,
+   459→  "r8_dose_wc_1e4": 13.405606266374983,
+   460→  "r8_dose_wc_1_5e4": 12.104343205851116,
+   461→  "r8_dose_wc_2e4": 11.130270846539293,
+   462→  "r8_dose_wc_2_5e4": 10.374448558036406,
+   463→  "r8_dose_wc_3e4": 9.769638164817229,
+   464→  "r8_dose_wc_1e3": 6.393625949660193,
+   465→  "r8_dose_all_finite": true,
+   466→  "r8_seed_b": 1657638767,
+   467→  "r8_ratio2_3e4": 1.1268925734915027,
+   468→  "r8_ratio2_3e4_first10": 0.0005878873951521122,
+   469→  "r8_ratio2_3e4_last10": 0.0006624859396461798,
+   470→  "r8_ratio2_wd0": 1.17997507686084,
+   471→  "r8_ratio2_wd0_first10": 0.0007870548837814303,
+   472→  "r8_ratio2_wd0_last10": 0.0009287051469836927,
+   473→  "r8_stage1_decayed": 0.6644108562180416,
+   474→  "r8_stage1_control": 0.7135257300287862,
+   475→  "r8_stage1_decayed_first10": 0.0004499849251276307,
+   476→  "r8_stage1_control_first10": 0.0006501350887065685,
+   477→  "r8_stage1_decayed_last10": 0.0002989748693892605,
+   478→  "r8_stage1_control_last10": 0.00046388811378668393,
+   479→  "r8_end_weights_sha_decayed": "6cf16e0682a8bf41fb14a41f09b8197f0207c1410f86555e82a2abed14afed56",
+   480→  "r8_end_weights_sha_control": "b929579e3159fa5e7e5b5f530c0277140fa9089be76ca64e6751987fcb7c7c85",
+   481→  "r8_rho20_1": 0.9311659387409014,
+   482→  "r8_rho20_2": 0.955013877487518,
+   483→  "r8_probe2_all_finite": true,
+   484→  "r8_D_1e3": null,
+   485→  "r8_exec_1e3": 100000,
+   486→  "r8_slow_1e3": -0.000028887182146357943,
+   487→  "r8_ratio_1e3_20k": 0.570098169081971,
+   488→  "r8_ratio_1e3_100k": 0.50858843397239,
+   489→  "r8_ratio_1e3_100k_first10": 0.00008577522201552424,
+   490→  "r8_ratio_1e3_100k_last10": 0.00004362428583850954,
+   491→  "r8_snapshot_wc_1e3_20000": 6.393625949660193,
+   492→  "r8_snapshot_wc_1e3_100000": 2.70821011403129,
+   493→  "r8_ckpt_wc_1e3_20000": 6.393625949660193,
+   494→  "r8_ckpt_wc_1e3_100000": 2.70821011403129,
+   495→  "r8_overdecay_all_finite": true,
+   496→  "r8_g_01": 0.2763398780999859,
+   497→  "r8_g_01_first10": 0.00860675864701362,
+   498→  "r8_g_01_last10": 0.0023783906353517436,
+   499→  "r8_g_02": 0.25369541417668573,
+   500→  "r8_g_015": 0.30409957215062605,
+   501→  "r8_g_025": 0.3505612327666269,
+   502→  "r8_dip_magnitude": 0.0736349882819407
+   503→ },
+   504→ "metrics_round9": {
+   505→  "r9_rate_wd2e4": -0.000003778708210171146,
+   506→  "r9_D_wd2e4": 85387,
+   507→  "r9_exec_wd2e4": 85387,
+   508→  "r9_runaway_wd2e4": 0.07013985167825404,
+   509→  "r9_D_ratio": 2.8298203751574205,
+   510→  "r9_g_wd2e4": 0.3502784478845342,
+   511→  "r9_r1_wd2e4": 0.1703136029297766,
+   512→  "r9_drift_wd2e4": 0.002617433483223252,
+   513→  "r9_ratio_2e4_20k": 0.6841500024733943,
+   514→  "r9_rho20_cured_20k": 0.9588301776388544,
+   515→  "r9_ratio_2e4_75000": 0.5507446127932,
+   516→  "r9_first10_2e4_75k": 0.00046412225324707535,
+   517→  "r9_last10_2e4_75k": 0.000255612830653268,
+   518→  "r9_ratio_3e4_75000": 0.5980059011717661,
+   519→  "r9_first10_3e4_75k": 0.00028983739376231354,
+   520→  "r9_last10_3e4_75k": 0.00017332447185010834,
+   521→  "r9_wc75_2e4": 8.691686529662682,
+   522→  "r9_wc75_3e4": 6.443616949719879,
+   523→  "r9_ckpt_wc75_2e4": 8.691686529662682,
+   524→  "r9_ckpt_wc75_3e4": 6.443616949719879,
+   525→  "r9_cure_all_finite": true,
+   526→  "r9_seed_c": 2856986428,
+   527→  "r9_stage1_decayed": 0.6644108562180416,
+   528→  "r9_stage2_decayed": 1.1268925734915027,
+   529→  "r9_ratio3_3e4": 0.7025685901201354,
+   530→  "r9_ratio3_3e4_first10": 0.0007878862781946942,
+   531→  "r9_ratio3_3e4_last10": 0.0005535441516462471,
+   532→  "r9_stage1_control": 0.7135257300287862,
+   533→  "r9_stage2_control": 1.17997507686084,
+   534→  "r9_ratio3_wd0": 0.7354070016984524,
+   535→  "r9_ratio3_wd0_first10": 0.0010478111106102445,
+   536→  "r9_ratio3_wd0_last10": 0.0007705676272002054,
+   537→  "r9_end1_sha_decayed": "6cf16e0682a8bf41fb14a41f09b8197f0207c1410f86555e82a2abed14afed56",
+   538→  "r9_end1_sha_control": "b929579e3159fa5e7e5b5f530c0277140fa9089be76ca64e6751987fcb7c7c85",
+   539→  "r9_end2_wc_decayed": 9.467373780715064,
+   540→  "r9_end2_wc_control": 17.693144881570092,
+   541→  "r9_end3_wc_decayed": 9.38074682340556,
+   542→  "r9_end3_wc_control": 17.679359103847727,
+   543→  "r9_rho20_1": 0.9311659387409014,
+   544→  "r9_rho20_2": 0.955013877487518,
+   545→  "r9_rho20_3": 0.9553466155442152,
+   546→  "r9_inc2": 0.023847938746616615,
+   547→  "r9_inc3": 0.0003327380566972016,
+   548→  "r9_sat_all_finite": true,
+   549→  "r9_g_015_w100": 0.5692660186806099,
+   550→  "r9_g_02_w75": 0.6044818860554356,
+   551→  "r9_g_025_w60": 0.6188174436817733,
+   552→  "r9_g_015_w400": 0.13808047549701252,
+   553→  "r9_g_02_w300": 0.1620743122201559,
+   554→  "r9_g_025_w240": 0.14797584159818838,
+   555→  "r9_g02_w150": 0.25369541417668573,
+   556→  "r9_dipmag_05x": -0.01044015487424399,
+   557→  "r9_dipmag_1x": 0.0736349882819407,
+   558→  "r9_dipmag_2x": -0.019046153672555438,
+   559→  "r9_dip_all_finite": true
+   560→ },
+   561→ "chain": [
+   562→  {
+   563→   "i": 0,
+   564→   "id": "header#0",
+   565→   "type": "header",
+   566→   "payload": {
+   567→    "repo": "quilt-jepa",
+   568→    "round": 10,
+   569→    "executed_in": "wave 64 (lane 64-b-r)",
+   570→    "seed_u32": 2133245488,
+   571→    "seed_b": 1657638767,
+   572→    "seed_b_derivation": "seedB = parseInt(sha256(selJson + \"|round8-worldB\").slice(0, 8), 16) >>> 0 — registered round-8 derivation (no new entropy), re-bound vs design8.seed_b AND run8.seed_b",
+   573→    "seed_c": 2856986428,
+   574→    "seed_c_derivation": "seedC = parseInt(sha256(selJson + \"|round9-worldC\").slice(0, 8), 16) >>> 0 — registered round-9 derivation from the SAME certified seed receipt (no new entropy), fail-closed vs design9.seed_c",
+   575→    "seed_d": 808219675,
+   576→    "seed_d_derivation": "seedD = parseInt(sha256(selJson + \"|round10-worldD\").slice(0, 8), 16) >>> 0 — registered round-10 derivation from the SAME certified seed receipt (no new entropy), fail-closed vs design10.seed_d",
+   577→    "seed_e": 3972732037,
+   578→    "seed_e_derivation": "seedE = parseInt(sha256(selJson + \"|round10-worldE\").slice(0, 8), 16) >>> 0 — registered round-10 derivation from the SAME certified seed receipt (no new entropy), fail-closed vs design10.seed_e",
+   579→    "seed_receipt": {
+   580→     "label": "quilt-jepa-wave49-seed",
+   581→     "mode": "FALLBACK",
+   582→     "schema": "moth-seal/receipt-v1",
+   583→     "note": ""
+   584→    },
+   585→    "registration": "registration-v10.json (sealed pre-run, self_sha256_masked 4802bc85… + mtime 1791100000000; RE-VERIFIED fail-closed at this run's startup)",
+   586→    "scope": "round-4/5/6/7/8/9 operating point UNCHANGED (lr 0.3, tau 0.99998, K4 1.5e-6, amp 0.9; core/ byte-untouched) — THE DEPTH-LADDER ROUND: all twenty-five round-4..9 claims re-scored under their UNCHANGED rules (the honest round-8 MECH FAIL and round-9 CURE9/DIP9 FAILs carry, SAT9 re-binds PASS; run4 29/29, run5 92/92, design6 AND run6 AND run7 AND run8 AND run9 bit-exact at all five metric layers, sha-level chain to run9.json R4 row ff60c211/7a20e613/30657dbe/34ec241a/c972511d) + 3 new claims: DOSE10 the dose decision via |Wc|-room ordering across a depth ladder {20000, 30000, 40000, 50000, 75000} on BOTH decayed arms (20k/75k re-bind run8/run9 bit-exact, 30k/40k/50k NEW; pre-registered ordering-curve law Delta strictly decreasing with exactly one sign crossing; DECISION RULE of record on PASS: wd 2e-4 CONFIRMED as the plasticity dose of the two-dose regime for round 11, 3e-4 UNCHANGED as longevity main, |Wc|-room RE-PRICED depth-refuted, dose-selection CLOSED), SAT10 fourth-switch plateau on TWO cascades (registered D-cascade trivial/seedB/seedC/seedD: FLAT-PLATEAU rho20_4 ∈ [rho20_3, 1) with inc4 <= inc3; DIFFERENT-PROBE-WORLD E-cascade with stage-1 on World2(seedE): rho20_4^E < 1.0; composition end-4 legs on both), DIP10 dip W-domain boundaries (THIRTY-NINE new g-points at THIRTEEN window scales: BIRTH localMin(0.95) TRUE + left holds at 0.9 fails at 0.55 + right holds at every low scale; DEATH localMin(1.75) FALSE + localMin(1.1) TRUE; INTERVAL <= 1 flip per ladder; GATE DOMAIN dipmag(0.55) < 0.05 AND dipmag(1.75) < 0.05)",
+   587→    "resume_receipt": "64-b → 64-b-r (wave 64): the prior incarnation (64-b) died on a backend result-return deadline AFTER the design probe but BEFORE registration — the keeper-verified resume state (untracked probe10.mjs + receipts/design10.json, repo clean at e52a1fb2 == remote) is committed unchanged in the registration commit aee0335 (probe + design10 receipted PRE-SEAL, audited vs the round-7/8/9 conventions and re-verified against run7/run8/run9/design6/design8/design9 receipts bit-exactly). No round-10 measurement of any kind happened before this registration was sealed AND pushed (aee0335, remote==local verified).",
+   588→    "probe_provenance": "probe10.mjs/design10.json receipted PRE-SEAL with 6 fail-closed pipeline identities (I-E10 Jepa4-wd0; I-A10a cure-arm capture-extension over the depth ladder; I-A10b main-arm capture-extension; I-B10 fourth-switch stage-path + disclosed control legs on BOTH cascades; I-C10 the twelve receipted DIP anchors; I-D10 GWIN anchor) — ALL TRUE; the I-B10 identity unavoidably computed the CONTROL fourth-switch ratios (D-cascade 0.976422859819224; E-cascade stages 0.7339388216462988 / 1.1899577897104565 / 0.7320487218963793 / 0.9776795481211076 — disclosed in registration-v10 and bound bit-exact here) and the I-A10a identity the cured arm's interior checkpoint |Wc| norms (30000/40000/50000: 10.284571782125024 / 9.687502951781555 / 9.25800362624802 — NEW numbers, the round-7/8 receipts carry only the 400/20000/75000 norms of this arm) and the I-A10b identity the main arm's interior norms (design6 re-binds); no other round-10 claim value measured pre-seal (no decayed fourth-switch leg on either cascade, no rho20_4, no rho20_4^E, no ladder switch ratio at 30000/40000/50000 on either arm, no DIP10 scan point)"
+   589→   },
+   590→   "prev": "JEPA-GENESIS-1",
+   591→   "sha": "5a506ca9cb95aa4f8a4a9ef06c041bda22fde0520bf170fdea6d2d3fa0ba2a5b"
+   592→  },
+   593→  {
+   594→   "i": 1,
+   595→   "id": "G_learning_sanity_gate#1",
+   596→   "type": "G_learning_sanity_gate",
+   597→   "payload": {
+   598→    "ratio": 0.34923244770336087,
+   599→    "first10": 0.00788526423127239,
+   600→    "last10": 0.002753790128275017,
+   601→    "lr": 0.3,
+   602→    "tau": 0.99998,
+   603→    "steps": 100,
+   604→    "world": "trivial (core/world.js)",
+   605→    "claim": "last10/first10 < 0.5 on the trivial world at 100 steps (L1 law, carried)",
+   606→    "pass": true,
+   607→    "gate_note": "gate OPEN — downstream claims scored"
+   608→   },
+   609→   "prev": "5a506ca9cb95aa4f8a4a9ef06c041bda22fde0520bf170fdea6d2d3fa0ba2a5b",
+   610→   "sha": "8932b079b458d1b1a3ad03d1aeb5d353b2e46b3ce2dd0b90196dfd7459fc6f7b"
+   611→  },
+   612→  {
+   613→   "i": 2,
+   614→   "id": "L2_difficulty_meter#2",
+   615→   "type": "L2_difficulty_meter",
+   616→   "payload": {
+   617→    "floor_trivial": 0.0002696956247429777,
+   618→    "floor_hard": 0.0004284808386273881,
+   619→    "ratio_trivial": 0.029520126256367397,
+   620→    "ratio_hard": 0.04325338123347421,
+   621→    "init_trivial": 0.009135991574047053,
+   622→    "init_hard": 0.00990629695085624,
+   623→    "claim": "hard world linear floor exceeds trivial (absolute and relative) — the gate meter (carried)",
+   624→    "pass": true
+   625→   },
+   626→   "prev": "8932b079b458d1b1a3ad03d1aeb5d353b2e46b3ce2dd0b90196dfd7459fc6f7b",
+   627→   "sha": "5ea88b84adb2ff16d10ccebeb22f48ba2489178fa127f5ac6f279591f86479ec"
+   628→  },
+   629→  {
+   630→   "i": 3,
+   631→   "id": "R1_hard_world_learning#3",
+   632→   "type": "R1_hard_world_learning",
+   633→   "payload": {
+   634→    "ratio": 0.1693138758473519,
+   635→    "first10": 0.008204023586316903,
+   636→    "last10": 0.0013890550309424068,
+   637→    "lr": 0.3,
+   638→    "tau": 0.99998,
+   639→    "steps": 400,
+   640→    "claim": "last10/first10 < 0.5 on world2 (carried)",
+   641→    "pass": true,
+   642→    "void_as_gated": false
+   643→   },
+   644→   "prev": "5ea88b84adb2ff16d10ccebeb22f48ba2489178fa127f5ac6f279591f86479ec",
+   645→   "sha": "f4eb5d6866cb26c10387186fffe4a94a0914754da95e0a9b1fdda4a82efe02c8"
+   646→  },
+   647→  {
+   648→   "i": 4,
+   649→   "id": "R2v4_pace_aware_ema#4",
+   650→   "type": "R2v4_pace_aware_ema",
+   651→   "payload": {
+   652→    "drift_ratio": 0.0026397133338834375,
+   653→    "drift_gate": 0.01,
+   654→    "tau": 0.99998,
+   655→    "g_ratio": 0.34923244770336087,
+   656→    "r1_ratio": 0.1693138758473519,
+   657→    "var_ratio": 1.0024850692069596,
+   658→    "var_gate": 0.5,
+   659→    "wc_disp_200_400_rel": 0.16056800416046071,
+   660→    "wt_total_move_rel_400": 0.004258257316654435,
+   661→    "claim": "PACE-AWARE EMA LAW (carried): drift/norm < 0.01 AND g<0.5 AND r1<0.5 AND var_ratio>=0.5",
+   662→    "pass": true,
+   663→    "void_as_gated": false
+   664→   },
+   665→   "prev": "f4eb5d6866cb26c10387186fffe4a94a0914754da95e0a9b1fdda4a82efe02c8",
+   666→   "sha": "36965d9778206fba644da954232b40923676f3f123205ccc3da6145b47d7b786"
+   667→  },
+   668→  {
+   669→   "i": 5,
+   670→   "id": "R3v4_percentile_normalized_surprise#5",
+   671→   "type": "R3v4_percentile_normalized_surprise",
+   672→   "payload": {
+   673→    "z_ratio": 3.540717612984098,
+   674→    "gate": 3,
+   675→    "z_anomaly_mean": 14.076616731036117,
+   676→    "z_sample_mean": 3.9756394803742676,
+   677→    "contrasts_gate_nothing": {
+   678→     "raw_ratio": 1.8496141357514475,
+   679→     "mad_ratio": 3.6111297062612198,
+   680→     "rank_ratio_selfsel": 1.0099090538889643,
+   681→     "rank_ratio_rawsel": 1.0368760515984299,
+   682→     "own_max_cells_anomaly_mean": 6.666666666666667,
+   683→     "own_max_cells_sample_mean": 2.9,
+   684→     "rank_excess_diff": 0.035349462365591555
+   685→    },
+   686→    "claim": "PERCENTILE-NORMALIZED SURPRISE LAW (carried): per-cell z vs own 124-tick baseline BEFORE concentration; top-4-by-z > 3.0",
+   687→    "pass": true,
+   688→    "anomalyTicks": [
+   689→     430,
+   690→     465,
+   691→     500
+   692→    ],
+   693→    "void_as_gated": false
+   694→   },
+   695→   "prev": "36965d9778206fba644da954232b40923676f3f123205ccc3da6145b47d7b786",
+   696→   "sha": "2f6b395a7dadde44c3a487a993f5e2c08daf4233fc56e9641c8639b65c07cd6a"
+   697→  },
+   698→  {
+   699→   "i": 6,
+   700→   "id": "R3L_ladder_saturation#6",
+   701→   "type": "R3L_ladder_saturation",
+   702→   "payload": {
+   703→    "ladder_z": {
+   704→     "0": 1.0342504185275474,
+   705→     "0.1": 1.0677299242125713,
+   706→     "0.2": 1.2323130172135066,
+   707→     "0.3": 1.687135333362526,
+   708→     "0.45": 2.5305055451148752,
+   709→     "0.6": 3.166808736910162,
+   710→     "0.75": 3.501945930078974,
+   711→     "0.9": 3.540717612984098,
+   712→     "1.2": 3.540717612984098
+   713→    },
+   714→    "ladder_raw": {
+   715→     "0": 0.7327541540995385,
+   716→     "0.1": 0.7327541540995385,
+   717→     "0.2": 0.7440278451925231,
+   718→     "0.3": 0.7834194239234958,
+   719→     "0.45": 1.01993801577223,
+   720→     "0.6": 1.4208352127134833,
+   721→     "0.75": 1.781668946034062,
+   722→     "0.9": 1.8496141357514475,
+   723→     "1.2": 1.8496141357514475
+   724→    },
+   725→    "ladder_var": {
+   726→     "0": 1.0024890884456237,
+   727→     "0.1": 1.0024889573906772,
+   728→     "0.2": 1.0024886843717724,
+   729→     "0.3": 1.002488269674619,
+   730→     "0.45": 1.0024875803856914,
+   731→     "0.6": 1.0024871136667557,
+   732→     "0.75": 1.0024854332429138,
+   733→     "0.9": 1.0024850692069596,
+   734→     "1.2": 1.0024850692069596
+   735→    },
+   736→    "z_null_anchor": 1.0342504185275474,
+   737→    "z_null_band": [
+   738→     0.9,
+   739→     1.15
+   740→    ],
+   741→    "monotone_up_to_anchor": true,
+   742→    "sat_bit_exact": true,
+   743→    "z_0_75": 3.501945930078974,
+   744→    "claim": "ANOMALY-STRENGTH LADDER: null anchor carries no signal, ratio non-decreasing to the anchor, anchor at the clamp plateau (1.2 == 0.9 bit-exact on z/raw/mad), plateau above gate — REFUTES the widen-by-amplitude lever",
+   745→    "pass": true,
+   746→    "void_as_gated": false
+   747→   },
+   748→   "prev": "2f6b395a7dadde44c3a487a993f5e2c08daf4233fc56e9641c8639b65c07cd6a",
+   749→   "sha": "e6d86c39b3e76717e55a69dd1e8a8c9f045a3f80f169d5e7397ee2493b2dede0"
+   750→  },
+   751→  {
+   752→   "i": 7,
+   753→   "id": "R2x_k4_cross_pace#7",
+   754→   "type": "R2x_k4_cross_pace",
+   755→   "payload": {
+   756→    "lr_0_15": {
+   757→     "tau": 0.99996,
+   758→     "pace": 0.0375,
+   759→     "drift": 0.004428545205078809,
+   760→     "g": 0.5692660186806099,
+   761→     "r1": 0.21237181800862215,
+   762→     "z": 3.879667500687105,
+   763→     "var": 1.0034723082456949,
+   764→     "wcdisp": 0.15586912091252547,
+   765→     "wtmove": 0.006584278355008626
+   766→    },
+   767→    "lr_0_5": {
+   768→     "tau": 0.999988,
+   769→     "pace": 0.125,
+   770→     "drift": 0.0017608179568816096,
+   771→     "g": 0.2286213846892445,
+   772→     "r1": 0.14567856315712555,
+   773→     "z": 3.43008622021181,
+   774→     "var": 1.0016584413577045,
+   775→     "wcdisp": 0.18841066172555032,
+   776→     "wtmove": 0.002928149913162613
+   777→    },
+   778→    "g_pace_lock_finding": {
+   779→     "lr": 0.15,
+   780→     "g_ratio": 0.5692660186806099,
+   781→     "gate": 0.5,
+   782→     "exceeds": true,
+   783→     "note": "REGISTERED FINDING, gates nothing here: the L1 G gate's fixed 100-step window is pace-locked; prices the round-6 candidate law G window ∝ 1/pace"
+   784→    },
+   785→    "claim": "K4 CROSS-PACE: same law constant transfers — drift < 0.01 at both second pace points AND all learning guards hold at lr=0.5",
+   786→    "pass": true,
+   787→    "void_as_gated": false
+   788→   },
+   789→   "prev": "e6d86c39b3e76717e55a69dd1e8a8c9f045a3f80f169d5e7397ee2493b2dede0",
+   790→   "sha": "4e685dfe47d7b4c7c4db0b7e6a48b716e9896eefd4b9c7d75876fd3cc1cb0b72"
+   791→  },
+   792→  {
+   793→   "i": 8,
+   794→   "id": "RHOR_finite_horizon_divergence#8",
+   795→   "type": "RHOR_finite_horizon_divergence",
+   796→   "payload": {
+   797→    "D": 30174,
+   798→    "D_band": [
+   799→     25000,
+   800→     40000
+   801→    ],
+   802→    "D_mod80": 14,
+   803→    "executed_to": 32174,
+   804→    "probe_identity": true,
+   805→    "slow_inflation_rate": 0.000019382458307633484,
+   806→    "slow_gate": 0.0001,
+   807→    "runaway_rate": 0.07290041942913189,
+   808→    "rate_ratio": 3761.1544558525466,
+   809→    "ratio_gate": 100,
+   810→    "wc_norm_at_last_finite": 55374836904458270000,
+   811→    "drift_last200": 0.9999976213398036,
+   812→    "loss_ratio_at_20000": 0.07518584732274115,
+   813→    "depth2000": {
+   814→     "drift": 0.0038874393945087246,
+   815→     "var": 1.0217532266155713,
+   816→     "z": 2.5480705541027127,
+   817→     "wcdisp": 0.03541951624868526
+   818→    },
+   819→    "weight_death_receipt": {
+   820→     "all_nan_step": null,
+   821→     "all_nan_at_end": false,
+   822→     "absorbing": false,
+   823→     "loss_finite_again": 21
+   824→    },
+   825→    "contrasts_gate_nothing": {
+   826→     "tau0.999_lr0.3": {
+   827→      "D": 9653,
+   828→      "slow": null,
+   829→      "rate": 0.08526432973022445,
+   830→      "mod80": 53
+   831→     },
+   832→     "lr0.15_tau_law": {
+   833→      "D": 68434,
+   834→      "slow": 0.000022099921843162118,
+   835→      "rate": 0.015921841405126168,
+   836→      "mod80": 34
+   837→     },
+   838→     "lr0.5_tau_law": {
+   839→      "D": 13052,
+   840→      "slow": null,
+   841→      "rate": 0.17289240406047499,
+   842→      "mod80": 12
+   843→     },
+   844→     "trivial_lr0.3": {
+   845→      "D": 30562,
+   846→      "slow": 0.00001795598361529933,
+   847→      "rate": 0.05649610144967517,
+   848→      "mod80": 2
+   849→     }
+   850→    },
+   851→    "claim": "FINITE-HORIZON DIVERGENCE: D in [2.5e4, 4e4] AND == design5 bit-exact AND depth-2000 laws hold (drift < 0.01, var >= 0.5) AND two-phase shape (slow < 1e-4, runaway > 100x). Findings receipted, gate nothing: depth-2000 z < 3.0 (statistic is depth-sensitive), weight death slower than the D+2000 window, all four contrasts diverge (fast EMA shortens life, slow pace lengthens it, trivial world ~ world2 — optimizer-borne)",
+   852→    "pass": true,
+   853→    "void_as_gated": false
+   854→   },
+   855→   "prev": "4e685dfe47d7b4c7c4db0b7e6a48b716e9896eefd4b9c7d75876fd3cc1cb0b72",
+   856→   "sha": "dc939f77c5c14630c2c6e95ed68396382643f5c4c10f159e51ba3ef4ec35f654"
+   857→  },
+   858→  {
+   859→   "i": 9,
+   860→   "id": "RLONG_longevity_law#9",
+   861→   "type": "RLONG_longevity_law",
+   862→   "payload": {
+   863→    "wd_main": 0.0003,
+   864→    "stop_rule": "min(5e5, D+2000); contrasts capped at 1e5",
+   865→    "arms": {
+   866→     "wd0_anchor": {
+   867→      "D": 30174,
+   868→      "executed_to": 30174,
+   869→      "slow": 0.000019382458307633484,
+   870→      "runaway": 0.07290041942913189
+   871→     },
+   872→     "wd3e4_main": {
+   873→      "D": null,
+   874→      "executed_to": 500000,
+   875→      "diverged": false,
+   876→      "censoring_floor_x": 16.570557433552064,
+   877→      "slow_20k": -0.000010025999770806105,
+   878→      "slow_100k": -0.0000076771378118419,
+   879→      "wc_norm": {
+   880→       "at400": 11.891085783057619,
+   881→       "at20000": 9.769638164817229,
+   882→       "at100000": 5.535301850188262,
+   883→       "at500000": 0.7387048214166075
+   884→      },
+   885→      "wp_norm": {
+   886→       "at400": 12.090201573925834,
+   887→       "at20000": 22.660694952763663
+   888→      }
+   889→     },
+   890→     "wd1e4_dose_response": {
+   891→      "D": 48091,
+   892→      "executed_to": 50091,
+   893→      "slow": 0.0000053037500730242976,
+   894→      "runaway": 0.07922435292937978,
+   895→      "rate_ratio": 14937.421982292723,
+   896→      "two_phase_persists": true
+   897→     },
+   898→     "wd1e3_mechanism_contrast": {
+   899→      "D": null,
+   900→      "executed_to": 100000,
+   901→      "slow": -0.000028887182146357943
+   902→     }
+   903→    },
+   904→    "guards_wd3e4_unrelaxed": {
+   905→     "g": 0.35080207176693745,
+   906→     "r1": 0.17081682633549816,
+   907→     "drift": 0.0026070231808889704
+   908→    },
+   909→    "dose_response_finding_gate_nothing": {
+   910→     "slow_rates_per_step": {
+   911→      "wd0": 0.000019382458307633484,
+   912→      "wd1e4": 0.0000053037500730242976,
+   913→      "wd3e4": -0.000010025999770806105,
+   914→      "wd1e3": -0.000028887182146357943
+   915→     },
+   916→     "note": "slow-phase rate flips sign between wd 1e-4 and 3e-4 — steep monotone longevity response; wd=1e-4 extends only 1.5938x (below the 2x band floor) and two-phase PERSISTS there (ratio 14937.4)"
+   917→    },
+   918→    "checks": {
+   919→     "anchor_D_30174": true,
+   920→     "anchor_D_design6_bit_exact": true,
+   921→     "extension_gate_censored_or_2x": true,
+   922→     "D_main_design6_bit_exact_incl_null": true,
+   923→     "executed_to_main_design6_bit_exact": true,
+   924→     "no_runaway_within_window_main": true,
+   925→     "D_wd1e4_design6_bit_exact": true,
+   926→     "D_wd1e4_ge_1_5x_undecayed": true,
+   927→     "runaway_wd1e4_ge_100x_slow": true,
+   928→     "g_wd_lt_0_5": true,
+   929→     "r1_wd_lt_0_5": true,
+   930→     "drift_wd_lt_0_01": true,
+   931→     "g_wd_tight_band_0_345_0_357": true,
+   932→     "r1_wd_tight_band_0_165_0_177": true,
+   933→     "jepa4_wd0_identity_fail_closed": true
+   934→    },
+   935→    "all_checks_pass": true,
+   936→    "claim": "LONGEVITY LAW: weight decay on Wc only, main dose 3e-4 — REGISTERED EXPECTATION: two-phase ELIMINATED-WITHIN-WINDOW at main dose (cap-censored > 16.5706x lifetime), PERSISTS at 1e-4; plasticity gates UNRELAXED in the decayed arm; registered factor gate >= 2x (band 2-10x)",
+   937→    "pass": true,
+   938→    "void_as_gated": false
+   939→   },
+   940→   "prev": "dc939f77c5c14630c2c6e95ed68396382643f5c4c10f159e51ba3ef4ec35f654",
+   941→   "sha": "8b22da279d2bbcab08c9f42d8566dcf3a4d9a074bc7bfab2b93d1450b56b27f2"
+   942→  },
+   943→  {
+   944→   "i": 10,
+   945→   "id": "R3D_depth_window_law#10",
+   946→   "type": "R3D_depth_window_law",
+   947→   "payload": {
+   948→    "law": "SCALE-ANCHORED SURPRISE: z_anchored(depth) = z_carried(depth) x [sd_sum(400)/sd_sum(depth)] — multiplier EXACTLY 1 at depth 400; removes ONLY the residual-scale-aliasing component",
+   949→    "sites": {
+   950→     "400": {
+   951→      "k": 1,
+   952→      "carried_z": 3.540717612984098,
+   953→      "sd_sum": 1.7285097927065063,
+   954→      "raw_gap": 0.05630991760796557,
+   955→      "multiplier": 1,
+   956→      "z_anchored": 3.540717612984098,
+   957→      "candD_z": 3.540717612984098,
+   958→      "candD_baseline_n": 124,
+   959→      "candA_z": 3.540717612984098
+   960→     },
+   961→     "1200": {
+   962→      "k": 3,
+   963→      "carried_z": 1.5918769063530553,
+   964→      "sd_sum": 1.2167723140024025,
+   965→      "raw_gap": 0.030802329598615563,
+   966→      "multiplier": 1.4205696273782027,
+   967→      "z_anchored": 2.261371983689926,
+   968→      "candD_z": 2.5781352264121717,
+   969→      "candD_baseline_n": 384,
+   970→      "candA_z": 1.536115986942694
+   971→     },
+   972→     "2000": {
+   973→      "k": 5,
+   974→      "carried_z": 2.204604995230523,
+   975→      "sd_sum": 1.1181032626432044,
+   976→      "raw_gap": -0.00458782812735687,
+   977→      "multiplier": 1.5459303719589337,
+   978→      "z_anchored": 3.4081658202992458,
+   979→      "candD_z": 4.805173316853757,
+   980→      "candD_baseline_n": 644,
+   981→      "candA_z": 1.4771704795932012
+   982→     },
+   983→     "2200": {
+   984→      "k": 5.5,
+   985→      "carried_z": 2.5480705541027127,
+   986→      "sd_sum": 1.379490620635662,
+   987→      "raw_gap": 0.02984016308716187,
+   988→      "multiplier": 1.2530058318990367,
+   989→      "z_anchored": 3.192747264380909,
+   990→      "candD_z": 1.218740343695452,
+   991→      "candD_baseline_n": 709,
+   992→      "candA_z": 3.341289039384384
+   993→     }
+   994→    },
+   995→    "mechanism_decomposition_gate_nothing": {
+   996→     "deficit_factor": {
+   997→      "400": 1,
+   998→      "1200": 0.44959160270661347,
+   999→      "2000": 0.6226435531447236,
+  1000→      "2200": 0.7196480579978284
+  1001→     },
+  1002→     "sd_collapse_factor": {
+  1003→      "400": 1,
+  1004→      "1200": 0.7039429681779104,
+  1005→      "2000": 0.6468596633707667,
+  1006→      "2200": 0.7980808824204872
+  1007→     },
+  1008→     "raw_gap_collapse_factor": {
+  1009→      "400": 1,
+  1010→      "1200": 0.5470142899704453,
+  1011→      "2000": -0.08147460202832686,
+  1012→      "2200": 0.5299273086299224
+  1013→     },
+  1014→     "honest_limits": "k=3 site (depth 1200) stays BELOW the gate (z_anchored 2.2614 < 3.0) — novelty-dominated deficit, no fix claimed; pure window-scaling candidates candD/candA are SITE-FRAGILE (candD: 4.8052 at nominal-2000 but 1.2187 at the finding site; candA: 3.3413 at the finding site but 1.4772 at nominal-2000) — neither survives both sites, neither is the law; REJECTED as registered"
+  1015→    },
+  1016→    "checks": {
+  1017→     "multiplier_at_400_exact_ieee_1": true,
+  1018→     "z_anchored_400_run4_bit_exact": true,
+  1019→     "z_carried_2200_design5_bit_exact": true,
+  1020→     "z_anchored_2200_ge_gate": true,
+  1021→     "z_anchored_2200_band_3_10_3_30": true,
+  1022→     "z_anchored_2000_ge_gate": true,
+  1023→     "z_anchored_2000_band_3_31_3_51": true
+  1024→    },
+  1025→    "design6_identities": {
+  1026→     "z_carried_400_design6": true,
+  1027→     "sd_sum_400_design6": true,
+  1028→     "candD_z_400_design6": true,
+  1029→     "candA_z_400_design6": true,
+  1030→     "multiplier_400_design6": true,
+  1031→     "z_anchored_400_design6": true,
+  1032→     "z_carried_1200_design6": true,
+  1033→     "sd_sum_1200_design6": true,
+  1034→     "candD_z_1200_design6": true,
+  1035→     "candA_z_1200_design6": true,
+  1036→     "multiplier_1200_design6": true,
+  1037→     "z_anchored_1200_design6": true,
+  1038→     "z_carried_2000_design6": true,
+  1039→     "sd_sum_2000_design6": true,
+  1040→     "candD_z_2000_design6": true,
+  1041→     "candA_z_2000_design6": true,
+  1042→     "multiplier_2000_design6": true,
+  1043→     "z_anchored_2000_design6": true,
+  1044→     "z_carried_2200_design6": true,
+  1045→     "sd_sum_2200_design6": true,
+  1046→     "candD_z_2200_design6": true,
+  1047→     "candA_z_2200_design6": true,
+  1048→     "multiplier_2200_design6": true,
+  1049→     "z_anchored_2200_design6": true,
+  1050→     "candD_round_rule_2200_design6": true
+  1051→    },
+  1052→    "all_checks_pass": true,
+  1053→    "claim": "DEPTH/WINDOW LAW: deficit = sd-aliasing x novelty-gap; registered fix restores the UNCHANGED 3.0 gate at BOTH depth-2000-class sites (2200 finding site and nominal 2000); carried statistic bit-identical at all sites",
+  1054→    "pass": true,
+  1055→    "void_as_gated": false
+  1056→   },
+  1057→   "prev": "8b22da279d2bbcab08c9f42d8566dcf3a4d9a074bc7bfab2b93d1450b56b27f2",
+  1058→   "sha": "a2b9c1eb1ed5ea977811db8b039080df69e4f2e06c3e78bf0f4573bcac4db581"
+  1059→  },
+  1060→  {
+  1061→   "i": 11,
+  1062→   "id": "GWIN_g_window_law#11",
+  1063→   "type": "GWIN_g_window_law",
+  1064→   "payload": {
+  1065→    "law": "W(lr) = round(30/lr) steps (1/pace, anchored lr 0.3 -> 100); tau from the carried K4 law at each pace",
+  1066→    "values": {
+  1067→     "anchor_lr0_3_w100": 0.34923244770336087,
+  1068→     "pace_lock_reference": 0.5692660186806099,
+  1069→     "lr0_15_w200": 0.30409957215062605,
+  1070→     "lr0_5_w60": 0.43412447386917424
+  1071→    },
+  1072→    "pace_lock_closed": true,
+  1073→    "checks": {
+  1074→     "g_015_w200_lt_0_5": true,
+  1075→     "g_015_w200_band_0_295_0_315": true,
+  1076→     "g_05_w60_lt_0_5": true,
+  1077→     "g_05_w60_band_0_42_0_45": true,
+  1078→     "g_anchor_run4_bit_exact": true,
+  1079→     "g_anchor_design6_bit_exact": true,
+  1080→     "g_015_design6_bit_exact": true,
+  1081→     "g_05_design6_bit_exact": true
+  1082→    },
+  1083→    "all_checks_pass": true,
+  1084→    "claim": "G-WINDOW LAW: the fixed 100-step window was pace-locked (round-5 finding g=0.5693>0.5 at lr 0.15); W(lr)=round(30/lr) restores the UNCHANGED 0.5 gate at both second pace points; carried anchor untouched and bit-exact vs run4",
+  1085→    "pass": true,
+  1086→    "void_as_gated": false
+  1087→   },
+  1088→   "prev": "a2b9c1eb1ed5ea977811db8b039080df69e4f2e06c3e78bf0f4573bcac4db581",
+  1089→   "sha": "900e790aa007bffd462ea4fdd27c8ea9f17bb80ab813dd35ead354b29c8646ce"
+  1090→  },
+  1091→  {
+  1092→   "i": 12,
+  1093→   "id": "RLONG7_dose_response#12",
+  1094→   "type": "RLONG7_dose_response",
+  1095→   "payload": {
+  1096→    "law": "slow-phase |Wc| inflation rate strictly decreasing in wd; cure zero-crossing wd* bracketed inside (1.5e-4, 2.5e-4)",
+  1097→    "rates_per_step": {
+  1098→     "wd0": 0.000019382458307633484,
+  1099→     "wd1e4": 0.0000053037500730242976,
+  1100→     "wd1_5e4": 2.982035306975962e-7,
+  1101→     "wd2e4": -0.000003778708210171146,
+  1102→     "wd2_5e4": -0.000007163695533815242,
+  1103→     "wd3e4": -0.000010025999770806105,
+  1104→     "wd1e3": -0.000028887182146357943
+  1105→    },
+  1106→    "new_arms_receipt_gate_nothing": {
+  1107→     "wd1_5e4": {
+  1108→      "D": 62383,
+  1109→      "executed_to": 62383,
+  1110→      "runaway": 0.0709951983727395,
+  1111→      "rate_ratio": 238076.31722756053
+  1112→     },
+  1113→     "wd2e4": {
+  1114→      "D": 85387,
+  1115→      "executed_to": 85387,
+  1116→      "runaway": 0.07013985167825404,
+  1117→      "rate_ratio": -18561.859708949916
+  1118→     },
+  1119→     "wd2_5e4": {
+  1120→      "D": null,
+  1121→      "executed_to": 100000,
+  1122→      "runaway": null,
+  1123→      "rate_ratio": null
+  1124→     }
+  1125→    },
+  1126→    "guards_wd1_5e4_gate_nothing": {
+  1127→     "g": 0.35001678597797703,
+  1128→     "r1": 0.17006279337297014,
+  1129→     "drift": 0.002622817157509699
+  1130→    },
+  1131→    "checks": {
+  1132→     "anchor_D_wd0_design6_bit_exact": true,
+  1133→     "slow_wd0_design6_bit_exact": true,
+  1134→     "D_wd1e4_design6_bit_exact": true,
+  1135→     "slow_wd1e4_design6_bit_exact": true,
+  1136→     "D_main_design6_bit_exact_incl_null": true,
+  1137→     "exec_main_design6_bit_exact": true,
+  1138→     "slow_main_design6_bit_exact": true,
+  1139→     "D_wd1e3_design6_bit_exact_incl_null": true,
+  1140→     "slow_wd1e3_design6_bit_exact": true,
+  1141→     "monotone_seven_dose": true,
+  1142→     "bracket_rate15e4_positive": true,
+  1143→     "bracket_rate25e4_negative": true,
+  1144→     "jepa4_wd0_identity_fail_closed": true
+  1145→    },
+  1146→    "all_checks_pass": true,
+  1147→    "claim": "DOSE-RESPONSE LAW: monotone 7-dose rate ordering + zero-crossing bracket (1.5e-4, 2.5e-4); four receipted doses bit-exact vs design6/run6; registered risk (disclosed): sublinearity could push the crossing below 1.5e-4",
+  1148→    "pass": true,
+  1149→    "void_as_gated": false
+  1150→   },
+  1151→   "prev": "900e790aa007bffd462ea4fdd27c8ea9f17bb80ab813dd35ead354b29c8646ce",
+  1152→   "sha": "adbcc99c658f09262a7661cdb8b5834245ab0ee3d90bc16bd4844ba2203885f0"
+  1153→  },
+  1154→  {
+  1155→   "i": 13,
+  1156→   "id": "PLAST_plasticity_cost#13",
+  1157→   "type": "PLAST_plasticity_cost",
+  1158→   "payload": {
+  1159→    "readout": "trivial-world switch continuation (400 steps) from warm states; ratio = last10/first10",
+  1160→    "probes": {
+  1161→     "main_20k": {
+  1162→      "ratio": 0.6644108562180416,
+  1163→      "first10": 0.0004499849251276307,
+  1164→      "last10": 0.0002989748693892605
+  1165→     },
+  1166→     "main_100k": {
+  1167→      "ratio": 0.5957770637776008,
+  1168→      "first10": 0.0002193773365421421,
+  1169→      "last10": 0.00013069998542442797
+  1170→     },
+  1171→     "main_500k_edge_gate_nothing": {
+  1172→      "ratio": 0.5864036049443728,
+  1173→      "first10": 0.000004074230277196593,
+  1174→      "last10": 0.0000023891433219215935,
+  1175→      "wc_norm": 0.7387048214166075
+  1176→     },
+  1177→     "control_20k": {
+  1178→      "ratio": 0.7135257300287862,
+  1179→      "first10": 0.0006501350887065685,
+  1180→      "last10": 0.00046388811378668393
+  1181→     },
+  1182→     "wd1e4_20k_gate_nothing": {
+  1183→      "ratio": 0.7017204255152192,
+  1184→      "first10": 0.0005449883696688159,
+  1185→      "last10": 0.00038242947066484704
+  1186→     }
+  1187→    },
+  1188→    "rho20": 0.9311659387409014,
+  1189→    "probe_run_binding": {
+  1190→     "disclosed": 0.6644108562180416,
+  1191→     "run": 0.6644108562180416,
+  1192→     "bit_exact": true
+  1193→    },
+  1194→    "domain_note": "the control diverges at 30174 so no 100k control exists — the cost readout is honestly asymmetric; the 500k edge probe (|Wc| 0.7387, 16x below init) prices the extreme-depth question for round 8",
+  1195→    "checks": {
+  1196→     "probe_run_bit_exact_20k": true,
+  1197→     "engage_20k_decayed": true,
+  1198→     "engage_100k_decayed": true,
+  1199→     "engage_20k_control": true,
+  1200→     "rho20_lt_2": true,
+  1201→     "all_finite": true,
+  1202→     "snapshot_wc_20000_design6_bit_exact": true,
+  1203→     "snapshot_wc_100000_design6_bit_exact": true,
+  1204→     "snapshot_wc_500000_design6_bit_exact": true
+  1205→    },
+  1206→    "all_checks_pass": true,
+  1207→    "claim": "PLASTICITY COST LAW: learning engages from every registered warm state (ratio < 1.0) at a bounded cost (rho20 < 2.0); probe==run bit-exact on the disclosed value; the 20k decayed ratio also equals the design7 I1 pipeline value by construction (same snapshot path)",
+  1208→    "pass": true,
+  1209→    "void_as_gated": false
+  1210→   },
+  1211→   "prev": "adbcc99c658f09262a7661cdb8b5834245ab0ee3d90bc16bd4844ba2203885f0",
+  1212→   "sha": "c29441fb8ef6d18d3ec4610c3d68cea835ab8351c6b3769c1d6a1c16e2338c88"
+  1213→  },
+  1214→  {
+  1215→   "i": 14,
+  1216→   "id": "R3DxR3L_composition#14",
+  1217→   "type": "R3DxR3L_composition",
+  1218→   "payload": {
+  1219→    "law": "the R3L clamp plateau extends to ALL depth sites; the anchored statistic inherits it bit-exactly; the anchored 3.0 restoration SURVIVES at the plateau",
+  1220→    "per_depth": {
+  1221→     "400": {
+  1222→      "z09": 3.540717612984098,
+  1223→      "z12": 3.540717612984098,
+  1224→      "sd09": 1.7285097927065063,
+  1225→      "sd12": 1.7285097927065063,
+  1226→      "mult09": 1,
+  1227→      "mult12": 1,
+  1228→      "anchored09": 3.540717612984098,
+  1229→      "anchored12": 3.540717612984098,
+  1230→      "var09": 1.0024850692069596,
+  1231→      "var12": 1.0024850692069596,
+  1232→      "equalities": {
+  1233→       "sd": true,
+  1234→       "z": true,
+  1235→       "anchored": true,
+  1236→       "var": true,
+  1237→       "raw_gap": true
+  1238→      }
+  1239→     },
+  1240→     "1200": {
+  1241→      "z09": 1.5918769063530553,
+  1242→      "z12": 1.5918769063530553,
+  1243→      "sd09": 1.2167723140024025,
+  1244→      "sd12": 1.2167723140024025,
+  1245→      "mult09": 1.4205696273782027,
+  1246→      "mult12": 1.4205696273782027,
+  1247→      "anchored09": 2.261371983689926,
+  1248→      "anchored12": 2.261371983689926,
+  1249→      "var09": 1.010308878291164,
+  1250→      "var12": 1.010308878291164,
+  1251→      "equalities": {
+  1252→       "sd": true,
+  1253→       "z": true,
+  1254→       "anchored": true,
+  1255→       "var": true,
+  1256→       "raw_gap": true
+  1257→      }
+  1258→     },
+  1259→     "2000": {
+  1260→      "z09": 2.204604995230523,
+  1261→      "z12": 2.204604995230523,
+  1262→      "sd09": 1.1181032626432044,
+  1263→      "sd12": 1.1181032626432044,
+  1264→      "mult09": 1.5459303719589337,
+  1265→      "mult12": 1.5459303719589337,
+  1266→      "anchored09": 3.4081658202992458,
+  1267→      "anchored12": 3.4081658202992458,
+  1268→      "var09": 1.0194662895305606,
+  1269→      "var12": 1.0194662895305606,
+  1270→      "equalities": {
+  1271→       "sd": true,
+  1272→       "z": true,
+  1273→       "anchored": true,
+  1274→       "var": true,
+  1275→       "raw_gap": true
+  1276→      }
+  1277→     },
+  1278→     "2200": {
+  1279→      "z09": 2.5480705541027127,
+  1280→      "z12": 2.5480705541027127,
+  1281→      "sd09": 1.379490620635662,
+  1282→      "sd12": 1.379490620635662,
+  1283→      "mult09": 1.2530058318990367,
+  1284→      "mult12": 1.2530058318990367,
+  1285→      "anchored09": 3.192747264380909,
+  1286→      "anchored12": 3.192747264380909,
+  1287→      "var09": 1.0217532266155713,
+  1288→      "var12": 1.0217532266155713,
+  1289→      "equalities": {
+  1290→       "sd": true,
+  1291→       "z": true,
+  1292→       "anchored": true,
+  1293→       "var": true,
+  1294→       "raw_gap": true
+  1295→      }
+  1296→     }
+  1297→    },
+  1298→    "checks": {
+  1299→     "sd_400": true,
+  1300→     "z_400": true,
+  1301→     "anchored_400": true,
+  1302→     "anchored09_design6_400": true,
+  1303→     "sd_1200": true,
+  1304→     "z_1200": true,
+  1305→     "anchored_1200": true,
+  1306→     "anchored09_design6_1200": true,
+  1307→     "sd_2000": true,
+  1308→     "z_2000": true,
+  1309→     "anchored_2000": true,
+  1310→     "anchored09_design6_2000": true,
+  1311→     "sd_2200": true,
+  1312→     "z_2200": true,
+  1313→     "anchored_2200": true,
+  1314→     "anchored09_design6_2200": true,
+  1315→     "mult400_amp12_exact_1": true,
+  1316→     "mult400_amp09_exact_1": true,
+  1317→     "anchored12_gate_2000": true,
+  1318→     "anchored12_gate_2200": true,
+  1319→     "carried_2200_design5_bit_exact": true
+  1320→    },
+  1321→    "all_checks_pass": true,
+  1322→    "claim": "COMPOSITION CLOSURE: plateau (amp 1.2 == 0.9 bit-exact) extends to every registered depth; anchored 3.0-gate restoration survives at the plateau — the two laws compose",
+  1323→    "pass": true,
+  1324→    "void_as_gated": false
+  1325→   },
+  1326→   "prev": "c29441fb8ef6d18d3ec4610c3d68cea835ab8351c6b3769c1d6a1c16e2338c88",
+  1327→   "sha": "dbd3337e54fc6c957ceef5499a6a4a989678119487c54a1ba18623e522329472"
+  1328→  },
+  1329→  {
+  1330→   "i": 15,
+  1331→   "id": "GWIN7_full_grid#15",
+  1332→   "type": "GWIN7_full_grid",
+  1333→   "payload": {
+  1334→    "law": "W(lr) = round(30/lr) holds g < 0.5 across the core pace grid",
+  1335→    "grid": {
+  1336→     "lr0.15_w200": 0.30409957215062605,
+  1337→     "lr0.2_w150": 0.25369541417668573,
+  1338→     "lr0.25_w120": 0.3505612327666269,
+  1339→     "lr0.3_w100_anchor": 0.34923244770336087,
+  1340→     "lr0.4_w75": 0.4033493702247352,
+  1341→     "lr0.5_w60": 0.43412447386917424
+  1342→    },
+  1343→    "edge_receipt_gate_nothing": {
+  1344→     "lr0.6_w50": 0.42714909329375844,
+  1345→     "note": "the receipted trend rises with pace (0.3041 -> 0.3492 -> 0.4341); the edge prices the law's domain for round 8 — g >= 0.5 here registers a domain boundary 0.15 <= lr <= 0.5 as a FINDING, not a refutation of the tested core"
+  1346→    },
+  1347→    "checks": {
+  1348→     "g_02_w150_lt_0_5": true,
+  1349→     "g_025_w120_lt_0_5": true,
+  1350→     "g_04_w75_lt_0_5": true,
+  1351→     "g_anchor_lt_0_5": true,
+  1352→     "g_015_w200_design6_bit_exact": true,
+  1353→     "g_05_w60_design6_bit_exact": true,
+  1354→     "g_anchor_run4_bit_exact": true
+  1355→    },
+  1356→    "all_checks_pass": true,
+  1357→    "claim": "FULL-GRID G-WINDOW LAW: g < 0.5 at every core grid point with anchors bit-exact; the lr 0.6 boundary probe is receipted gate-nothing",
+  1358→    "pass": true,
+  1359→    "void_as_gated": false
+  1360→   },
+  1361→   "prev": "dbd3337e54fc6c957ceef5499a6a4a989678119487c54a1ba18623e522329472",
+  1362→   "sha": "33ef5f952f6cfc5e81322b89631caab81a3c89872dfa04cae821a183a05ec779"
+  1363→  },
+  1364→  {
+  1365→   "i": 16,
+  1366→   "id": "MECH_plasticity_advantage_mechanism#16",
+  1367→   "type": "MECH_plasticity_advantage_mechanism",
+  1368→   "payload": {
+  1369→    "law": "the cure's plasticity advantage is (leg 1) ORDERED BY the end-of-decay |Wc| across the seven-dose grid (Spearman >= 0.75 — the |Wc|-room hypothesis) and (leg 2) COMPOUNDS on a SECOND world switch (rho20_2 < rho20_1 AND < 1.0)",
+  1370→    "dose_grid": {
+  1371→     "0": {
+  1372→      "ratio": 0.7135257300287862,
+  1373→      "wc20k": 17.808040736570447,
+  1374→      "first10": 0.0006501350887065685,
+  1375→      "last10": 0.00046388811378668393
+  1376→     },
+  1377→     "0.0001": {
+  1378→      "ratio": 0.7017204255152192,
+  1379→      "wc20k": 13.405606266374983,
+  1380→      "first10": 0.0005449883696688159,
+  1381→      "last10": 0.00038242947066484704
+  1382→     },
+  1383→     "0.00015": {
+  1384→      "ratio": 0.6932745971950486,
+  1385→      "wc20k": 12.104343205851116,
+  1386→      "first10": 0.000511141223855861,
+  1387→      "last10": 0.0003543612260784562
+  1388→     },
+  1389→     "0.0002": {
+  1390→      "ratio": 0.6841500024733943,
+  1391→      "wc20k": 11.130270846539293,
+  1392→      "first10": 0.0004852947458951283,
+  1393→      "last10": 0.0003320144016044773
+  1394→     },
+  1395→     "0.00025": {
+  1396→      "ratio": 0.6744102403950979,
+  1397→      "wc20k": 10.374448558036406,
+  1398→      "first10": 0.00046545433678845587,
+  1399→      "last10": 0.00031390717116644337
+  1400→     },
+  1401→     "0.0003": {
+  1402→      "ratio": 0.6644108562180416,
+  1403→      "wc20k": 9.769638164817229,
+  1404→      "first10": 0.0004499849251276307,
+  1405→      "last10": 0.0002989748693892605
+  1406→     },
+  1407→     "0.001": {
+  1408→      "ratio": 0.570098169081971,
+  1409→      "wc20k": 6.393625949660193,
+  1410→      "first10": 0.00037838955043814745,
+  1411→      "last10": 0.00021571918990453796
+  1412→     }
+  1413→    },
+  1414→    "spearman": 1,
+  1415→    "spearman_gate": 0.75,
+  1416→    "second_switch": {
+  1417→     "seed_b": 1657638767,
+  1418→     "steps": 400,
+  1419→     "world": "fresh World2(seedB) from its own t=0, entered from the END state of the registered first switch, NO weight reset",
+  1420→     "decayed_3e4": {
+  1421→      "ratio2": 1.1268925734915027,
+  1422→      "first10": 0.0005878873951521122,
+  1423→      "last10": 0.0006624859396461798,
+  1424→      "stage1_ratio": 0.6644108562180416
+  1425→     },
+  1426→     "control_wd0": {
+  1427→      "ratio2": 1.17997507686084,
+  1428→      "first10": 0.0007870548837814303,
+  1429→      "last10": 0.0009287051469836927,
+  1430→      "stage1_ratio": 0.7135257300287862,
+  1431→      "probe_binding": "design8 I-C disclosed value 1.17997507686084, bit-exact"
+  1432→     },
+  1433→     "rho20_1": 0.9311659387409014,
+  1434→     "rho20_2": 0.955013877487518
+  1435→    },
+  1436→    "checks": {
+  1437→     "spearman_ge_0_75": true,
+  1438→     "ratio20k_wd0_run7_bit_exact": true,
+  1439→     "ratio20k_wd1e4_run7_bit_exact": true,
+  1440→     "ratio20k_wd3e4_run7_bit_exact": true,
+  1441→     "rho20_2_lt_rho20_1": false,
+  1442→     "rho20_1_run7_bit_exact": true,
+  1443→     "rho20_2_lt_1": true,
+  1444→     "ratio2_3e4_lt_1": false,
+  1445→     "ratio2_wd0_design8_bit_exact": true,
+  1446→     "probe2_stage1_decayed_bit_exact": true,
+  1447→     "probe2_stage1_control_bit_exact": true,
+  1448→     "probe2_all_finite": true,
+  1449→     "dose_all_finite": true
+  1450→    },
+  1451→    "all_checks_pass": false,
+  1452→    "fail_branches_priced": "rho20_2 in [rho20_1, 1) = advantage SATURATES (one-time re-balancing); rho20_2 >= 1 = advantage REVERSES; Spearman < 0.75 = |Wc|-room mechanism FAILS (dose-decoupled advantage)",
+  1453→    "claim": "PLASTICITY-ADVANTAGE MECHANISM: readaptation advantage ordered by end-of-decay |Wc| across the dose grid AND compounding on a second world switch",
+  1454→    "pass": false,
+  1455→    "void_as_gated": false
+  1456→   },
+  1457→   "prev": "33ef5f952f6cfc5e81322b89631caab81a3c89872dfa04cae821a183a05ec779",
+  1458→   "sha": "5c6d87a66bacf8e11fc7bb90c7c66d6e2e01f4e7ea0001c5ca1fc9705747d267"
+  1459→  },
+  1460→  {
+  1461→   "i": 17,
+  1462→   "id": "GWIN8_low_pace_dip#17",
+  1463→   "type": "GWIN8_low_pace_dip",
+  1464→   "payload": {
+  1465→    "law": "W(lr) = round(30/lr) extends to the unexplored low-pace region; the receipted lr-0.2 dip is a LOCAL MINIMUM of the pace grid; dip magnitude (declared re-scoring leg, threshold fixed at registration) >= 0.05",
+  1466→    "grid": {
+  1467→     "lr0.1_w300": 0.2763398780999859,
+  1468→     "lr0.15_w200": 0.30409957215062605,
+  1469→     "lr0.2_w150": 0.25369541417668573,
+  1470→     "lr0.25_w120": 0.3505612327666269,
+  1471→     "lr0.3_w100_anchor": 0.34923244770336087,
+  1472→     "lr0.4_w75": 0.4033493702247352,
+  1473→     "lr0.5_w60": 0.43412447386917424,
+  1474→     "lr0.6_w50": 0.42714909329375844
+  1475→    },
+  1476→    "dip_magnitude": 0.0736349882819407,
+  1477→    "dip_gate": 0.05,
+  1478→    "checks": {
+  1479→     "g_01_w300_lt_0_5": true,
+  1480→     "g_01_gt_g_02_dip_local_min": true,
+  1481→     "g_02_run7_bit_exact": true,
+  1482→     "dip_magnitude_ge_0_05": true,
+  1483→     "g_015_design6_bit_exact": true,
+  1484→     "g_025_run7_bit_exact": true
+  1485→    },
+  1486→    "all_checks_pass": true,
+  1487→    "fail_branches_priced": "g(0.1) <= g(0.2) = the dip is the low edge of a declining trend (monotone-declining boundary below lr 0.2); g(0.1) >= 0.5 = the law gains a domain boundary below lr 0.15",
+  1488→    "claim": "LOW-PACE EXTENSION + DIP LAW: the G-window law holds at (0.1, W300) and the lr-0.2 dip is a local minimum of the pace grid",
+  1489→    "pass": true,
+  1490→    "void_as_gated": false
+  1491→   },
+  1492→   "prev": "5c6d87a66bacf8e11fc7bb90c7c66d6e2e01f4e7ea0001c5ca1fc9705747d267",
+  1493→   "sha": "f796221af27841ce287c40d5c72ce637953d95dcff25d8229d8913e60a061744"
+  1494→  },
+  1495→  {
+  1496→   "i": 18,
+  1497→   "id": "REDOSE_main_dose_reregistration#18",
+  1498→   "type": "REDOSE_main_dose_reregistration",
+  1499→   "payload": {
+  1500→    "law": "wd 2e-4 evaluated for re-registration as the plasticity-optimal cured-dose candidate per the ROUND-6 REGISTERED RULES (cure engaged: rate < 0; longevity factor gate D >= 2 x D_wd0 = 60348; guards UNRELAXED) — NO new threshold surgery; guards at 2.5e-4 receipted adjacent, gate nothing",
+  1501→    "decision_inputs": {
+  1502→     "rate_2e4": -0.000003778708210171146,
+  1503→     "D_2e4": 85387,
+  1504→     "factor_over_wd0": 2.8298203751574205,
+  1505→     "guards_2e4": {
+  1506→      "g": 0.3502784478845342,
+  1507→      "r1": 0.1703136029297766,
+  1508→      "drift": 0.002617433483223252
+  1509→     },
+  1510→     "registered_disclosure": "the two-phase law PERSISTS at 2e-4 (runaway 0.07013985167825404 at D = 85387) — wd 3e-4 REMAINS the longevity main dose (the only receipted dose whose two-phase is eliminated within the 5e5 window)"
+  1511→    },
+  1512→    "guards_2_5e4_gate_nothing": {
+  1513→     "g": 0.35054021030750215,
+  1514→     "r1": 0.170564930215658,
+  1515→     "drift": 0.002612163631139878
+  1516→    },
+  1517→    "decision_on_pass": "wd 2e-4 is re-registered as the plasticity-optimal cured-dose candidate for round 9's dose-selection registration (mildest cure-engaging dose on the receipted grid; steepest measured lifetime-per-decay segment 4.6008e8 steps/unit-dose); wd 3e-4 remains the longevity main dose",
+  1518→    "decision_on_fail": "the main dose stays 3e-4 outright — the honest finding is that the cure's guard cost at 2e-4 exceeds the round-6 gates",
+  1519→    "checks": {
+  1520→     "rate_2e4_run7_bit_exact": true,
+  1521→     "rate_2e4_negative": true,
+  1522→     "D_2e4_bit_exact_85387": true,
+  1523→     "D_2e4_ge_2x_undecayed": true,
+  1524→     "g_wd2e4_lt_0_5": true,
+  1525→     "r1_wd2e4_lt_0_5": true,
+  1526→     "drift_wd2e4_lt_0_01": true
+  1527→    },
+  1528→    "all_checks_pass": true,
+  1529→    "claim": "MAIN-DOSE RE-REGISTRATION DECISION: wd 2e-4 satisfies cure + factor + unrelaxed guards from the round-7 receipts and the fresh 2e-4 guard measurement",
+  1530→    "pass": true,
+  1531→    "void_as_gated": false
+  1532→   },
+  1533→   "prev": "f796221af27841ce287c40d5c72ce637953d95dcff25d8229d8913e60a061744",
+  1534→   "sha": "98908d84db61955c6af216d9da24a2e7640aec533225590a87cd22ce2b4bb742"
+  1535→  },
+  1536→  {
+  1537→   "i": 19,
+  1538→   "id": "OVERDECAY_over_decay_plasticity#19",
+  1539→   "type": "OVERDECAY_over_decay_plasticity",
+  1540→   "payload": {
+  1541→    "law": "the 1e-3 arm (strongest contraction, -2.889e-5/step) re-run with read-only captures at 20000 AND 100000 (arithmetic bound bit-exact vs design6/run7): learning still engages from heavily over-decayed states AND the plasticity advantage does not reverse at 3.3x the main dose",
+  1542→    "probes": {
+  1543→     "at_20000": {
+  1544→      "ratio": 0.570098169081971,
+  1545→      "first10": 0.00037838955043814745,
+  1546→      "last10": 0.00021571918990453796,
+  1547→      "wc_norm": 6.393625949660193
+  1548→     },
+  1549→     "at_100000": {
+  1550→      "ratio": 0.50858843397239,
+  1551→      "first10": 0.00008577522201552424,
+  1552→      "last10": 0.00004362428583850954,
+  1553→      "wc_norm": 2.70821011403129
+  1554→     }
+  1555→    },
+  1556→    "main_dose_bound": 0.6644108562180416,
+  1557→    "checks": {
+  1558→     "engage_20k": true,
+  1559→     "engage_100k": true,
+  1560→     "no_reversal_vs_main_dose": true,
+  1561→     "D_1e3_null": true,
+  1562→     "exec_1e3_100000": true,
+  1563→     "slow_1e3_design6_bit_exact": true,
+  1564→     "capture_path_validation_20k": true,
+  1565→     "capture_path_validation_100k": true,
+  1566→     "all_finite": true
+  1567→    },
+  1568→    "all_checks_pass": true,
+  1569→    "fail_branches_priced": "(b) fails = over-decay is a TOXIC dose (the cure has a dose ceiling); (c) fails = the advantage REVERSES under over-decay (non-monotone plasticity dose-response)",
+  1570→    "claim": "OVER-DECAY PLASTICITY: learning engages from both over-decayed states and the advantage does not reverse",
+  1571→    "pass": true,
+  1572→    "void_as_gated": false
+  1573→   },
+  1574→   "prev": "98908d84db61955c6af216d9da24a2e7640aec533225590a87cd22ce2b4bb742",
+  1575→   "sha": "a602ea4cbe033a6baff1c01c99c9d87a2132a63336679a6f62353632063e6bc5"
+  1576→  },
+  1577→  {
+  1578→   "i": 20,
+  1579→   "id": "CURE9_cured_dose_reregistration#20",
+  1580→   "type": "CURE9_cured_dose_reregistration",
+  1581→   "payload": {
+  1582→    "law": "the round-8 REDOSE decision of record re-registered wd 2e-4 as the plasticity-optimal cured-dose candidate; round 9 executes the dose-selection: the arm is re-bound bit-exact and the plasticity advantage is scored AT ITS OWN DOSE (20k re-bound + 75000 NEW — the deepest finite capture, since the dose diverges at D = 85387 < 100000), the dose-ordering law (round-8 MECH leg-1, Spearman 1.0 at 20k) must extend to 75k on the cured side, and the |Wc|-room composition must stay consistent",
+  1583→    "arm": {
+  1584→     "rate_2e4": -0.000003778708210171146,
+  1585→     "D_2e4": 85387,
+  1586→     "executed_to": 85387,
+  1587→     "D_ratio_over_wd0": 2.8298203751574205,
+  1588→     "D_ratio_registered_band": [
+  1589→      2.5,
+  1590→      3.2
+  1591→     ],
+  1592→     "runaway_2e4": 0.07013985167825404
+  1593→    },
+  1594→    "guards_2e4": {
+  1595→     "g": 0.3502784478845342,
+  1596→     "r1": 0.1703136029297766,
+  1597→     "drift": 0.002617433483223252
+  1598→    },
+  1599→    "plasticity": {
+  1600→     "at_20000": {
+  1601→      "ratio": 0.6841500024733943,
+  1602→      "rho20_cured": 0.9588301776388544,
+  1603→      "source": "re-bound bit-exact vs run8.metrics_round8.r8_dose_ratio_2e4"
+  1604→     },
+  1605→     "at_75000_2e4": {
+  1606→      "ratio": 0.5507446127932,
+  1607→      "first10": 0.00046412225324707535,
+  1608→      "last10": 0.000255612830653268,
+  1609→      "wc_norm": 8.691686529662682,
+  1610→      "source": "NEW — the cured dose at its own deepest finite capture"
+  1611→     },
+  1612→     "at_75000_3e4": {
+  1613→      "ratio": 0.5980059011717661,
+  1614→      "first10": 0.00028983739376231354,
+  1615→      "last10": 0.00017332447185010834,
+  1616→      "wc_norm": 6.443616949719879,
+  1617→      "source": "NEW — the longevity main dose shared-depth reference"
+  1618→     }
+  1619→    },
+  1620→    "checks": {
+  1621→     "rate_2e4_bit_exact": true,
+  1622→     "rate_negative": true,
+  1623→     "D_bit_exact_85387": true,
+  1624→     "exec_bit_exact_85387": true,
+  1625→     "D_ratio_in_registered_band": true,
+  1626→     "guards_unrelaxed": true,
+  1627→     "guards_bit_exact_vs_run8": true,
+  1628→     "ratio_20k_bit_exact_vs_run8": true,
+  1629→     "ratio_20k_lt_1": true,
+  1630→     "rho20_cured_20k_lt_1": true,
+  1631→     "engage_75k_2e4": true,
+  1632→     "engage_75k_3e4": true,
+  1633→     "dose_ordering_extends_75k": false,
+  1634→     "wc75_capture_validation": true,
+  1635→     "wc75_composition_consistent": true,
+  1636→     "all_finite": true
+  1637→    },
+  1638→    "all_checks_pass": false,
+  1639→    "fail_branches_priced": "re-bind fails = infra drift (RETAIN 3e-4 outright); guards fail = the cure's guard cost exceeds the round-6 gates (candidate DEMOTED); (d) fails = the cured dose does not carry the advantage at its own dose (DEMOTED); engage_75k fails = the advantage is shallow-depth only (DEMOTED); ordering reverses = |Wc|-room depth-fragile on the cured side (mechanism re-pricing, decision deferred)",
+  1640→    "decision_on_pass": "wd 2e-4 CONFIRMED as the plasticity main dose (the cured dose) for round 10; wd 3e-4 REMAINS the longevity main dose; the TWO-DOSE REGIME (plasticity 2e-4 + longevity 3e-4) is the round-10 operating point of record",
+  1641→    "claim": "CURED-DOSE RE-REGISTRATION: wd 2e-4 reproduces the plasticity advantage at its own dose and the dose-ordering law extends to its deepest finite state",
+  1642→    "pass": false,
+  1643→    "void_as_gated": false
+  1644→   },
+  1645→   "prev": "a602ea4cbe033a6baff1c01c99c9d87a2132a63336679a6f62353632063e6bc5",
+  1646→   "sha": "d22c7fecd7e5647376749296816cd3c212ba790677210669c948f31863966d24"
+  1647→  },
+  1648→  {
+  1649→   "i": 21,
+  1650→   "id": "SAT9_saturation_successor#21",
+  1651→   "type": "SAT9_saturation_successor",
+  1652→   "payload": {
+  1653→    "law": "the round-8 MECH leg-2 finding (advantage SATURATES on the second switch: rho20_2 = 0.955014 ∈ [rho20_1 = 0.931166, 1) — a one-time re-balancing) prices its successor curve on a THIRD switch (fresh World2(seedC = 2856986428) from its own t=0, from the END state of the registered second switch, NO weight reset, both arms at their own dose): pre-registered CONCAVE SATURATION — rho20_3 ∈ [rho20_2, 1) with a non-expanding increment; the Wc-composition mechanism leg: the decayed arm's contracted-|Wc| room PERSISTS through repeated switches",
+  1654→    "stages": {
+  1655→     "decayed_3e4": {
+  1656→      "ratio1": 0.6644108562180416,
+  1657→      "ratio2": 1.1268925734915027,
+  1658→      "ratio3": 0.7025685901201354,
+  1659→      "first10_3": 0.0007878862781946942,
+  1660→      "last10_3": 0.0005535441516462471,
+  1661→      "end_wc": {
+  1662→       "after1": "sha-bound"
+  1663→      }
+  1664→     },
+  1665→     "control_wd0": {
+  1666→      "ratio1": 0.7135257300287862,
+  1667→      "ratio2": 1.17997507686084,
+  1668→      "ratio3": 0.7354070016984524,
+  1669→      "first10_3": 0.0010478111106102445,
+  1670→      "last10_3": 0.0007705676272002054
+  1671→     }
+  1672→    },
+  1673→    "saturation_curve": {
+  1674→     "rho20_1": 0.9311659387409014,
+  1675→     "rho20_2": 0.955013877487518,
+  1676→     "rho20_3": 0.9553466155442152,
+  1677→     "inc2": 0.023847938746616615,
+  1678→     "inc3": 0.0003327380566972016,
+  1679→     "expected_branch": "rho20_3 ∈ [rho20_2, 1) AND inc3 <= inc2 (CONCAVE SATURATION)"
+  1680→    },
+  1681→    "composition": {
+  1682→     "end2": {
+  1683→      "decayed": 9.467373780715064,
+  1684→      "control": 17.693144881570092
+  1685→     },
+  1686→     "end3": {
+  1687→      "decayed": 9.38074682340556,
+  1688→      "control": 17.679359103847727
+  1689→     }
+  1690→    },
+  1691→    "seed_c": 2856986428,
+  1692→    "checks": {
+  1693→     "stage1_decayed_bit_exact": true,
+  1694→     "stage2_decayed_bit_exact": true,
+  1695→     "end1_sha_decayed_bit_exact": true,
+  1696→     "stage1_control_bit_exact": true,
+  1697→     "stage2_control_bit_exact": true,
+  1698→     "end1_sha_control_bit_exact": true,
+  1699→     "ratio3_control_design9_bit_exact": true,
+  1700→     "saturation_advantage_persists": true,
+  1701→     "saturation_no_growth": true,
+  1702→     "increment_not_expanding": true,
+  1703→     "composition_room_persists_end2": true,
+  1704→     "composition_room_persists_end3": true,
+  1705→     "all_finite": true
+  1706→    },
+  1707→    "all_checks_pass": true,
+  1708→    "fail_branches_priced": "rho20_3 >= 1 = WASHOUT (the advantage is consumed by the third switch — the re-balancing is transient); rho20_3 < rho20_2 = COMPOUNDING RESUMES (contradicts the round-8 sealed saturation finding, re-opens the question); inc3 > inc2 while rho20_3 < 1 = CONVEX WASH-OUT PRECURSOR (expanding steps toward the line — super-linear decay of the advantage); a composition leg fails = the room is consumed by re-adaptation (the advantage is NOT carried by persistent |Wc| room)",
+  1709→    "claim": "SATURATION SUCCESSOR: the plasticity advantage persists without growing on a third switch and its |Wc|-room carrier persists with it",
+  1710→    "pass": true,
+  1711→    "void_as_gated": false
+  1712→   },
+  1713→   "prev": "d22c7fecd7e5647376749296816cd3c212ba790677210669c948f31863966d24",
+  1714→   "sha": "e9482299152721db60dab54eaa5538215774650c54929d35c5e38f80988fc262"
+  1715→  },
+  1716→  {
+  1717→   "i": 22,
+  1718→   "id": "DIP9_dip_law_window_scaling#22",
+  1719→   "type": "DIP9_dip_law_window_scaling",
+  1720→   "payload": {
+  1721→    "law": "the round-8 dip law (the lr-0.2 dip is a LOCAL MINIMUM of the registered W(lr) = round(30/lr) pace grid, dip magnitude 0.0736349882819407 >= 0.05) is probed at NEIGHBORING W SCALINGS (the round-8 priced question): the {0.15, 0.2, 0.25} mini-grid at 0.5x (W {100, 75, 60}) and 2x (W {400, 300, 240}) of the registered windows, tau from the carried K4 law, wd 0, trivial world. Pre-registered shape: local-minimum survival at BOTH scalings, dip-depth monotone in W (the convergence-phase story: the dip site is nearest its floor at the registered window), monotone RECOVERY at the dip site along W",
+  1722→    "grid": {
+  1723→     "0.5x": {
+  1724→      "g(0.15,W100)": 0.5692660186806099,
+  1725→      "g(0.2,W75)": 0.6044818860554356,
+  1726→      "g(0.25,W60)": 0.6188174436817733
+  1727→     },
+  1728→     "1x_receipted": {
+  1729→      "g(0.15,W200)": 0.30409957215062605,
+  1730→      "g(0.2,W150)": 0.25369541417668573,
+  1731→      "g(0.25,W120)": 0.3505612327666269
+  1732→     },
+  1733→     "2x": {
+  1734→      "g(0.15,W400)": 0.13808047549701252,
+  1735→      "g(0.2,W300)": 0.1620743122201559,
+  1736→      "g(0.25,W240)": 0.14797584159818838
+  1737→     }
+  1738→    },
+  1739→    "dip_magnitudes": {
+  1740→     "0.5x": -0.01044015487424399,
+  1741→     "1x": 0.0736349882819407,
+  1742→     "2x": -0.019046153672555438
+  1743→    },
+  1744→    "receipted_findings_gate_nothing": {
+  1745→     "dipmag_0_5x >= 0.05": false,
+  1746→     "dipmag_2x >= 0.05": false,
+  1747→     "note": "the registered 0.05 dip-law gate's survival at the neighbor scalings — the round-8 priced question, answered as a finding"
+  1748→    },
+  1749→    "checks": {
+  1750→     "anchor_02_bit_exact": true,
+  1751→     "anchor_015_bit_exact": true,
+  1752→     "anchor_025_bit_exact": true,
+  1753→     "dipmag_1x_bit_exact": true,
+  1754→     "local_min_survives_0_5x_low": false,
+  1755→     "local_min_survives_0_5x_high": true,
+  1756→     "local_min_survives_2x_low": false,
+  1757→     "local_min_survives_2x_high": false,
+  1758→     "depth_05x_le_1x": true,
+  1759→     "depth_2x_ge_1x": false,
+  1760→     "recovery_short_side": true,
+  1761→     "recovery_long_side": true,
+  1762→     "all_finite": true
+  1763→    },
+  1764→    "all_checks_pass": false,
+  1765→    "fail_branches_priced": "any local-min leg fails = the dip is WINDOW-FRAGILE (the shape claim narrows to the registered W; the law gains a W-domain boundary on the failing side); dipmag(2x) < dipmag(1x) = the dip SATURATES with window scaling (the site is already at its floor at the registered W); dipmag(0.5x) > dipmag(1x) = the dip DEEPENS under contraction (the convergence-phase story refuted — amplitude-like behavior); a recovery leg fails = the site's adaptation is non-monotone in window depth (EMA/lr interference at depth)",
+  1766→    "claim": "DIP-LAW SHAPE: the lr-0.2 dip remains a local minimum under 0.5x/2x window scalings, deepening with window expansion, with monotone recovery along W",
+  1767→    "pass": false,
+  1768→    "void_as_gated": false
+  1769→   },
+  1770→   "prev": "e9482299152721db60dab54eaa5538215774650c54929d35c5e38f80988fc262",
+  1771→   "sha": "020b3cef5a9d89290299ef6a35b0680473b4fbf39f6f811dc89296cc1b78ca48"
+  1772→  },
+  1773→  {
+  1774→   "i": 23,
+  1775→   "id": "DOSE10_dose_decision_depth_ladder#23",
+  1776→   "type": "DOSE10_dose_decision_depth_ladder",
+  1777→   "payload": {
+  1778→    "law": "the round-9 CURE9 ordering-reversal FAIL deferred the dose decision with the reversal as the priced question; round 10 re-prices the ordering as a DEPTH LAW: the switch ratio on BOTH decayed arms at ALL FIVE shared-finite ladder depths (each arm at its own dose, the carried PLAST convention, the round-9 75k probe class), the pre-registered ordering-curve law Delta(d) = ratio(2e-4, d) - ratio(3e-4, d) STRICTLY DECREASING with EXACTLY ONE sign crossing d* (the receipted endpoints +0.01973914625535267 / -0.047261288378566135 are declared re-scoring anchors), all-engage legs, the |Wc| ladder re-bound bit-exact",
+  1779→    "ladder": {
+  1780→     "20000": {
+  1781→      "ratio_2e4": 0.6841500024733943,
+  1782→      "ratio_3e4": 0.6644108562180416,
+  1783→      "delta": 0.01973914625535267,
+  1784→      "wc_2e4": 11.130270846539293,
+  1785→      "wc_3e4": 9.769638164817229,
+  1786→      "first10_2e4": 0.0004852947458951283,
+  1787→      "last10_2e4": 0.0003320144016044773,
+  1788→      "first10_3e4": 0.0004499849251276307,
+  1789→      "last10_3e4": 0.0002989748693892605
+  1790→     },
+  1791→     "30000": {
+  1792→      "ratio_2e4": 0.6770690708450811,
+  1793→      "ratio_3e4": 0.6463475830590938,
+  1794→      "delta": 0.030721487785987267,
+  1795→      "wc_2e4": 10.284571782125024,
+  1796→      "wc_3e4": 8.803594735118917,
+  1797→      "first10_2e4": 0.00046768619115508117,
+  1798→      "last10_2e4": 0.0003166558548924458,
+  1799→      "first10_3e4": 0.00041833540117081357,
+  1800→      "last10_3e4": 0.00027039007545481174
+  1801→     },
+  1802→     "40000": {
+  1803→      "ratio_2e4": 0.6721661790413602,
+  1804→      "ratio_3e4": 0.6401973684680589,
+  1805→      "delta": 0.031968810573301365,
+  1806→      "wc_2e4": 9.687502951781555,
+  1807→      "wc_3e4": 8.107602218267036,
+  1808→      "first10_2e4": 0.0004505108994094176,
+  1809→      "last10_2e4": 0.0003028181898725148,
+  1810→      "first10_3e4": 0.0003843235905400959,
+  1811→      "last10_3e4": 0.00024604295130396515
+  1812→     },
+  1813→     "50000": {
+  1814→      "ratio_2e4": 0.6496072946519339,
+  1815→      "ratio_3e4": 0.6214399319610716,
+  1816→      "delta": 0.028167362690862285,
+  1817→      "wc_2e4": 9.25800362624802,
+  1818→      "wc_3e4": 7.5690166212299825,
+  1819→      "first10_2e4": 0.0004459546199132006,
+  1820→      "last10_2e4": 0.0002896953741793457,
+  1821→      "first10_3e4": 0.000360392518018215,
+  1822→      "last10_3e4": 0.0002239623018765188
+  1823→     },
+  1824→     "75000": {
+  1825→      "ratio_2e4": 0.5507446127932,
+  1826→      "ratio_3e4": 0.5980059011717661,
+  1827→      "delta": -0.047261288378566135,
+  1828→      "wc_2e4": 8.691686529662682,
+  1829→      "wc_3e4": 6.443616949719879,
+  1830→      "first10_2e4": 0.00046412225324707535,
+  1831→      "last10_2e4": 0.000255612830653268,
+  1832→      "first10_3e4": 0.00028983739376231354,
+  1833→      "last10_3e4": 0.00017332447185010834
+  1834→     }
+  1835→    },
+  1836→    "ordering_curve": {
+  1837→     "delta_strictly_decreasing": false,
+  1838→     "sign_crossings": 1,
+  1839→     "d_star": 75000,
+  1840→     "d_star_meaning": "the first ladder depth where ratio(2e-4) < ratio(3e-4) — the milder cure becomes the faster re-adapter from here to the deepest shared-finite state"
+  1841→    },
+  1842→    "mechanism_finding_gate_nothing": {
+  1843→     "spearman_pooled_wc_vs_ratio": 0.9151515151515152,
+  1844→     "wc_gap_by_depth": {
+  1845→      "20000": 1.3606326817220644,
+  1846→      "30000": 1.4809770470061068,
+  1847→      "40000": 1.5799007335145188,
+  1848→      "50000": 1.6889870050180367,
+  1849→      "75000": 2.248069579942803
+  1850→     },
+  1851→     "note": "the receipted |Wc| gap GROWS monotonically with depth (1.36 -> 2.25) while the ordering INVERTS — |Wc| room cannot be the ordering carrier at depth (the round-8 20k law, Spearman 1.0, re-scored pooled across the ladder)"
+  1852→    },
+  1853→    "checks": {
+  1854→     "rate_2e4_bit_exact": true,
+  1855→     "rate_negative": true,
+  1856→     "D_bit_exact_85387": true,
+  1857→     "exec_bit_exact_85387": true,
+  1858→     "main_arm_bound": true,
+  1859→     "ratio_2e4_20k_bit_exact": true,
+  1860→     "ratio_3e4_20k_bit_exact": true,
+  1861→     "ratio_2e4_75k_bit_exact": true,
+  1862→     "ratio_3e4_75k_bit_exact": true,
+  1863→     "wc_ladder_2e4_bit_exact": true,
+  1864→     "wc_ladder_3e4_bit_exact": true,
+  1865→     "wc_capture_validated": true,
+  1866→     "engage_all_depths_both_arms": true,
+  1867→     "delta_strictly_decreasing": false,
+  1868→     "delta_single_crossing": true,
+  1869→     "dstar_bracketed": true,
+  1870→     "all_finite": true
+  1871→    },
+  1872→    "all_checks_pass": false,
+  1873→    "fail_branches_priced": "re-bind fails = infra drift (RETAIN wd 3e-4 outright, candidate demoted); engage fails at any depth on either arm = the plasticity advantage is not robust across the finite ladder (decision DEFERRED again, 2e-4 stays candidate-only); the curve is not strictly decreasing or has multiple crossings = the reversal is NOT a lawful depth phenomenon (ordering mechanism re-priced as multi-factor, decision DEFERRED, 2e-4 neither confirmed nor demoted)",
+  1874→    "decision_on_pass": "wd 2e-4 CONFIRMED as the plasticity dose of the TWO-DOSE REGIME for round 11 (the cured dose of record for deep-window re-adaptation — the faster re-adapter at every ladder depth >= d*, including the deepest shared-finite state 75000); wd 3e-4 REMAINS the longevity main dose UNCHANGED (and the receipted faster re-adapter for shallow windows d < d*); the |Wc|-room mechanism is RE-PRICED depth-refuted as the ordering carrier; the dose-selection question is CLOSED — the crossing law d* joins the operating point of record",
+  1875→    "claim": "THE DOSE DECISION: the ordering reversal is a lawful depth phenomenon (single crossing) and the cured dose engages at every finite depth on both arms",
+  1876→    "pass": false,
+  1877→    "void_as_gated": false
+  1878→   },
+  1879→   "prev": "020b3cef5a9d89290299ef6a35b0680473b4fbf39f6f811dc89296cc1b78ca48",
+  1880→   "sha": "5d915bbbc34dddec3f6f8f4411d4577d9143e7b2cd5c302a0683f3d274aca929"
+  1881→  },
+  1882→  {
+  1883→   "i": 24,
+  1884→   "id": "SAT10_fourth_switch_plateau#24",
+  1885→   "type": "SAT10_fourth_switch_plateau",
+  1886→   "payload": {
+  1887→    "law": "the round-9 SAT9 finding (curve FLAT at rho20_3 = 0.9553466155442152, increment collapsed 71x to 0.0003327380566972016, trivial-world readout only) prices its successor on a FOURTH switch over TWO cascades (both from the arms' own 20k snapshots, no weight reset, 400 steps/stage, both arms at their own dose): the registered D-cascade (trivial -> World2(seedB = 1657638767) -> World2(seedC = 2856986428) -> World2(seedD = 808219675)) with the pre-registered FLAT-PLATEAU continuation rho20_4 ∈ [rho20_3, 1) and non-expanding increment, and the DIFFERENT-PROBE-WORLD E-cascade (stage-1 window on a fresh World2(seedE = 3972732037) — the round-9 trivial-world caveat's priced answer) with rho20_4^E < 1.0; the control's D-cascade stage-4 leg (0.976422859819224) and E-cascade stage-1..4 legs are the design10 disclosures, bound bit-exact; ALL decayed fourth-switch legs are first measured in run10",
+  1888→    "stages": {
+  1889→     "dcascade_decayed_3e4": {
+  1890→      "ratio1": 0.6644108562180416,
+  1891→      "ratio2": 1.1268925734915027,
+  1892→      "ratio3": 0.7025685901201354,
+  1893→      "ratio4": 0.9491609473533265,
+  1894→      "first10_4": 0.00063373491123632,
+  1895→      "last10_4": 0.0006015164287199417,
+  1896→      "end_wc": {
+  1897→       "after2": 9.467373780715064,
+  1898→       "after3": 9.38074682340556,
+  1899→       "after4": 9.364991121950265
+  1900→      }
+  1901→     },
+  1902→     "dcascade_control_wd0": {
+  1903→      "ratio1": 0.7135257300287862,
+  1904→      "ratio2": 1.17997507686084,
+  1905→      "ratio3": 0.7354070016984524,
+  1906→      "ratio4": 0.976422859819224,
+  1907→      "first10_4": 0.0008566096964317725,
+  1908→      "last10_4": 0.0008364132895387887,
+  1909→      "end_wc": {
+  1910→       "after2": 17.693144881570092,
+  1911→       "after3": 17.679359103847727,
+  1912→       "after4": 17.760185404934926
+  1913→      }
+  1914→     },
+  1915→     "ecascade_decayed_3e4": {
+  1916→      "ratio1": 0.6937080013378479,
+  1917→      "ratio2": 1.1560282592302051,
+  1918→      "ratio3": 0.6931542618895913,
+  1919→      "ratio4": 0.9595995448457966,
+  1920→      "first10_4": 0.0006220738298734279,
+  1921→      "last10_4": 0.0005969417640070229,
+  1922→      "end4_wc": 9.38646432529357
+  1923→     },
+  1924→     "ecascade_control_wd0": {
+  1925→      "ratio1": 0.7339388216462988,
+  1926→      "ratio2": 1.1899577897104565,
+  1927→      "ratio3": 0.7320487218963793,
+  1928→      "ratio4": 0.9776795481211076,
+  1929→      "first10_4": 0.0008490242254007265,
+  1930→      "last10_4": 0.0008300736210336557,
+  1931→      "end4_wc": 17.76983578233187
+  1932→     }
+  1933→    },
+  1934→    "saturation_curve": {
+  1935→     "rho20_1": 0.9311659387409014,
+  1936→     "rho20_2": 0.955013877487518,
+  1937→     "rho20_3": 0.9553466155442152,
+  1938→     "rho20_4": 0.9720798092837104,
+  1939→     "rho20_4_E": 0.9815072297359018,
+  1940→     "inc3": 0.0003327380566972016,
+  1941→     "inc4": 0.016733193739495222,
+  1942→     "expected_branch": "rho20_4 ∈ [rho20_3, 1) AND inc4 <= inc3 (FLAT PLATEAU) AND rho20_4^E < 1.0 (advantage persists in the different probe world)"
+  1943→    },
+  1944→    "seeds": {
+  1945→     "seed_d": 808219675,
+  1946→     "seed_e": 3972732037
+  1947→    },
+  1948→    "checks": {
+  1949→     "dc_stage1_decayed_bit_exact": true,
+  1950→     "dc_stage2_decayed_bit_exact": true,
+  1951→     "dc_end1_sha_decayed_bit_exact": true,
+  1952→     "dc_stage3_decayed_rebinds_run9": true,
+  1953→     "dc_stage1_control_bit_exact": true,
+  1954→     "dc_stage2_control_bit_exact": true,
+  1955→     "dc_end1_sha_control_bit_exact": true,
+  1956→     "dc_stage3_control_bit_exact": true,
+  1957→     "dc_stage4_control_design10_bit_exact": true,
+  1958→     "plateau_persists": true,
+  1959→     "increment_not_expanding": false,
+  1960→     "composition_end2": true,
+  1961→     "composition_end3": true,
+  1962→     "composition_end4": true,
+  1963→     "ec_stage1_control_bit_exact": true,
+  1964→     "ec_stage2_control_bit_exact": true,
+  1965→     "ec_stage3_control_bit_exact": true,
+  1966→     "ec_stage4_control_bit_exact": true,
+  1967→     "ec_advantage_persists": true,
+  1968→     "ec_composition_end4": true,
+  1969→     "all_finite": true
+  1970→    },
+  1971→    "all_checks_pass": false,
+  1972→    "fail_branches_priced": "rho20_4 >= 1 = WASHOUT at the fourth switch (the plateau breaks); rho20_4 < rho20_3 = COMPOUNDING RESUMES (contradicts the round-8/9 sealed findings, re-opens the question); inc4 > inc3 while rho20_4 < 1 = EXPANDING STEPS (convex wash-out precursor); rho20_4^E >= 1 = the plateau is a TRIVIAL-WORLD ARTIFACT (the advantage does not survive the all-hard-world cascade); a composition leg fails = the room is consumed by re-adaptation",
+  1973→    "claim": "FOURTH-SWITCH PLATEAU: the plasticity advantage holds flat through the fourth switch on the registered cascade AND persists in a different probe world, with its |Wc|-room carrier intact",
+  1974→    "pass": false,
+  1975→    "void_as_gated": false
+  1976→   },
+  1977→   "prev": "5d915bbbc34dddec3f6f8f4411d4577d9143e7b2cd5c302a0683f3d274aca929",
+  1978→   "sha": "12a320910c26329dd9186e7921e2c67296afcd86e175cabc286fb65dcba91c2b"
+  1979→  },
+  1980→  {
+  1981→   "i": 25,
+  1982→   "id": "DIP10_dip_w_domain#25",
+  1983→   "type": "DIP10_dip_w_domain",
+  1984→   "payload": {
+  1985→    "law": "the round-9 DIP9 FAIL proved the lr-0.2 dip's local-minimum shape is WINDOW-FRAGILE on both sides (0.5x kills the left flank, 2x makes the site a local max) and priced this round's boundary mapping: the {0.15, 0.2, 0.25} mini-grid at THIRTEEN window scales W_s(lr) = round(s*30/lr) — LOW {0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95} bracketing the birth, HIGH {1.1, 1.25, 1.5, 1.75} bracketing the death — THIRTY-NINE new points, tau from the carried K4 law, wd 0, trivial world; pre-registered: BIRTH (localMin(0.95) TRUE, left inequality holds at 0.9 fails at 0.55, right inequality holds at EVERY low scale), DEATH (localMin(1.75) FALSE, localMin(1.1) TRUE), INTERVAL (<= 1 localMin flip along each ordered ladder), GATE DOMAIN (dipmag(0.55) < 0.05 AND dipmag(1.75) < 0.05)",
+  1986→    "scan": {
+  1987→     "0.55": {
+  1988→      "w015": 110,
+  1989→      "w020": 83,
+  1990→      "w025": 66,
+  1991→      "g015": 0.5972086312455835,
+  1992→      "g020": 0.5209338182506718,
+  1993→      "g025": 0.5936873967383857,
+  1994→      "dipmag": 0.0745141957413129,
+  1995→      "left": true,
+  1996→      "right": true,
+  1997→      "localmin": true
+  1998→     },
+  1999→     "0.6": {
+  2000→      "w015": 120,
+
+[showing lines 1-2000 of 2343; use offset=2001 with limit to continue reading]

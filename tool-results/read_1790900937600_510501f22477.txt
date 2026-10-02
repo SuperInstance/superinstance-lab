@@ -1,0 +1,427 @@
+     1→     1→// probe9.mjs — quilt-jepa ROUND 9 (wave 63, lane 63-b). PRE-SEAL pipeline validation —
+     2→     2→// GATES NOTHING. Follows the round-7/8 discipline (probe7/design7, probe8/design8): the probe
+     3→     3→// measures NO round-9 claim value except the ones DISCLOSED here and bound bit-exact in the run.
+     4→     4→// Identities (all must be TRUE for the receipt to say all_identities_pass):
+     5→     5→//   I-E9  Jepa4(seed, wd=0) == Jepa3(seed) 400-step identity (losses AND all three weight
+     6→     6→//         matrices) — the carried fail-closed identity re-verified in the round-9 environment.
+     7→     7→//   I-A9  CURED-DOSE capture-extension identity: the wd 2e-4 arm via horizonRun5 WITH
+     8→     8→//         captureAt=[20000, 75000] (executed twice) reproduces the receipted arm BIT-EXACTLY
+     9→     9→//         (D = 85387 == executed_to vs run7/run8, slow rate -3.778708210171146e-6, wc norms at
+    10→    10→//         400/20000 vs design8 I-B + run8 metrics8) and each captured snapshot's |Wc| equals the
+    11→    11→//         arm's own checkpoint norm bit-exactly; cross-execution snapshot shas bit-identical.
+    12→    12→//         Proves the round-9 read-only weight-capture extension perturbs no arithmetic.
+    13→    13→//         DISCLOSES wc75000(2e-4) + the two snapshot shas (unavoidably measured by the identity).
+    14→    14→//   I-B9  SATURATION-SUCCESSOR stage-path identity + DISCLOSED control value: two independent
+    15→    15→//         20000-step wd0 control slices capture BIT-IDENTICAL snapshots; the round-9
+    16→    16→//         trivialSwitchProbe3 (stage 1 trivial window -> stage 2 fresh World2(seedB) -> stage 3
+    17→    17→//         fresh World2(seedC), no weight reset between stages, each stage 400 steps) executed on
+    18→    18→//         the CONTROL arm reproduces run7's receipted control first-switch ratio
+    19→    19→//         0.7135257300287862 AND run8's receipted control second-switch ratio 1.17997507686084
+    20→    20→//         AND run8's receipted stage-1 end-weights sha BIT-EXACTLY; the full 3-stage path
+    21→    21→//         executed twice is bit-identical. The control's THIRD-switch ratio (fresh World2 at the
+    22→    22→//         round-9 derived seedC, 400 steps) is a NEW number the pipeline computes here —
+    23→    23→//         DISCLOSED in registration-v9 and bound bit-exact in the run (the round-7/8 disclosure
+    24→    24→//         pattern). It gates nothing by itself: the SAT9 gates act on
+    25→    25→//         rho20_3 = ratio3(3e-4)/ratio3(wd0), whose DECAYED leg is measured for the first time
+    26→    26→//         inside run9.
+    27→    27→//   I-D9  carried GWIN anchor identity: gGateFlex(0.3, W100, wd0) == run4.metrics.g_ratio.
+    28→    28→//   I-F9  DIP9 1x-row anchor identity: gGateFlex at the receipted registered-window row —
+    29→    29→//         g(0.2, W150) === run7.metrics_round7.gwin7_g_02, g(0.15, W200) === design6 partC,
+    30→    30→//         g(0.25, W120) === run7.metrics_round7.gwin7_g_025 (all three receipted; tau from the
+    31→    31→//         carried K4 law) — proves the exact (lr, tau, W, wd=0, trivial world) path DIP9 uses.
+    32→    32→'use strict';
+    33→    33→import fs from 'node:fs';
+    34→    34→import path from 'node:path';
+    35→    35→import crypto from 'node:crypto';
+    36→    36→import { createRequire } from 'node:module';
+    37→    37→const require = createRequire(import.meta.url);
+    38→    38→const { GRID, xorshift32 } = require('./core/world2.js');
+    39→    39→const { World } = require('./core/world.js');
+    40→    40→const { World2 } = require('./core/world2.js');
+    41→    41→const { CELLS, LAT } = require('./core/jepa.js');
+    42→    42→const { Jepa3 } = require('./core/jepa3.js');
+    43→    43→const { Jepa4 } = require('./core/jepa4.js');
+    44→    44→
+    45→    45→const HERE = path.dirname(new URL(import.meta.url).pathname);
+    46→    46→const RECEIPTS = path.join(HERE, 'receipts');
+    47→    47→fs.mkdirSync(RECEIPTS, { recursive: true });
+    48→    48→
+    49→    49→const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
+    50→    50→function mean(a) { return a.reduce((x, y) => x + y, 0) / a.length; }
+    51→    51→const LR3 = 0.3;      // registered lr (carried)
+    52→    52→const TAU4 = 0.99998; // registered round-4 tau (carried)
+    53→    53→const K4 = 1.5e-6;    // registered pace-law constant (carried)
+    54→    54→const T_HORIZON = 500000;
+    55→    55→const CONTRAST_CAP = 100000;
+    56→    56→const WD_MAIN = 3e-4;
+    57→    57→const WD_CURE = 2e-4; // the round-8 registered cured-dose candidate (round-9 claim arm)
+    58→    58→const RLONG_CKPTS = [400, 1000, 5000, 10000, 20000, 30000, 40000, 50000, 75000, 100000, 150000, 200000, 300000, 400000, 500000];
+    59→    59→const PLAST_STEPS = 400;
+    60→    60→const R9_SEEDC_SUFFIX = '|round9-worldC'; // round-9 seedC derivation suffix (registered; no new entropy)
+    61→    61→const norm64 = (W) => { let s = 0; for (let i = 0; i < W.length; i++) s += W[i] * W[i]; return Math.sqrt(s); };
+    62→    62→const weightSha = (je) => sha(Buffer.concat([Buffer.from(je.Wc.buffer, je.Wc.byteOffset, je.Wc.byteLength),
+    63→    63→                                             Buffer.from(je.Wp.buffer, je.Wp.byteOffset, je.Wp.byteLength),
+    64→    64→                                             Buffer.from(je.Wt.buffer, je.Wt.byteOffset, je.Wt.byteLength)]));
+    65→    65→const snapSha = (snap) => sha(Buffer.concat([Buffer.from(snap.Wc.buffer, snap.Wc.byteOffset, snap.Wc.byteLength),
+    66→    66→                                             Buffer.from(snap.Wp.buffer, snap.Wp.byteOffset, snap.Wp.byteLength),
+    67→    67→                                             Buffer.from(snap.Wt.buffer, snap.Wt.byteOffset, snap.Wt.byteLength)]));
+    68→    68→
+    69→    69→// ---------- fail-closed seal verification against the LAST SEALED registration (round-8) ----------
+    70→    70→const REG = path.join(HERE, 'registration-v8.json');
+    71→    71→const raw = fs.readFileSync(REG, 'utf8');
+    72→    72→const reg = JSON.parse(raw);
+    73→    73→const storedMasked = reg.registration.seal.self_sha256_masked;
+    74→    74→const storedMtime = reg.registration.seal.mtime_local_ms;
+    75→    75→const maskedBody = raw.replace(`"self_sha256_masked": "${storedMasked}"`, `"self_sha256_masked": "${'0'.repeat(64)}"`);
+    76→    76→const recomputed = sha(maskedBody);
+    77→    77→const st = fs.statSync(REG);
+    78→    78→if (recomputed !== storedMasked) {
+    79→    79→  console.error('SEAL VERIFICATION FAILED: masked sha mismatch — probe REFUSED (fail-closed). stored=' + storedMasked.slice(0, 12) + ' recomputed=' + recomputed.slice(0, 12));
+    80→    80→  process.exit(2);
+    81→    81→}
+    82→    82→if (st.mtimeMs !== storedMtime) {
+    83→    83→  console.error('SEAL VERIFICATION FAILED: mtime ' + st.mtimeMs + ' != sealed ' + storedMtime + ' — probe REFUSED (fail-closed).');
+    84→    84→  process.exit(2);
+    85→    85→}
+    86→    86→console.log('seal verified (registration-v8): masked sha ' + storedMasked.slice(0, 12) + '… mtime ' + storedMtime);
+    87→    87→
+    88→    88→const design6 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'design6.json'), 'utf8'));
+    89→    89→const design8 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'design8.json'), 'utf8'));
+    90→    90→const run7 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run7.json'), 'utf8'));
+    91→    91→const run8 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run8.json'), 'utf8'));
+    92→    92→const run4 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run4.json'), 'utf8'));
+    93→    93→
+    94→    94→// ---------- certified seed + the round-8/round-9 worldB/worldC derivations ----------
+    95→    95→const seedReceipt = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'certified-seed.json'), 'utf8'));
+    96→    96→const selJson = JSON.stringify(seedReceipt.chosen.selected);
+    97→    97→const seedU32 = parseInt(sha(selJson).slice(0, 8), 16) >>> 0;
+    98→    98→const seedB = parseInt(sha(selJson + '|round8-worldB').slice(0, 8), 16) >>> 0;
+    99→    99→const seedC = parseInt(sha(selJson + R9_SEEDC_SUFFIX).slice(0, 8), 16) >>> 0;
+   100→   100→if (seedU32 !== 2133245488) { console.error('seed derivation drift: ' + seedU32); process.exit(2); }
+   101→   101→if (seedB !== design8.seed_b || seedB !== run8.seed_b) { console.error('seedB derivation drift: ' + seedB); process.exit(2); }
+   102→   102→console.log('seed_u32=' + seedU32 + ' seedB=' + seedB + ' (design8/run8-bound) seedC=' + seedC + ' (derivation: sha256(selJson' + JSON.stringify(R9_SEEDC_SUFFIX) + ').slice(0,8))');
+   103→   103→
+   104→   104→// ---------- horizonRun5 (verbatim from run8.mjs / probe8 lineage) ----------
+   105→   105→function horizonRun5(WorldCls, seedU32, lr, tau, wd, T, stopRule, ckpts, captureAt) {
+   106→   106→  const world = new WorldCls(seedU32);
+   107→   107→  const jepa = new Jepa4(seedU32, wd);
+   108→   108→  jepa.lr = lr; jepa.tau = tau;
+   109→   109→  const wt0 = Float32Array.from(jepa.Wt);
+   110→   110→  const wc0 = Float32Array.from(jepa.Wc);
+   111→   111→  const losses = [];
+   112→   112→  const checkpoints = {};
+   113→   113→  for (const k of ckpts) checkpoints[String(k)] = null;
+   114→   114→  const captureSet = new Set(captureAt);
+   115→   115→  const snapshots = {};
+   116→   116→  const ringWt = []; const ringWc = []; const ringWp = [];
+   117→   117→  let D = -1, executedTo = 0;
+   118→   118→  let allNanStep = -1, weightsAbsorbing = true, lossFiniteAgain = 0;
+   119→   119→  let obs = world.observe();
+   120→   120→  const limit = stopRule === 'registered' ? T : Math.min(T, CONTRAST_CAP);
+   121→   121→  const postDWindow = stopRule === 'registered' ? 2000 : 0;
+   122→   122→  const weightState = () => {
+   123→   123→    let anyFin = false;
+   124→   124→    for (const W of [jepa.Wc, jepa.Wp, jepa.Wt]) {
+   125→   125→      for (let i = 0; i < W.length; i++) { if (Number.isFinite(W[i])) { anyFin = true; break; } }
+   126→   126→      if (anyFin) break;
+   127→   127→    }
+   128→   128→    return { anyFin };
+   129→   129→  };
+   130→   130→  for (let t = 1; t <= limit; t++) {
+   131→   131→    world.step();
+   132→   132→    const o1 = world.observe();
+   133→   133→    const L = jepa.trainStep(obs, o1);
+   134→   134→    obs = o1;
+   135→   135→    losses.push(L);
+   136→   136→    executedTo = t;
+   137→   137→    if (Number.isFinite(L)) {
+   138→   138→      if (D > 0) lossFiniteAgain++;
+   139→   139→      else {
+   140→   140→        ringWt.push(Float32Array.from(jepa.Wt)); ringWc.push(Float32Array.from(jepa.Wc)); ringWp.push(Float32Array.from(jepa.Wp));
+   141→   141→        if (ringWt.length > 201) { ringWt.shift(); ringWc.shift(); ringWp.shift(); }
+   142→   142→        if (ckpts.includes(t)) {
+   143→   143→          checkpoints[String(t)] = {
+   144→   144→            wt_move_rel: relDisp(jepa.Wt, wt0), wc_move_rel: relDisp(jepa.Wc, wc0),
+   145→   145→            wt_norm: norm64(jepa.Wt), wc_norm: norm64(jepa.Wc), wp_norm: norm64(jepa.Wp),
+   146→   146→            loss_mean_500: mean(losses.slice(Math.max(0, t - 500), t))
+   147→   147→          };
+   148→   148→        }
+   149→   149→        if (captureSet.has(t)) {
+   150→   150→          snapshots[String(t)] = { Wc: Float32Array.from(jepa.Wc), Wp: Float32Array.from(jepa.Wp), Wt: Float32Array.from(jepa.Wt) };
+   151→   151→        }
+   152→   152→      }
+   153→   153→    } else if (D < 0) {
+   154→   154→      D = t;
+   155→   155→      if (stopRule !== 'registered') break;
+   156→   156→    }
+   157→   157→    if (D > 0 && t > D && t <= D + postDWindow) {
+   158→   158→      const ws = weightState();
+   159→   159→      if (!ws.anyFin) { if (allNanStep < 0) allNanStep = t; }
+   160→   160→      else if (allNanStep > 0) weightsAbsorbing = false;
+   161→   161→      if (t >= D + postDWindow) break;
+   162→   162→    }
+   163→   163→  }
+   164→   164→  const finOrNull = (x) => (Number.isFinite(x) ? x : null);
+   165→   165→  const finite = losses.filter(Number.isFinite);
+   166→   166→  const out = {
+   167→   167→    lr, tau, wd, world: WorldCls === World ? 'trivial' : 'world2',
+   168→   168→    T_registered: T, stop_rule: stopRule, cap: stopRule === 'registered' ? null : CONTRAST_CAP,
+   169→   169→    executed_to: executedTo,
+   170→   170→    D: D > 0 ? D : null, diverged: D > 0,
+   171→   171→    D_mod80: D > 0 ? D % 80 : null,
+   172→   172→    all_weights_nan_step: D > 0 ? (allNanStep > 0 ? allNanStep : null) : null,
+   173→   173→    weights_all_nan_at_end: D > 0 ? !weightState().anyFin : null,
+   174→   174→    weights_nan_absorbing: D > 0 ? (allNanStep > 0 && weightsAbsorbing) : null,
+   175→   175→    loss_finite_again_count: D > 0 ? lossFiniteAgain : null,
+   176→   176→    first10: mean(losses.slice(0, 10)),
+   177→   177→    last_finite10_tail: finite.length >= 10 ? mean(finite.slice(-10)) : null,
+   178→   178→    loss_ratio_finite_tail: finite.length >= 10 ? mean(finite.slice(-10)) / mean(losses.slice(0, 10)) : null,
+   179→   179→    loss_ratio_at_20000: finite.length >= 20000 ? mean(finite.slice(19990, 20000)) / mean(losses.slice(0, 10)) : null,
+   180→   180→    checkpoints,
+   181→   181→    captured_at: Object.keys(snapshots).map(Number),
+   182→   182→    snapshots,
+   183→   183→    drift_last200: null, wc_norm_at_last_finite: null, wp_norm_at_last_finite: null,
+   184→   184→    blowup_rate_last200: null
+   185→   185→  };
+   186→   186→  if (D > 201 && ringWt.length === 201) {
+   187→   187→    const a = ringWt[0], b = ringWt[200];
+   188→   188→    let drift = 0, n2 = 0;
+   189→   189→    for (let i = 0; i < a.length; i++) { const d = b[i] - a[i]; drift += d * d; n2 += b[i] * b[i]; }
+   190→   190→    out.drift_last200 = finOrNull(Math.sqrt(drift) / Math.sqrt(n2));
+   191→   191→    const wa = ringWc[0], wb = ringWc[200];
+   192→   192→    out.blowup_rate_last200 = finOrNull(Math.log(norm64(wb) / norm64(wa)) / 200);
+   193→   193→    out.wc_norm_at_last_finite = finOrNull(norm64(ringWc[200]));
+   194→   194→    out.wp_norm_at_last_finite = finOrNull(norm64(ringWp[200]));
+   195→   195→  }
+   196→   196→  return out;
+   197→   197→}
+   198→   198→const relDisp = (W, W0) => { let d = 0, n = 0; for (let i = 0; i < W.length; i++) { const dd = W[i] - W0[i]; d += dd * dd; n += W[i] * W[i]; } return Math.sqrt(d) / Math.sqrt(n); };
+   199→   199→
+   200→   200→// ---------- gGateFlex (verbatim from run8.mjs lineage) ----------
+   201→   201→function gGateFlex(seedU32, lr, tau, wd, steps) {
+   202→   202→  const world = new World(seedU32);
+   203→   203→  const jepa = new Jepa4(seedU32, wd);
+   204→   204→  jepa.lr = lr; jepa.tau = tau;
+   205→   205→  const losses = [];
+   206→   206→  let obs = world.observe();
+   207→   207→  for (let t = 0; t < steps; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+   208→   208→  return { g_ratio: mean(losses.slice(-10)) / mean(losses.slice(0, 10)), g_first10: mean(losses.slice(0, 10)), g_last10: mean(losses.slice(-10)) };
+   209→   209→}
+   210→   210→
+   211→   211→// ---------- trivialSwitchProbe (verbatim — the carried PLAST readout) ----------
+   212→   212→function trivialSwitchProbe(seedU32, lr, tau, wd, snap, steps) {
+   213→   213→  const world = new World(seedU32);
+   214→   214→  const jepa = new Jepa4(seedU32, wd);
+   215→   215→  jepa.lr = lr; jepa.tau = tau;
+   216→   216→  jepa.Wc.set(snap.Wc); jepa.Wp.set(snap.Wp); jepa.Wt.set(snap.Wt);
+   217→   217→  const losses = [];
+   218→   218→  let obs = world.observe();
+   219→   219→  for (let t = 0; t < steps; t++) { world.step(); const o1 = world.observe(); losses.push(jepa.trainStep(obs, o1)); obs = o1; }
+   220→   220→  return { ratio: mean(losses.slice(-10)) / mean(losses.slice(0, 10)), first10: mean(losses.slice(0, 10)), last10: mean(losses.slice(-10)) };
+   221→   221→}
+   222→   222→
+   223→   223→// ---------- trivialSwitchProbe2 (ROUND 8, verbatim — stage 1 + stage 2) ----------
+   224→   224→function trivialSwitchProbe2(seedU32, seedB, lr, tau, wd, snap, steps) {
+   225→   225→  const world = new World(seedU32);
+   226→   226→  const jepa = new Jepa4(seedU32, wd);
+   227→   227→  jepa.lr = lr; jepa.tau = tau;
+   228→   228→  jepa.Wc.set(snap.Wc); jepa.Wp.set(snap.Wp); jepa.Wt.set(snap.Wt);
+   229→   229→  const losses1 = [];
+   230→   230→  let obs = world.observe();
+   231→   231→  for (let t = 0; t < steps; t++) { world.step(); const o1 = world.observe(); losses1.push(jepa.trainStep(obs, o1)); obs = o1; }
+   232→   232→  const endWc = Float32Array.from(jepa.Wc), endWp = Float32Array.from(jepa.Wp), endWt = Float32Array.from(jepa.Wt);
+   233→   233→  const world2 = new World2(seedB);
+   234→   234→  const losses2 = [];
+   235→   235→  obs = world2.observe();
+   236→   236→  for (let t = 0; t < steps; t++) { world2.step(); const o1 = world2.observe(); losses2.push(jepa.trainStep(obs, o1)); obs = o1; }
+   237→   237→  return {
+   238→   238→    ratio1: mean(losses1.slice(-10)) / mean(losses1.slice(0, 10)),
+   239→   239→    first10_1: mean(losses1.slice(0, 10)), last10_1: mean(losses1.slice(-10)),
+   240→   240→    ratio2: mean(losses2.slice(-10)) / mean(losses2.slice(0, 10)),
+   241→   241→    first10_2: mean(losses2.slice(0, 10)), last10_2: mean(losses2.slice(-10)),
+   242→   242→    end_weights_sha: sha(Buffer.concat([Buffer.from(endWc.buffer, endWc.byteOffset, endWc.byteLength),
+   243→   243→                                        Buffer.from(endWp.buffer, endWp.byteOffset, endWp.byteLength),
+   244→   244→                                        Buffer.from(endWt.buffer, endWt.byteOffset, endWt.byteLength)]))
+   245→   245→  };
+   246→   246→}
+   247→   247→
+   248→   248→// ---------- trivialSwitchProbe3 (ROUND 9 — runner-level addition per registration-v9):
+   249→   249→// stages 1 and 2 are ARITHMETIC-IDENTICAL to the carried trivialSwitchProbe2 (same worlds, same
+   250→   250→// weights, same 400-step windows — identity bound vs run8's receipted probe2 values on the
+   251→   251→// control path in I-B9, and re-bound in-run on BOTH arms); it adds per-stage end-weight capture
+   252→   252→// (norms after each stage) and the THIRD switch: a fresh World2(seedC) from its own t=0, 400
+   253→   253→// steps, continuing from the end state of stage 2 with NO weight reset between stages. ----------
+   254→   254→function trivialSwitchProbe3(seedU32, seedB, seedC, lr, tau, wd, snap, steps) {
+   255→   255→  const world = new World(seedU32);
+   256→   256→  const jepa = new Jepa4(seedU32, wd);
+   257→   257→  jepa.lr = lr; jepa.tau = tau;
+   258→   258→  jepa.Wc.set(snap.Wc); jepa.Wp.set(snap.Wp); jepa.Wt.set(snap.Wt);
+   259→   259→  const normNow = () => ({ wc_norm: norm64(jepa.Wc), wp_norm: norm64(jepa.Wp), wt_norm: norm64(jepa.Wt) });
+   260→   260→  const losses1 = [];
+   261→   261→  let obs = world.observe();
+   262→   262→  for (let t = 0; t < steps; t++) { world.step(); const o1 = world.observe(); losses1.push(jepa.trainStep(obs, o1)); obs = o1; }
+   263→   263→  const end1 = { sha: weightSha(jepa), norms: normNow() };
+   264→   264→  const world2 = new World2(seedB);
+   265→   265→  const losses2 = [];
+   266→   266→  obs = world2.observe();
+   267→   267→  for (let t = 0; t < steps; t++) { world2.step(); const o1 = world2.observe(); losses2.push(jepa.trainStep(obs, o1)); obs = o1; }
+   268→   268→  const end2 = { sha: weightSha(jepa), norms: normNow() };
+   269→   269→  const world3 = new World2(seedC);
+   270→   270→  const losses3 = [];
+   271→   271→  obs = world3.observe();
+   272→   272→  for (let t = 0; t < steps; t++) { world3.step(); const o1 = world3.observe(); losses3.push(jepa.trainStep(obs, o1)); obs = o1; }
+   273→   273→  const end3 = { sha: weightSha(jepa), norms: normNow() };
+   274→   274→  return {
+   275→   275→    ratio1: mean(losses1.slice(-10)) / mean(losses1.slice(0, 10)),
+   276→   276→    first10_1: mean(losses1.slice(0, 10)), last10_1: mean(losses1.slice(-10)),
+   277→   277→    ratio2: mean(losses2.slice(-10)) / mean(losses2.slice(0, 10)),
+   278→   278→    first10_2: mean(losses2.slice(0, 10)), last10_2: mean(losses2.slice(-10)),
+   279→   279→    ratio3: mean(losses3.slice(-10)) / mean(losses3.slice(0, 10)),
+   280→   280→    first10_3: mean(losses3.slice(0, 10)), last10_3: mean(losses3.slice(-10)),
+   281→   281→    end1, end2, end3
+   282→   282→  };
+   283→   283→}
+   284→   284→
+   285→   285→const T0 = Date.now();
+   286→   286→const out = { identities: {} };
+   287→   287→const I = out.identities;
+   288→   288→
+   289→   289→// ---------- I-E9: Jepa4-wd0 identity (carried, cheap, first) ----------
+   290→   290→{
+   291→   291→  const world = new World2(seedU32);
+   292→   292→  const a = new Jepa3(seedU32); a.lr = LR3; a.tau = TAU4;
+   293→   293→  const b = new Jepa4(seedU32, 0); b.lr = LR3; b.tau = TAU4;
+   294→   294→  const la = [], lb = [];
+   295→   295→  let obs = world.observe();
+   296→   296→  for (let t = 0; t < 400; t++) { world.step(); const o1 = world.observe(); la.push(a.trainStep(obs, o1)); lb.push(b.trainStep(obs, o1)); obs = o1; }
+   297→   297→  let lossesExact = true;
+   298→   298→  for (let i = 0; i < la.length; i++) if (la[i] !== lb[i]) { lossesExact = false; break; }
+   299→   299→  I.IE9_jepa4_wd0_identity = { steps: 400, losses_bit_exact: lossesExact, weights_bit_exact: weightSha(a) === weightSha(b), weights_sha: weightSha(a) };
+   300→   300→  console.log('I-E9 jepa4-wd0 identity:', lossesExact && weightSha(a) === weightSha(b));
+   301→   301→}
+   302→   302→
+   303→   303→// ---------- I-A9: cured-dose capture-extension identity on the 2e-4 arm ----------
+   304→   304→{
+   305→   305→  const armA = horizonRun5(World2, seedU32, LR3, TAU4, WD_CURE, T_HORIZON, 'contrast', RLONG_CKPTS, [20000, 75000]);
+   306→   306→  const armB = horizonRun5(World2, seedU32, LR3, TAU4, WD_CURE, T_HORIZON, 'contrast', RLONG_CKPTS, [20000, 75000]);
+   307→   307→  const slow = Math.log(armA.checkpoints['20000'].wc_norm / armA.checkpoints['400'].wc_norm) / 19600;
+   308→   308→  const receiptedRate = run7.metrics_round7.r7_rate_wd2e4;
+   309→   309→  const receiptedD = run7.metrics_round7.r7_D_wd2e4;
+   310→   310→  const receiptedExec = run7.metrics_round7.r7_exec_wd2e4;
+   311→   311→  const receiptedWc20k = run8.metrics_round8.r8_dose_wc_2e4;
+   312→   312→  const receiptedWc400 = design8.identities.IB_wd2e4_registered_prefix.wc400;
+   313→   313→  const snapNorm20k = norm64(armA.snapshots['20000'].Wc);
+   314→   314→  const snapNorm75k = norm64(armA.snapshots['75000'].Wc);
+   315→   315→  I.IA9_cure_capture_extension = {
+   316→   316→    capture_at: [20000, 75000],
+   317→   317→    D: armA.D, D_bit_exact_vs_receipts: armA.D === receiptedD && armA.D === run8.metrics_round8.r8_D_wd2e4 && armA.D === 85387,
+   318→   318→    executed_to: armA.executed_to, exec_bit_exact: armA.executed_to === receiptedExec && armA.executed_to === run8.metrics_round8.r8_exec_wd2e4,
+   319→   319→    slow, slow_bit_exact: slow === receiptedRate && slow === run8.metrics_round8.r8_rate_wd2e4,
+   320→   320→    wc400: armA.checkpoints['400'].wc_norm, wc400_bit_exact: armA.checkpoints['400'].wc_norm === receiptedWc400,
+   321→   321→    wc20000: armA.checkpoints['20000'].wc_norm, wc20000_bit_exact: armA.checkpoints['20000'].wc_norm === receiptedWc20k,
+   322→   322→    wc75000: armA.checkpoints['75000'].wc_norm,
+   323→   323→    captured_at: armA.captured_at,
+   324→   324→    snapshot_wc_norm_20000: snapNorm20k, snapshot_wc_norm_20000_bit_exact_vs_own_ckpt: snapNorm20k === armA.checkpoints['20000'].wc_norm,
+   325→   325→    snapshot_wc_norm_75000: snapNorm75k, snapshot_wc_norm_75000_bit_exact_vs_own_ckpt: snapNorm75k === armA.checkpoints['75000'].wc_norm,
+   326→   326→    cross_execution_snapshots_bit_identical: snapSha(armA.snapshots['20000']) === snapSha(armB.snapshots['20000'])
+   327→   327→      && snapSha(armA.snapshots['75000']) === snapSha(armB.snapshots['75000']) && armA.D === armB.D && armA.executed_to === armB.executed_to,
+   328→   328→    snapshot_sha_20000: snapSha(armA.snapshots['20000']),
+   329→   329→    snapshot_sha_75000: snapSha(armA.snapshots['75000']),
+   330→   330→    DISCLOSED_wc75000: armA.checkpoints['75000'].wc_norm,
+   331→   331→    disclosed_note: 'the cured-dose arm\'s 75000-checkpoint |Wc| and both snapshot shas — computed here because the I-A9 identity unavoidably executes the extended-capture path (round-7/8 disclosure pattern); the cured-dose 75000 SWITCH ratios are NOT measured anywhere pre-seal (first measured inside run9)'
+   332→   332→  };
+   333→   333→  console.log('I-A9 cure capture extension:', JSON.stringify(I.IA9_cure_capture_extension));
+   334→   334→}
+   335→   335→
+   336→   336→// ---------- I-B9: saturation-successor stage-path identity + DISCLOSED control third switch ----------
+   337→   337→{
+   338→   338→  const s1 = horizonRun5(World2, seedU32, LR3, TAU4, 0, 20000, 'registered', [20000], [20000]);
+   339→   339→  const s2 = horizonRun5(World2, seedU32, LR3, TAU4, 0, 20000, 'registered', [20000], [20000]);
+   340→   340→  const captureBitExact = snapSha(s1.snapshots['20000']) === snapSha(s2.snapshots['20000']);
+   341→   341→  const p3a = trivialSwitchProbe3(seedU32, seedB, seedC, LR3, TAU4, 0, s1.snapshots['20000'], PLAST_STEPS);
+   342→   342→  const p3b = trivialSwitchProbe3(seedU32, seedB, seedC, LR3, TAU4, 0, s2.snapshots['20000'], PLAST_STEPS);
+   343→   343→  const receiptedCtrl1 = run7.metrics_round7.plast_ratio_ctrl20k;                    // 0.7135257300287862
+   344→   344→  const receiptedCtrl2 = run8.metrics_round8.r8_ratio2_wd0;                          // 1.17997507686084
+   345→   345→  const receiptedCtrlEndSha1 = run8.metrics_round8.r8_end_weights_sha_control;       // probe2 stage-1 end sha
+   346→   346→  I.IB9_saturation_stage_path = {
+   347→   347→    snapshot_step: 20000, wd: 0,
+   348→   348→    capture_bit_exact_cross_execution: captureBitExact,
+   349→   349→    snapshot_weights_sha: snapSha(s1.snapshots['20000']),
+   350→   350→    stage1_ratio: p3a.ratio1, stage1_bit_exact_vs_run7_ctrl20k: p3a.ratio1 === receiptedCtrl1,
+   351→   351→    stage2_ratio: p3a.ratio2, stage2_bit_exact_vs_run8_ratio2_wd0: p3a.ratio2 === receiptedCtrl2,
+   352→   352→    stage1_end_sha: p3a.end1.sha, stage1_end_sha_bit_exact_vs_run8: p3a.end1.sha === receiptedCtrlEndSha1,
+   353→   353→    full_path_bit_exact_cross_execution: p3a.ratio1 === p3b.ratio1 && p3a.ratio2 === p3b.ratio2
+   354→   354→      && p3a.ratio3 === p3b.ratio3 && p3a.end2.sha === p3b.end2.sha && p3a.end3.sha === p3b.end3.sha,
+   355→   355→    seed_b: seedB, seed_c: seedC,
+   356→   356→    seed_c_derivation: 'seedC = parseInt(sha256(JSON.stringify(certified-seed.chosen.selected) + "|round9-worldC").slice(0, 8), 16) >>> 0 — deterministic derivation from the SAME certified seed receipt (no new entropy; the round-8 seedB pattern)',
+   357→   357→    DISCLOSED_control_third_switch_ratio: p3a.ratio3,
+   358→   358→    disclosed_note: 'the control leg of the round-9 SAT9 third-switch readout — computed here because the I-B9 identity unavoidably executes the full control path (round-7/8 disclosure pattern); the DECAYED leg is measured for the first time inside run9; this value gates nothing by itself (the SAT9 gates act on rho20_3 = ratio3(3e-4)/ratio3(wd0))',
+   359→   359→    control_third_switch_first10: p3a.first10_3, control_third_switch_last10: p3a.last10_3,
+   360→   360→    control_end2_norms: p3a.end2.norms, control_end3_norms: p3a.end3.norms
+   361→   361→  };
+   362→   362→  console.log('I-B9 saturation stage path:', JSON.stringify(I.IB9_saturation_stage_path));
+   363→   363→}
+   364→   364→
+   365→   365→// ---------- I-D9: carried GWIN anchor identity ----------
+   366→   366→{
+   367→   367→  const g = gGateFlex(seedU32, LR3, TAU4, 0, 100);
+   368→   368→  I.ID9_gwin_anchor = { g: g.g_ratio, run4_pin: run4.metrics.g_ratio, bit_exact: g.g_ratio === run4.metrics.g_ratio };
+   369→   369→  console.log('I-D9 gwin anchor:', JSON.stringify(I.ID9_gwin_anchor));
+   370→   370→}
+   371→   371→
+   372→   372→// ---------- I-F9: DIP9 1x-row anchor identity (the receipted registered-window row) ----------
+   373→   373→{
+   374→   374→  const tauOf = (lr) => 1 - K4 * LAT / lr;
+   375→   375→  const g02 = gGateFlex(seedU32, 0.2, tauOf(0.2), 0, 150);
+   376→   376→  const g015 = gGateFlex(seedU32, 0.15, tauOf(0.15), 0, 200);
+   377→   377→  const g025 = gGateFlex(seedU32, 0.25, tauOf(0.25), 0, 120);
+   378→   378→  I.IF9_dip9_row_anchors = {
+   379→   379→    g_02_w150: g02.g_ratio, g_02_bit_exact_vs_run7: g02.g_ratio === run7.metrics_round7.gwin7_g_02,
+   380→   380→    g_015_w200: g015.g_ratio, g_015_bit_exact_vs_design6: g015.g_ratio === design6.partC_gwindow.lr0_15_w200.g_ratio,
+   381→   381→    g_025_w120: g025.g_ratio, g_025_bit_exact_vs_run7: g025.g_ratio === run7.metrics_round7.gwin7_g_025,
+   382→   382→    dip_magnitude_1x: (g015.g_ratio + g025.g_ratio) / 2 - g02.g_ratio,
+   383→   383→    dip_magnitude_1x_bit_exact_vs_run8: ((g015.g_ratio + g025.g_ratio) / 2 - g02.g_ratio) === run8.metrics_round8.r8_dip_magnitude
+   384→   384→  };
+   385→   385→  console.log('I-F9 dip9 row anchors:', JSON.stringify(I.IF9_dip9_row_anchors));
+   386→   386→}
+   387→   387→
+   388→   388→const ids = [I.IE9_jepa4_wd0_identity, I.IA9_cure_capture_extension, I.IB9_saturation_stage_path, I.ID9_gwin_anchor, I.IF9_dip9_row_anchors];
+   389→   389→const bools = [
+   390→   390→  I.IE9_jepa4_wd0_identity.losses_bit_exact && I.IE9_jepa4_wd0_identity.weights_bit_exact,
+   391→   391→  I.IA9_cure_capture_extension.D_bit_exact_vs_receipts && I.IA9_cure_capture_extension.exec_bit_exact && I.IA9_cure_capture_extension.slow_bit_exact
+   392→   392→    && I.IA9_cure_capture_extension.wc400_bit_exact && I.IA9_cure_capture_extension.wc20000_bit_exact
+   393→   393→    && I.IA9_cure_capture_extension.snapshot_wc_norm_20000_bit_exact_vs_own_ckpt && I.IA9_cure_capture_extension.snapshot_wc_norm_75000_bit_exact_vs_own_ckpt
+   394→   394→    && I.IA9_cure_capture_extension.cross_execution_snapshots_bit_identical,
+   395→   395→  I.IB9_saturation_stage_path.capture_bit_exact_cross_execution && I.IB9_saturation_stage_path.stage1_bit_exact_vs_run7_ctrl20k
+   396→   396→    && I.IB9_saturation_stage_path.stage2_bit_exact_vs_run8_ratio2_wd0 && I.IB9_saturation_stage_path.stage1_end_sha_bit_exact_vs_run8
+   397→   397→    && I.IB9_saturation_stage_path.full_path_bit_exact_cross_execution,
+   398→   398→  I.ID9_gwin_anchor.bit_exact,
+   399→   399→  I.IF9_dip9_row_anchors.g_02_bit_exact_vs_run7 && I.IF9_dip9_row_anchors.g_015_bit_exact_vs_design6 && I.IF9_dip9_row_anchors.g_025_bit_exact_vs_run7
+   400→   400→    && I.IF9_dip9_row_anchors.dip_magnitude_1x_bit_exact_vs_run8
+   401→   401→];
+   402→   402→out.schema = 'quilt-jepa/design-probe-v9';
+   403→   403→out.note = 'PRE-SEAL pipeline validation for round 9 — GATES NOTHING. All identities are pipeline checks against already-receipted values (design6, design8, run4, run7, run8); no round-9 claim value is measured here except the DISCLOSED control third-switch ratio (I-B9) and the cured-dose arm\'s 75000-checkpoint |Wc| + snapshot shas (I-A9) — the round-7/8 disclosure patterns. The round-9 measurements (the decayed third-switch leg, rho20_3, the saturation-curve increments, the end-of-stage Wc compositions, the cured-dose 75000 switch ratios on both arms, the six DIP9 window-scaled g points) happen for the FIRST time inside run9.';
+   404→   404→out.seed_u32 = seedU32;
+   405→   405→out.seed_b = seedB;
+   406→   406→out.seed_c = seedC;
+   407→   407→out.seed_c_derivation = 'seedC = parseInt(sha256(JSON.stringify(certified-seed.chosen.selected) + "|round9-worldC").slice(0, 8), 16) >>> 0 — deterministic derivation from the SAME certified seed receipt as rounds 1-8 (no new entropy; the round-9 third-switch world is a fresh World2 at seedC from its own t=0)';
+   408→   408→out.disclosed_pipeline_values = {
+   409→   409→  control_third_switch_ratio: I.IB9_saturation_stage_path.DISCLOSED_control_third_switch_ratio,
+   410→   410→  control_third_switch_first10: I.IB9_saturation_stage_path.control_third_switch_first10,
+   411→   411→  control_third_switch_last10: I.IB9_saturation_stage_path.control_third_switch_last10,
+   412→   412→  control_first_switch_ratio: I.IB9_saturation_stage_path.stage1_ratio,
+   413→   413→  control_second_switch_ratio: I.IB9_saturation_stage_path.stage2_ratio,
+   414→   414→  control_snapshot_weights_sha: I.IB9_saturation_stage_path.snapshot_weights_sha,
+   415→   415→  control_end2_norms: I.IB9_saturation_stage_path.control_end2_norms,
+   416→   416→  control_end3_norms: I.IB9_saturation_stage_path.control_end3_norms,
+   417→   417→  cure_wc75000: I.IA9_cure_capture_extension.DISCLOSED_wc75000,
+   418→   418→  cure_snapshot_sha_20000: I.IA9_cure_capture_extension.snapshot_sha_20000,
+   419→   419→  cure_snapshot_sha_75000: I.IA9_cure_capture_extension.snapshot_sha_75000
+   420→   420→};
+   421→   421→out.all_identities_pass = bools.every(Boolean);
+   422→   422→out.identity_count = bools.length;
+   423→   423→out.wall_ms = Date.now() - T0;
+   424→   424→fs.writeFileSync(path.join(RECEIPTS, 'design9.json'), JSON.stringify(out, null, 1) + '\n');
+   425→   425→console.log('all identities pass:', out.all_identities_pass, '(' + bools.filter(Boolean).length + '/' + bools.length + ') wall_ms=' + out.wall_ms);
+   426→   426→if (!out.all_identities_pass) process.exit(1);
+   427→   427→

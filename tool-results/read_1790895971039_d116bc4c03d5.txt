@@ -1,0 +1,402 @@
+     1→  1669→}));
+     2→  1670→const loadStaging = () => { try { return JSON.parse(fs.readFileSync(STAGING, 'utf8')); } catch { return { stages: {} }; } };
+     3→  1671→const saveStaging = (st) => { const tmp = STAGING + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(st)); fs.renameSync(tmp, STAGING); };
+     4→  1672→
+     5→  1673→// ---------- execute ----------
+     6→  1674→const T0 = Date.now();
+     7→  1675→const seedReceipt = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'certified-seed.json'), 'utf8'));
+     8→  1676→const selJson = JSON.stringify(seedReceipt.chosen.selected);
+     9→  1677→const seedU32 = parseInt(sha(selJson).slice(0, 8), 16) >>> 0;
+    10→  1678→
+    11→  1679→const chain = new Chain();
+    12→  1680→chain.add('header', {
+    13→  1681→  repo: 'quilt-jepa', round: 8, executed_in: 'wave 62 (lane 62-a)', seed_u32: seedU32,
+    14→  1682→  seed_b: parseInt(sha(selJson + R8_SEEDB_SUFFIX).slice(0, 8), 16) >>> 0,
+    15→  1683→  seed_b_derivation: 'seedB = parseInt(sha256(selJson + "|round8-worldB").slice(0, 8), 16) >>> 0 — registered derivation from the SAME certified seed receipt (no new entropy)',
+    16→  1684→  seed_receipt: { label: seedReceipt.label, mode: seedReceipt.mode, schema: seedReceipt.schema, note: seedReceipt.note },
+    17→  1685→  registration: 'registration-v8.json (sealed pre-run, self_sha256_masked 260c01ba… + mtime 1790682000000; RE-VERIFIED fail-closed at this run\'s startup)',
+    18→  1686→  scope: 'round-4/5/6/7 operating point UNCHANGED (lr 0.3, tau 0.99998, K4 1.5e-6, amp 0.9; core/ byte-untouched) — carried claims re-scored (run4 29/29, run5 92/92, design6 AND run6 AND run7 bit-exact at all three metric layers, sha-level chain to run7.json R4 row) + 4 new claims: MECH plasticity-advantage mechanism (seven-dose |Wc|-ordering Spearman >= 0.75 + second-switch compounding rho20_2 < rho20_1), GWIN8 low-pace extension + dip law (g(0.1, W300) < 0.5; lr-0.2 dip LOCAL MINIMUM; dip magnitude >= 0.05 declared re-scoring), REDOSE main-dose re-registration decision (2e-4 per round-6 rules, guards UNRELAXED — no threshold surgery), OVERDECAY 1e-3 plasticity (engages from 20k/100k captures, no reversal vs main dose)',
+    19→  1687→  probe_provenance: 'probe8.mjs/design8.json receipted PRE-SEAL with 5 fail-closed pipeline identities (I-E Jepa4-wd0; I-A capture-extension on the wd0 anchor; I-B 2e-4 registered-prefix rate; I-C second-switch determinism + stage-1 arithmetic identity to the carried probe; I-D GWIN anchor) — ALL TRUE; the I-C identity unavoidably computed the CONTROL second-switch ratio (1.17997507686084) and first-switch ratio (0.7135257300287862) which are DISCLOSED in registration-v8 and bound bit-exact here; no other round-8 claim value measured pre-seal (no decayed second-switch leg, no new dose-curve ratio, no Spearman input beyond the receipted three, no guard value at 2e-4/2.5e-4, no g(0.1, W300))'
+    20→  1688→});
+    21→  1689→const staging = loadStaging();
+    22→  1690→staging.stages = staging.stages || {};
+    23→  1691→let r1, r2, q1, q2;
+    24→  1692→if (staging.stages.r1) { r1 = staging.stages.r1; console.error('[resume] coreRun5 #1 loaded from staging (sha_carried ' + r1.metricsSha.slice(0, 12) + '…)'); }
+    25→  1693→else { r1 = coreRun5(seedU32); staging.stages.r1 = pack(r1); saveStaging(staging); console.error('[progress] coreRun5 #1 done at', Date.now() - T0, 'ms — STAGED'); }
+    26→  1694→if (staging.stages.r2) { r2 = staging.stages.r2; console.error('[resume] coreRun5 #2 (twin) loaded from staging (sha_carried ' + r2.metricsSha.slice(0, 12) + '…)'); }
+    27→  1695→else { r2 = coreRun5(seedU32); staging.stages.r2 = pack(r2); saveStaging(staging); console.error('[progress] coreRun5 #2 (twin) done at', Date.now() - T0, 'ms — STAGED'); }
+    28→  1696→if (staging.stages.q1) { q1 = staging.stages.q1; console.error('[resume] coreRun8 #1 loaded from staging (sha8 ' + q1.metrics8Sha.slice(0, 12) + '…)'); }
+    29→  1697→else { q1 = coreRun8(seedU32); staging.stages.q1 = pack(q1); saveStaging(staging); console.error('[progress] coreRun8 #1 done at', Date.now() - T0, 'ms — STAGED'); }
+    30→  1698→if (staging.stages.q2) { q2 = staging.stages.q2; console.error('[resume] coreRun8 #2 (twin) loaded from staging (sha8 ' + q2.metrics8Sha.slice(0, 12) + '…)'); }
+    31→  1699→else { q2 = coreRun8(seedU32); staging.stages.q2 = pack(q2); saveStaging(staging); console.error('[progress] coreRun8 #2 (twin) done at', Date.now() - T0, 'ms — STAGED'); }
+    32→  1700→
+    33→  1701→// G gates everything downstream (registered verdict_rule)
+    34→  1702→const gPass = r1.g_ratio < 0.5;
+    35→  1703→chain.add('G_learning_sanity_gate', {
+    36→  1704→  ratio: r1.g_ratio, first10: r1.g_first10, last10: r1.g_last10, lr: LR3, tau: TAU4, steps: 100, world: 'trivial (core/world.js)',
+    37→  1705→  claim: 'last10/first10 < 0.5 on the trivial world at 100 steps (L1 law, carried)', pass: gPass,
+    38→  1706→  gate_note: gPass ? 'gate OPEN — downstream claims scored' : 'gate CLOSED — all downstream claims VOID-AS-GATED'
+    39→  1707→});
+    40→  1708→chain.add('L2_difficulty_meter', {
+    41→  1709→  floor_trivial: r1.l2_floor_trivial, floor_hard: r1.l2_floor_hard,
+    42→  1710→  ratio_trivial: r1.l2_ratio_trivial, ratio_hard: r1.l2_ratio_hard,
+    43→  1711→  init_trivial: r1.l2_init_trivial, init_hard: r1.l2_init_hard,
+    44→  1712→  claim: 'hard world linear floor exceeds trivial (absolute and relative) — the gate meter (carried)',
+    45→  1713→  pass: r1.l2_floor_hard > r1.l2_floor_trivial && r1.l2_ratio_hard > r1.l2_ratio_trivial
+    46→  1714→});
+    47→  1715→chain.add('R1_hard_world_learning', {
+    48→  1716→  ratio: r1.r1_ratio, first10: r1.r1_first10, last10: r1.r1_last10, lr: LR3, tau: TAU4, steps: 400,
+    49→  1717→  claim: 'last10/first10 < 0.5 on world2 (carried)', pass: r1.r1_ratio < 0.5,
+    50→  1718→  void_as_gated: !gPass
+    51→  1719→});
+    52→  1720→chain.add('R2v4_pace_aware_ema', {
+    53→  1721→  drift_ratio: r1.r2_drift_ratio, drift_gate: 0.01, tau: TAU4,
+    54→  1722→  g_ratio: r1.g_ratio, r1_ratio: r1.r1_ratio,
+    55→  1723→  var_ratio: r1.r3v4_var_ratio, var_gate: 0.5,
+    56→  1724→  wc_disp_200_400_rel: r1.r2v4_wc_disp_200_400_rel, wt_total_move_rel_400: r1.r2v4_wt_total_move_rel_400,
+    57→  1725→  claim: 'PACE-AWARE EMA LAW (carried): drift/norm < 0.01 AND g<0.5 AND r1<0.5 AND var_ratio>=0.5',
+    58→  1726→  pass: r1.r2_drift_ratio < 0.01 && r1.g_ratio < 0.5 && r1.r1_ratio < 0.5 && r1.r3v4_var_ratio >= 0.5,
+    59→  1727→  void_as_gated: !gPass
+    60→  1728→});
+    61→  1729→chain.add('R3v4_percentile_normalized_surprise', {
+    62→  1730→  z_ratio: r1.r3v4.v1_z_ratio, gate: 3.0,
+    63→  1731→  z_anomaly_mean: r1.r3v4.anomaly_vs_sample.z.anomaly_mean, z_sample_mean: r1.r3v4.anomaly_vs_sample.z.sample_mean,
+    64→  1732→  contrasts_gate_nothing: {
+    65→  1733→    raw_ratio: r1.r3v4.v0_raw_ratio, mad_ratio: r1.r3v4.v3_mad_ratio,
+    66→  1734→    rank_ratio_selfsel: r1.r3v4.v2_rank_ratio_selfsel, rank_ratio_rawsel: r1.r3v4.v2b_rank_ratio_rawsel,
+    67→  1735→    own_max_cells_anomaly_mean: r1.r3v4.own_max_cells_anomaly_mean, own_max_cells_sample_mean: r1.r3v4.own_max_cells_sample_mean,
+    68→  1736→    rank_excess_diff: r1.r3v4.v4_rank_excess_diff
+    69→  1737→  },
+    70→  1738→  claim: 'PERCENTILE-NORMALIZED SURPRISE LAW (carried): per-cell z vs own 124-tick baseline BEFORE concentration; top-4-by-z > 3.0',
+    71→  1739→  pass: r1.r3v4.v1_z_ratio > 3.0,
+    72→  1740→  anomalyTicks: ANOMALY_TICKS, void_as_gated: !gPass
+    73→  1741→});
+    74→  1742→// R3L: ladder saturation claim
+    75→  1743→{
+    76→  1744→  const L = r1.r3l;
+    77→  1745→  const amps = LADDER.map(String);
+    78→  1746→  let monotone = true;
+    79→  1747→  for (let i = 1; i < amps.length - 1; i++) if (L[amps[i]].z < L[amps[i - 1]].z) monotone = false;
+    80→  1748→  const z0 = L['0'].z, z075 = L['0.75'].z;
+    81→  1749→  const sat = r1.r3l_sat_bit_exact;
+    82→  1750→  const pass = z0 >= 0.9 && z0 <= 1.15 && monotone && sat && z075 > 3.0;
+    83→  1751→  chain.add('R3L_ladder_saturation', {
+    84→  1752→    ladder_z: Object.fromEntries(amps.map((a) => [a, L[a].z])),
+    85→  1753→    ladder_raw: Object.fromEntries(amps.map((a) => [a, L[a].raw])),
+    86→  1754→    ladder_var: Object.fromEntries(amps.map((a) => [a, L[a].var])),
+    87→  1755→    z_null_anchor: z0, z_null_band: [0.9, 1.15], monotone_up_to_anchor: monotone,
+    88→  1756→    sat_bit_exact: sat, z_0_75: z075,
+    89→  1757→    claim: 'ANOMALY-STRENGTH LADDER: null anchor carries no signal, ratio non-decreasing to the anchor, anchor at the clamp plateau (1.2 == 0.9 bit-exact on z/raw/mad), plateau above gate — REFUTES the widen-by-amplitude lever',
+    90→  1758→    pass, void_as_gated: !gPass
+    91→  1759→  });
+    92→  1760→}
+    93→  1761→// R2x: K4 cross-pace claim
+    94→  1762→{
+    95→  1763→  const a = r1.r2x['0.15'], b = r1.r2x['0.5'];
+    96→  1764→  const pass = a.r2_drift_ratio < 0.01 && b.r2_drift_ratio < 0.01 && b.g_ratio < 0.5 && b.r1_ratio < 0.5 && b.var_ratio >= 0.5;
+    97→  1765→  chain.add('R2x_k4_cross_pace', {
+    98→  1766→    lr_0_15: { tau: a.tau, pace: a.pace, drift: a.r2_drift_ratio, g: a.g_ratio, r1: a.r1_ratio, z: a.z_ratio_at_registered_amp, var: a.var_ratio, wcdisp: a.wc_disp_200_400_rel, wtmove: a.wt_total_move_rel_400 },
+    99→  1767→    lr_0_5: { tau: b.tau, pace: b.pace, drift: b.r2_drift_ratio, g: b.g_ratio, r1: b.r1_ratio, z: b.z_ratio_at_registered_amp, var: b.var_ratio, wcdisp: b.wc_disp_200_400_rel, wtmove: b.wt_total_move_rel_400 },
+   100→  1768→    g_pace_lock_finding: { lr: 0.15, g_ratio: a.g_ratio, gate: 0.5, exceeds: a.g_ratio > 0.5, note: 'REGISTERED FINDING, gates nothing here: the L1 G gate\'s fixed 100-step window is pace-locked; prices the round-6 candidate law G window ∝ 1/pace' },
+   101→  1769→    claim: 'K4 CROSS-PACE: same law constant transfers — drift < 0.01 at both second pace points AND all learning guards hold at lr=0.5',
+   102→  1770→    pass, void_as_gated: !gPass
+   103→  1771→  });
+   104→  1772→}
+   105→  1773→// RHOR: finite-horizon divergence claim
+   106→  1774→{
+   107→  1775→  const H = r1.rhor;
+   108→  1776→  const d5 = design5.partC_horizon;
+   109→  1777→  const pass = H.D >= 25000 && H.D <= 40000
+   110→  1778→    && H.D === d5.D
+   111→  1779→    && H.drift_at_depth_2000 < 0.01
+   112→  1780→    && H.var_ratio_after_depth_2000 >= 0.5
+   113→  1781→    && H.slow_inflation_rate < 1e-4
+   114→  1782→    && H.rate_ratio_runaway_over_slow > 100;
+   115→  1783→  chain.add('RHOR_finite_horizon_divergence', {
+   116→  1784→    D: H.D, D_band: [25000, 40000], D_mod80: H.D_mod80, executed_to: H.executed_to,
+   117→  1785→    probe_identity: H.D === d5.D,
+   118→  1786→    slow_inflation_rate: H.slow_inflation_rate, slow_gate: 1e-4,
+   119→  1787→    runaway_rate: H.blowup_rate_last200, rate_ratio: H.rate_ratio_runaway_over_slow, ratio_gate: 100,
+   120→  1788→    wc_norm_at_last_finite: H.wc_norm_at_last_finite, drift_last200: H.drift_last200,
+   121→  1789→    loss_ratio_at_20000: H.loss_ratio_at_20000,
+   122→  1790→    depth2000: { drift: H.drift_at_depth_2000, var: H.var_ratio_after_depth_2000, z: H.z_ratio_after_depth_2000, wcdisp: H.wc_disp_at_depth_2000 },
+   123→  1791→    weight_death_receipt: { all_nan_step: H.all_weights_nan_step, all_nan_at_end: H.weights_all_nan_at_end, absorbing: H.weights_nan_absorbing, loss_finite_again: H.loss_finite_again_count },
+   124→  1792→    contrasts_gate_nothing: Object.fromEntries(Object.keys(H.contrasts).map((k) => {
+   125→  1793→      const c = H.contrasts[k];
+   126→  1794→      return [k, { D: c.D, slow: c.slow_inflation_rate, rate: c.blowup_rate_last200, mod80: c.D_mod80 }];
+   127→  1795→    })),
+   128→  1796→    claim: 'FINITE-HORIZON DIVERGENCE: D in [2.5e4, 4e4] AND == design5 bit-exact AND depth-2000 laws hold (drift < 0.01, var >= 0.5) AND two-phase shape (slow < 1e-4, runaway > 100x). Findings receipted, gate nothing: depth-2000 z < 3.0 (statistic is depth-sensitive), weight death slower than the D+2000 window, all four contrasts diverge (fast EMA shortens life, slow pace lengthens it, trivial world ~ world2 — optimizer-borne)',
+   129→  1797→    pass, void_as_gated: !gPass
+   130→  1798→  });
+   131→  1799→}
+   132→  1800→// RLONG: longevity law (round-6 claim 1) — verdict rule VERBATIM from registration-v6
+   133→  1801→const run4 = JSON.parse(fs.readFileSync(path.join(RECEIPTS, 'run4.json'), 'utf8'));
+   134→  1802→{
+   135→  1803→  const d6a = design6.partA_longevity;
+   136→  1804→  const m0 = q1.arms['wd0_anchor'], mm = q1.arms['wd3e-4_main'], m1 = q1.arms['wd1e-4'];
+   137→  1805→  const g3 = q1.arms.guards_wd3e4;
+   138→  1806→  const gw = g3.g_gate_trivial_100.g_ratio, r1w = g3.r1_world2_400.r1_ratio, drw = g3.r2_drift_200_400.r2_drift_ratio;
+   139→  1807→  const extensionOk = (mm.D === null && mm.executed_to === 500000 && 500000 / 30174 >= 2) || (mm.D !== null && mm.D >= 60348);
+   140→  1808→  const checks = {
+   141→  1809→    anchor_D_30174: m0.D === 30174,
+   142→  1810→    anchor_D_design6_bit_exact: m0.D === d6a.arms['wd0_anchor'].D,
+   143→  1811→    extension_gate_censored_or_2x: extensionOk,
+   144→  1812→    D_main_design6_bit_exact_incl_null: mm.D === d6a.arms['wd3e-4_main'].D,
+   145→  1813→    executed_to_main_design6_bit_exact: mm.executed_to === d6a.arms['wd3e-4_main'].executed_to,
+   146→  1814→    no_runaway_within_window_main: mm.diverged === false,
+   147→  1815→    D_wd1e4_design6_bit_exact: m1.D === d6a.arms['wd1e-4'].D,
+   148→  1816→    D_wd1e4_ge_1_5x_undecayed: m1.D >= 1.5 * 30174,
+   149→  1817→    runaway_wd1e4_ge_100x_slow: m1.blowup_rate_last200 >= 100 * Math.abs(m1.slow_inflation_rate),
+   150→  1818→    g_wd_lt_0_5: gw < 0.5,
+   151→  1819→    r1_wd_lt_0_5: r1w < 0.5,
+   152→  1820→    drift_wd_lt_0_01: drw < 0.01,
+   153→  1821→    g_wd_tight_band_0_345_0_357: gw >= 0.345 && gw <= 0.357,
+   154→  1822→    r1_wd_tight_band_0_165_0_177: r1w >= 0.165 && r1w <= 0.177,
+   155→  1823→    jepa4_wd0_identity_fail_closed: q1.identity.losses_bit_exact && q1.identity.weights_bit_exact
+   156→  1824→  };
+   157→  1825→  chain.add('RLONG_longevity_law', {
+   158→  1826→    wd_main: WD_MAIN, stop_rule: 'min(5e5, D+2000); contrasts capped at 1e5',
+   159→  1827→    arms: {
+   160→  1828→      wd0_anchor: { D: m0.D, executed_to: m0.executed_to, slow: m0.slow_inflation_rate, runaway: m0.blowup_rate_last200 },
+   161→  1829→      wd3e4_main: { D: mm.D, executed_to: mm.executed_to, diverged: mm.diverged, censoring_floor_x: mm.D === null ? 500000 / 30174 : null,
+   162→  1830→                    slow_20k: mm.slow_inflation_rate, slow_100k: mm.slow_inflation_rate_100k,
+   163→  1831→                    wc_norm: { at400: mm.checkpoints['400'].wc_norm, at20000: mm.checkpoints['20000'].wc_norm, at100000: mm.checkpoints['100000'].wc_norm, at500000: mm.checkpoints['500000'].wc_norm },
+   164→  1832→                    wp_norm: { at400: mm.checkpoints['400'].wp_norm, at20000: mm.checkpoints['20000'].wp_norm } },
+   165→  1833→      wd1e4_dose_response: { D: m1.D, executed_to: m1.executed_to, slow: m1.slow_inflation_rate, runaway: m1.blowup_rate_last200, rate_ratio: m1.rate_ratio_runaway_over_slow, two_phase_persists: true },
+   166→  1834→      wd1e3_mechanism_contrast: { D: q1.arms['wd0.001'].D, executed_to: q1.arms['wd0.001'].executed_to, slow: q1.arms['wd0.001'].slow_inflation_rate }
+   167→  1835→    },
+   168→  1836→    guards_wd3e4_unrelaxed: { g: gw, r1: r1w, drift: drw },
+   169→  1837→    dose_response_finding_gate_nothing: {
+   170→  1838→      slow_rates_per_step: { wd0: m0.slow_inflation_rate, wd1e4: m1.slow_inflation_rate, wd3e4: mm.slow_inflation_rate, wd1e3: q1.arms['wd0.001'].slow_inflation_rate },
+   171→  1839→      note: 'slow-phase rate flips sign between wd 1e-4 and 3e-4 — steep monotone longevity response; wd=1e-4 extends only 1.5938x (below the 2x band floor) and two-phase PERSISTS there (ratio ' + m1.rate_ratio_runaway_over_slow.toFixed(1) + ')'
+   172→  1840→    },
+   173→  1841→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+   174→  1842→    claim: 'LONGEVITY LAW: weight decay on Wc only, main dose 3e-4 — REGISTERED EXPECTATION: two-phase ELIMINATED-WITHIN-WINDOW at main dose (cap-censored > 16.5706x lifetime), PERSISTS at 1e-4; plasticity gates UNRELAXED in the decayed arm; registered factor gate >= 2x (band 2-10x)',
+   175→  1843→    pass: Object.values(checks).every(Boolean),
+   176→  1844→    void_as_gated: !gPass
+   177→  1845→});
+   178→  1846→}
+   179→  1847→// R3D: depth/window law (round-6 claim 2) — verdict rule VERBATIM from registration-v6
+   180→  1848→{
+   181→  1849→  const d6b = design6.partB_depth_window;
+   182→  1850→  const cs = q1.partB.candS;
+   183→  1851→  const run4metrics = run4.metrics;
+   184→  1852→  const zA400 = cs['400'].z_ratio_corrected, zA1200 = cs['1200'].z_ratio_corrected, zA2000 = cs['2000'].z_ratio_corrected, zA2200 = cs['2200'].z_ratio_corrected;
+   185→  1853→  const checks = {
+   186→  1854→    multiplier_at_400_exact_ieee_1: cs['400'].multiplier === 1,
+   187→  1855→    z_anchored_400_run4_bit_exact: zA400 === run4metrics.r3v4_z_ratio,
+   188→  1856→    z_carried_2200_design5_bit_exact: q1.partB.depths['2200'].carried.z_ratio === design5.partC_horizon.z_ratio_after_depth_2000,
+   189→  1857→    z_anchored_2200_ge_gate: zA2200 >= 3.0,
+   190→  1858→    z_anchored_2200_band_3_10_3_30: zA2200 >= 3.10 && zA2200 <= 3.30,
+   191→  1859→    z_anchored_2000_ge_gate: zA2000 >= 3.0,
+   192→  1860→    z_anchored_2000_band_3_31_3_51: zA2000 >= 3.31 && zA2000 <= 3.51
+   193→  1861→  };
+   194→  1862→  const identities = {};
+   195→  1863→  for (const dep of DEPTHS6.map(String)) {
+   196→  1864→    identities['z_carried_' + dep + '_design6'] = q1.partB.depths[dep].carried.z_ratio === d6b.depths[dep].carried.z_ratio;
+   197→  1865→    identities['sd_sum_' + dep + '_design6'] = q1.partB.depths[dep].carried.sd_sum === d6b.depths[dep].carried.sd_sum;
+   198→  1866→    identities['candD_z_' + dep + '_design6'] = q1.partB.depths[dep].candD.z_ratio === d6b.depths[dep].candD.z_ratio;
+   199→  1867→    identities['candA_z_' + dep + '_design6'] = q1.partB.depths[dep].candA.z_ratio === d6b.depths[dep].candA.z_ratio;
+   200→  1868→    identities['multiplier_' + dep + '_design6'] = cs[dep].multiplier === d6b.candS[dep].multiplier;
+   201→  1869→    identities['z_anchored_' + dep + '_design6'] = cs[dep].z_ratio_corrected === d6b.candS[dep].z_ratio_corrected;
+   202→  1870→  }
+   203→  1871→  identities.candD_round_rule_2200_design6 = (q1.partB.depths['2200'].candD_round_rule ? q1.partB.depths['2200'].candD_round_rule.z_ratio : null)
+   204→  1872→    === (d6b.depths['2200'].candD_round_rule ? d6b.depths['2200'].candD_round_rule.z_ratio : null);
+   205→  1873→  chain.add('R3D_depth_window_law', {
+   206→  1874→    law: 'SCALE-ANCHORED SURPRISE: z_anchored(depth) = z_carried(depth) x [sd_sum(400)/sd_sum(depth)] — multiplier EXACTLY 1 at depth 400; removes ONLY the residual-scale-aliasing component',
+   207→  1875→    sites: Object.fromEntries(DEPTHS6.map((d) => [d, {
+   208→  1876→      k: q1.partB.depths[String(d)].k, carried_z: q1.partB.depths[String(d)].carried.z_ratio,
+   209→  1877→      sd_sum: q1.partB.depths[String(d)].carried.sd_sum, raw_gap: q1.partB.depths[String(d)].carried.raw_gap,
+   210→  1878→      multiplier: cs[String(d)].multiplier, z_anchored: cs[String(d)].z_ratio_corrected,
+   211→  1879→      candD_z: q1.partB.depths[String(d)].candD.z_ratio, candD_baseline_n: q1.partB.depths[String(d)].candD.baseline_n,
+   212→  1880→      candA_z: q1.partB.depths[String(d)].candA.z_ratio
+   213→  1881→    }])),
+   214→  1882→    mechanism_decomposition_gate_nothing: {
+   215→  1883→      deficit_factor: q1.partB.mechanism_law.deficit_factor, sd_collapse_factor: q1.partB.mechanism_law.sd_collapse_factor,
+   216→  1884→      raw_gap_collapse_factor: q1.partB.mechanism_law.raw_gap_collapse_factor,
+   217→  1885→      honest_limits: 'k=3 site (depth 1200) stays BELOW the gate (z_anchored ' + zA1200.toFixed(4) + ' < 3.0) — novelty-dominated deficit, no fix claimed; pure window-scaling candidates candD/candA are SITE-FRAGILE (candD: ' + q1.partB.depths['2000'].candD.z_ratio.toFixed(4) + ' at nominal-2000 but ' + q1.partB.depths['2200'].candD.z_ratio.toFixed(4) + ' at the finding site; candA: ' + q1.partB.depths['2200'].candA.z_ratio.toFixed(4) + ' at the finding site but ' + q1.partB.depths['2000'].candA.z_ratio.toFixed(4) + ' at nominal-2000) — neither survives both sites, neither is the law; REJECTED as registered'
+   218→  1886→    },
+   219→  1887→    checks, design6_identities: identities,
+   220→  1888→    all_checks_pass: Object.values(checks).every(Boolean) && Object.values(identities).every(Boolean),
+   221→  1889→    claim: 'DEPTH/WINDOW LAW: deficit = sd-aliasing x novelty-gap; registered fix restores the UNCHANGED 3.0 gate at BOTH depth-2000-class sites (2200 finding site and nominal 2000); carried statistic bit-identical at all sites',
+   222→  1890→    pass: Object.values(checks).every(Boolean) && Object.values(identities).every(Boolean),
+   223→  1891→    void_as_gated: !gPass
+   224→  1892→  });
+   225→  1893→}
+   226→  1894→// GWIN: G-window law (round-6 claim 3) — verdict rule VERBATIM from registration-v6
+   227→  1895→{
+   228→  1896→  const d6c = design6.partC_gwindow;
+   229→  1897→  const a = q1.partC.lr0_15_w200.g_ratio, b = q1.partC.lr0_5_w60.g_ratio, anc = q1.partC.anchor_lr0_3_w100.g_ratio;
+   230→  1898→  const checks = {
+   231→  1899→    g_015_w200_lt_0_5: a < 0.5,
+   232→  1900→    g_015_w200_band_0_295_0_315: a >= 0.295 && a <= 0.315,
+   233→  1901→    g_05_w60_lt_0_5: b < 0.5,
+   234→  1902→    g_05_w60_band_0_42_0_45: b >= 0.42 && b <= 0.45,
+   235→  1903→    g_anchor_run4_bit_exact: anc === run4.metrics.g_ratio,
+   236→  1904→    g_anchor_design6_bit_exact: anc === d6c.anchor_lr0_3_w100.g_ratio,
+   237→  1905→    g_015_design6_bit_exact: a === d6c.lr0_15_w200.g_ratio,
+   238→  1906→    g_05_design6_bit_exact: b === d6c.lr0_5_w60.g_ratio
+   239→  1907→  };
+   240→  1908→  chain.add('GWIN_g_window_law', {
+   241→  1909→    law: 'W(lr) = round(30/lr) steps (1/pace, anchored lr 0.3 -> 100); tau from the carried K4 law at each pace',
+   242→  1910→    values: {
+   243→  1911→      anchor_lr0_3_w100: anc, pace_lock_reference: 0.5692660186806099,
+   244→  1912→      lr0_15_w200: a, lr0_5_w60: b
+   245→  1913→    },
+   246→  1914→    pace_lock_closed: a < 0.5 && b < 0.5,
+   247→  1915→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+   248→  1916→    claim: 'G-WINDOW LAW: the fixed 100-step window was pace-locked (round-5 finding g=0.5693>0.5 at lr 0.15); W(lr)=round(30/lr) restores the UNCHANGED 0.5 gate at both second pace points; carried anchor untouched and bit-exact vs run4',
+   249→  1917→    pass: Object.values(checks).every(Boolean),
+   250→  1918→    void_as_gated: !gPass
+   251→  1919→  });
+   252→  1920→}
+   253→  1921→// RLONG7: dose-response law (round-7 claim 1) — verdict rule VERBATIM from registration-v7
+   254→  1922→{
+   255→  1923→  const a15 = q1.arms7['0.00015'], a20 = q1.arms7['0.0002'], a25 = q1.arms7['0.00025'];
+   256→  1924→  const d6a = design6.partA_longevity;
+   257→  1925→  const m0 = q1.arms['wd0_anchor'], mm = q1.arms['wd3e-4_main'], m1 = q1.arms['wd1e-4'], m3 = q1.arms['wd0.001'];
+   258→  1926→  const checks = {
+   259→  1927→    anchor_D_wd0_design6_bit_exact: m0.D === d6a.arms['wd0_anchor'].D && m0.D === 30174,
+   260→  1928→    slow_wd0_design6_bit_exact: m0.slow_inflation_rate === d6a.arms['wd0_anchor'].slow_inflation_rate,
+   261→  1929→    D_wd1e4_design6_bit_exact: m1.D === d6a.arms['wd1e-4'].D && m1.D === 48091,
+   262→  1930→    slow_wd1e4_design6_bit_exact: m1.slow_inflation_rate === d6a.arms['wd1e-4'].slow_inflation_rate,
+   263→  1931→    D_main_design6_bit_exact_incl_null: mm.D === d6a.arms['wd3e-4_main'].D && mm.D === null,
+   264→  1932→    exec_main_design6_bit_exact: mm.executed_to === d6a.arms['wd3e-4_main'].executed_to && mm.executed_to === 500000,
+   265→  1933→    slow_main_design6_bit_exact: mm.slow_inflation_rate === d6a.arms['wd3e-4_main'].slow_inflation_rate,
+   266→  1934→    D_wd1e3_design6_bit_exact_incl_null: m3.D === d6a.arms['wd0.001'].D && m3.D === null,
+   267→  1935→    slow_wd1e3_design6_bit_exact: m3.slow_inflation_rate === d6a.arms['wd0.001'].slow_inflation_rate,
+   268→  1936→    monotone_seven_dose: q1.metrics7.r7_monotone_seven,
+   269→  1937→    bracket_rate15e4_positive: a15.slow_inflation_rate > 0,
+   270→  1938→    bracket_rate25e4_negative: a25.slow_inflation_rate < 0,
+   271→  1939→    jepa4_wd0_identity_fail_closed: q1.identity.losses_bit_exact && q1.identity.weights_bit_exact
+   272→  1940→  };
+   273→  1941→  chain.add('RLONG7_dose_response', {
+   274→  1942→    law: 'slow-phase |Wc| inflation rate strictly decreasing in wd; cure zero-crossing wd* bracketed inside (1.5e-4, 2.5e-4)',
+   275→  1943→    rates_per_step: { wd0: m0.slow_inflation_rate, wd1e4: m1.slow_inflation_rate, wd1_5e4: a15.slow_inflation_rate, wd2e4: a20.slow_inflation_rate, wd2_5e4: a25.slow_inflation_rate, wd3e4: mm.slow_inflation_rate, wd1e3: m3.slow_inflation_rate },
+   276→  1944→    new_arms_receipt_gate_nothing: {
+   277→  1945→      wd1_5e4: { D: a15.D, executed_to: a15.executed_to, runaway: a15.blowup_rate_last200, rate_ratio: a15.rate_ratio_runaway_over_slow },
+   278→  1946→      wd2e4: { D: a20.D, executed_to: a20.executed_to, runaway: a20.blowup_rate_last200, rate_ratio: a20.rate_ratio_runaway_over_slow },
+   279→  1947→      wd2_5e4: { D: a25.D, executed_to: a25.executed_to, runaway: a25.blowup_rate_last200, rate_ratio: a25.rate_ratio_runaway_over_slow }
+   280→  1948→    },
+   281→  1949→    guards_wd1_5e4_gate_nothing: { g: q1.metrics7.r7_g_wd1_5e4, r1: q1.metrics7.r7_r1_wd1_5e4, drift: q1.metrics7.r7_drift_wd1_5e4 },
+   282→  1950→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+   283→  1951→    claim: 'DOSE-RESPONSE LAW: monotone 7-dose rate ordering + zero-crossing bracket (1.5e-4, 2.5e-4); four receipted doses bit-exact vs design6/run6; registered risk (disclosed): sublinearity could push the crossing below 1.5e-4',
+   284→  1952→    pass: Object.values(checks).every(Boolean),
+   285→  1953→    void_as_gated: !gPass
+   286→  1954→  });
+   287→  1955→}
+   288→  1956→// PLAST: plasticity cost law (round-7 claim 2) — verdict rule VERBATIM from registration-v7
+   289→  1957→{
+   290→  1958→  const p = q1.metrics7;
+   291→  1959→  const design7Value = design7.identities.I1_continuation_reconstruction.trivial_continuation_ratio;
+   292→  1960→  const checks = {
+   293→  1961→    probe_run_bit_exact_20k: p.plast_ratio_20k === design7Value && p.plast_ratio_20k === PLAST_PROBE_VALUE_DISCLOSED,
+   294→  1962→    engage_20k_decayed: p.plast_ratio_20k < 1.0,
+   295→  1963→    engage_100k_decayed: p.plast_ratio_100k < 1.0,
+   296→  1964→    engage_20k_control: p.plast_ratio_ctrl20k < 1.0,
+   297→  1965→    rho20_lt_2: p.plast_rho20 < 2.0,
+   298→  1966→    all_finite: p.plast_all_finite,
+   299→  1967→    snapshot_wc_20000_design6_bit_exact: p.plast_snapshot_wc_20000 === design6.partA_longevity.arms['wd3e-4_main'].checkpoints['20000'].wc_norm,
+   300→  1968→    snapshot_wc_100000_design6_bit_exact: p.plast_snapshot_wc_100000 === design6.partA_longevity.arms['wd3e-4_main'].checkpoints['100000'].wc_norm,
+   301→  1969→    snapshot_wc_500000_design6_bit_exact: p.plast_snapshot_wc_500000 === design6.partA_longevity.arms['wd3e-4_main'].checkpoints['500000'].wc_norm
+   302→  1970→  };
+   303→  1971→  chain.add('PLAST_plasticity_cost', {
+   304→  1972→    readout: 'trivial-world switch continuation (400 steps) from warm states; ratio = last10/first10',
+   305→  1973→    probes: {
+   306→  1974→      main_20k: { ratio: p.plast_ratio_20k, first10: p.plast_first10_20k, last10: p.plast_last10_20k },
+   307→  1975→      main_100k: { ratio: p.plast_ratio_100k, first10: p.plast_first10_100k, last10: p.plast_last10_100k },
+   308→  1976→      main_500k_edge_gate_nothing: { ratio: p.plast_ratio_500k, first10: p.plast_first10_500k, last10: p.plast_last10_500k, wc_norm: p.plast_snapshot_wc_500000 },
+   309→  1977→      control_20k: { ratio: p.plast_ratio_ctrl20k, first10: p.plast_first10_ctrl20k, last10: p.plast_last10_ctrl20k },
+   310→  1978→      wd1e4_20k_gate_nothing: { ratio: p.plast_ratio_wd1e4_20k, first10: p.plast_first10_wd1e4_20k, last10: p.plast_last10_wd1e4_20k }
+   311→  1979→    },
+   312→  1980→    rho20: p.plast_rho20,
+   313→  1981→    probe_run_binding: { disclosed: PLAST_PROBE_VALUE_DISCLOSED, run: p.plast_ratio_20k, bit_exact: p.plast_ratio_20k === design7Value },
+   314→  1982→    domain_note: 'the control diverges at 30174 so no 100k control exists — the cost readout is honestly asymmetric; the 500k edge probe (|Wc| 0.7387, 16x below init) prices the extreme-depth question for round 8',
+   315→  1983→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+   316→  1984→    claim: 'PLASTICITY COST LAW: learning engages from every registered warm state (ratio < 1.0) at a bounded cost (rho20 < 2.0); probe==run bit-exact on the disclosed value; the 20k decayed ratio also equals the design7 I1 pipeline value by construction (same snapshot path)',
+   317→  1985→    pass: Object.values(checks).every(Boolean),
+   318→  1986→    void_as_gated: !gPass
+   319→  1987→  });
+   320→  1988→}
+   321→  1989→// R3DxR3L: composition closure (round-7 claim 3) — verdict rule VERBATIM from registration-v7
+   322→  1990→{
+   323→  1991→  const d6b = design6.partB_depth_window;
+   324→  1992→  const pl = q1.plateau.depths;
+   325→  1993→  const eq = {};
+   326→  1994→  for (const dep of DEPTHS6.map(String)) {
+   327→  1995→    eq['sd_' + dep] = pl[dep].sd_equal;
+   328→  1996→    eq['z_' + dep] = pl[dep].z_equal;
+   329→  1997→    eq['anchored_' + dep] = pl[dep].anchored_equal;
+   330→  1998→    eq['anchored09_design6_' + dep] = pl[dep].anchored_09 === d6b.candS[dep].z_ratio_corrected;
+   331→  1999→  }
+   332→  2000→  const checks = {
+   333→  2001→    ...eq,
+   334→  2002→    mult400_amp12_exact_1: pl['400'].multiplier_12 === 1,
+   335→  2003→    mult400_amp09_exact_1: pl['400'].multiplier_09 === 1,
+   336→  2004→    anchored12_gate_2000: pl['2000'].anchored_12 >= 3.0,
+   337→  2005→    anchored12_gate_2200: pl['2200'].anchored_12 >= 3.0,
+   338→  2006→    carried_2200_design5_bit_exact: q1.partB.depths['2200'].carried.z_ratio === design5.partC_horizon.z_ratio_after_depth_2000
+   339→  2007→  };
+   340→  2008→  chain.add('R3DxR3L_composition', {
+   341→  2009→    law: 'the R3L clamp plateau extends to ALL depth sites; the anchored statistic inherits it bit-exactly; the anchored 3.0 restoration SURVIVES at the plateau',
+   342→  2010→    per_depth: Object.fromEntries(DEPTHS6.map((d) => [String(d), {
+   343→  2011→      z09: pl[String(d)].carried_z_09, z12: pl[String(d)].carried_z_12,
+   344→  2012→      sd09: pl[String(d)].sd_sum_09, sd12: pl[String(d)].sd_sum_12,
+   345→  2013→      mult09: pl[String(d)].multiplier_09, mult12: pl[String(d)].multiplier_12,
+   346→  2014→      anchored09: pl[String(d)].anchored_09, anchored12: pl[String(d)].anchored_12,
+   347→  2015→      var09: pl[String(d)].var_09, var12: pl[String(d)].var_12,
+   348→  2016→      equalities: { sd: pl[String(d)].sd_equal, z: pl[String(d)].z_equal, anchored: pl[String(d)].anchored_equal, var: pl[String(d)].var_equal, raw_gap: pl[String(d)].raw_gap_equal }
+   349→  2017→    }])),
+   350→  2018→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+   351→  2019→    claim: 'COMPOSITION CLOSURE: plateau (amp 1.2 == 0.9 bit-exact) extends to every registered depth; anchored 3.0-gate restoration survives at the plateau — the two laws compose',
+   352→  2020→    pass: Object.values(checks).every(Boolean),
+   353→  2021→    void_as_gated: !gPass
+   354→  2022→  });
+   355→  2023→}
+   356→  2024→// GWIN7: full-grid law (round-7 claim 4) — verdict rule VERBATIM from registration-v7
+   357→  2025→{
+   358→  2026→  const d6c = design6.partC_gwindow;
+   359→  2027→  const g02 = q1.metrics7.gwin7_g_02, g025 = q1.metrics7.gwin7_g_025, g04 = q1.metrics7.gwin7_g_04, g06 = q1.metrics7.gwin7_g_06;
+   360→  2028→  const checks = {
+   361→  2029→    g_02_w150_lt_0_5: g02 < 0.5,
+   362→  2030→    g_025_w120_lt_0_5: g025 < 0.5,
+   363→  2031→    g_04_w75_lt_0_5: g04 < 0.5,
+   364→  2032→    g_anchor_lt_0_5: q1.partC.anchor_lr0_3_w100.g_ratio < 0.5,
+   365→  2033→    g_015_w200_design6_bit_exact: q1.partC.lr0_15_w200.g_ratio === d6c.lr0_15_w200.g_ratio,
+   366→  2034→    g_05_w60_design6_bit_exact: q1.partC.lr0_5_w60.g_ratio === d6c.lr0_5_w60.g_ratio,
+   367→  2035→    g_anchor_run4_bit_exact: q1.partC.anchor_lr0_3_w100.g_ratio === run4.metrics.g_ratio
+   368→  2036→  };
+   369→  2037→  chain.add('GWIN7_full_grid', {
+   370→  2038→    law: 'W(lr) = round(30/lr) holds g < 0.5 across the core pace grid',
+   371→  2039→    grid: { 'lr0.15_w200': q1.partC.lr0_15_w200.g_ratio, 'lr0.2_w150': g02, 'lr0.25_w120': g025, 'lr0.3_w100_anchor': q1.partC.anchor_lr0_3_w100.g_ratio, 'lr0.4_w75': g04, 'lr0.5_w60': q1.partC.lr0_5_w60.g_ratio },
+   372→  2040→    edge_receipt_gate_nothing: { 'lr0.6_w50': g06, note: 'the receipted trend rises with pace (0.3041 -> 0.3492 -> 0.4341); the edge prices the law\'s domain for round 8 — g >= 0.5 here registers a domain boundary 0.15 <= lr <= 0.5 as a FINDING, not a refutation of the tested core' },
+   373→  2041→    checks, all_checks_pass: Object.values(checks).every(Boolean),
+   374→  2042→    claim: 'FULL-GRID G-WINDOW LAW: g < 0.5 at every core grid point with anchors bit-exact; the lr 0.6 boundary probe is receipted gate-nothing',
+   375→  2043→    pass: Object.values(checks).every(Boolean),
+   376→  2044→    void_as_gated: !gPass
+   377→  2045→  });
+   378→  2046→}
+   379→  2047→// MECH: plasticity-advantage mechanism (round-8 claim 1) — verdict rule VERBATIM from registration-v8
+   380→  2048→{
+   381→  2049→  const p = q1.metrics8;
+   382→  2050→  const d8disc = design8.disclosed_pipeline_values;
+   383→  2051→  const run7rho20_1 = run7Receipt.metrics_round7.plast_rho20;
+   384→  2052→  const checks = {
+   385→  2053→    spearman_ge_0_75: p.r8_spearman_ratio_wc >= 0.75,
+   386→  2054→    ratio20k_wd0_run7_bit_exact: p.r8_dose_ratio_0 === 0.7135257300287862 && p.r8_dose_ratio_0 === run7Receipt.metrics_round7.plast_ratio_ctrl20k,
+   387→  2055→    ratio20k_wd1e4_run7_bit_exact: p.r8_dose_ratio_1e4 === 0.7017204255152192 && p.r8_dose_ratio_1e4 === run7Receipt.metrics_round7.plast_ratio_wd1e4_20k,
+   388→  2056→    ratio20k_wd3e4_run7_bit_exact: p.r8_dose_ratio_3e4 === 0.6644108562180416 && p.r8_dose_ratio_3e4 === run7Receipt.metrics_round7.plast_ratio_20k,
+   389→  2057→    rho20_2_lt_rho20_1: p.r8_rho20_2 < p.r8_rho20_1,
+   390→  2058→    rho20_1_run7_bit_exact: p.r8_rho20_1 === run7rho20_1 && run7rho20_1 === 0.9311659387409014,
+   391→  2059→    rho20_2_lt_1: p.r8_rho20_2 < 1.0,
+   392→  2060→    ratio2_3e4_lt_1: p.r8_ratio2_3e4 < 1.0,
+   393→  2061→    ratio2_wd0_design8_bit_exact: p.r8_ratio2_wd0 === 1.17997507686084 && p.r8_ratio2_wd0 === d8disc.control_second_switch_ratio,
+   394→  2062→    probe2_stage1_decayed_bit_exact: p.r8_stage1_decayed === 0.6644108562180416,
+   395→  2063→    probe2_stage1_control_bit_exact: p.r8_stage1_control === 0.7135257300287862,
+   396→  2064→    probe2_all_finite: p.r8_probe2_all_finite,
+   397→  2065→    dose_all_finite: p.r8_dose_all_finite
+   398→  2066→  };
+   399→  2067→  chain.add('MECH_plasticity_advantage_mechanism', {
+   400→  2068→    law: 'the cure\'s plasticity advantage is (leg 1) ORDERED BY the end-of-decay |Wc| across the seven-dose grid (Spearman >= 0.75 — the |Wc|-room hypothesis) and (leg 2) COMPOUNDS on a SECOND world switch (rho20_2 < rho20_1 AND < 1.0)',
+   401→
+   402→[showing lines 1669-2068 of 2459; use offset=2069 with limit to continue reading]
