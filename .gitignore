@@ -4,3 +4,11 @@ node_modules/
 upload/
 secrets/
 .env.keys
+download/github-mirror/
+.env*
+*.key.env
+**/moth_key.env
+**/.env.*.bak
+*.pem
+*.p12
+.credentials/
