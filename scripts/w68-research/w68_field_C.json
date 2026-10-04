@@ -1,0 +1,156 @@
+{
+  "slug": "C",
+  "name": "mempool fee market under congestion",
+  "queries": [
+    {
+      "query": "bitcoin mempool fee market mechanism design congestion 2025 2026",
+      "n": 9,
+      "hits": [
+        {
+          "title": "Bitcoin Statistics 2026: Price, Adoption & Institutional Moves",
+          "url": "https://sqmagazine.co.uk",
+          "snippet": "Sep 27, 2025 — By May 2025 , Bitcoin's market capitalization exceeded $1.35 trillion. ... Recent blocks' size fluctuates depending on mempool congestion and fee ... Read more",
+          "date": "Sep 27, 2025"
+        },
+        {
+          "title": "What Really Happens to Unconfirmed Bitcoin Transactions?",
+          "url": "https://d-central.tech",
+          "snippet": "Jul 23, 2026 — Learn what happens to unconfirmed Bitcoin transactions in 2026 . How the mempool and fee market work, full RBF, CPFP, and why every miner ...",
+          "date": "Jul 23, 2026"
+        },
+        {
+          "title": "10-K",
+          "url": "https://www.sec.gov",
+          "snippet": "The BRRNY was designed to provide a daily, 4:00 p.m. EST reference rate of the U.S. dollar price of one (1) bitcoin and is calculated by CF Benchmarks Ltd. (the ... Read more",
+          "date": ""
+        },
+        {
+          "title": "(PDF) Structural Tensions in the Bitcoin Protocol",
+          "url": "https://www.researchgate.net",
+          "snippet": "Sep 9, 2026 — Bitcoin's design encodes four hard consensus-rule constraints — a fixed per-block weight ceil- ing, a geometrically decaying block subsidy, ... Read more",
+          "date": "Sep 9, 2026"
+        },
+        {
+          "title": "Transaction Fee Mechanisms under Execution Uncertainty",
+          "url": "https://arxiv.org",
+          "snippet": "Jun 11, 2026 — Transaction fee market design for parallel execution, 2025 . URL ... Transaction fee mechanism design for leaderless blockchain protocols, 2025. Read more",
+          "date": "Jun 11, 2026"
+        },
+        {
+          "title": "The Execution Dilemma in Pessimistic Blockchains",
+          "url": "https://drops.dagstuhl.de",
+          "snippet": "1 day ago — Transaction fee market design for parallel execution. arXiv preprint arXiv:2502.11964, 2025 . URL: https://doi.org/10.48550/arXiv.2502.11964 ... Read more",
+          "date": "Oct 3, 2026"
+        },
+        {
+          "title": "Blockchain Network Congestion: How It Affects Speed and",
+          "url": "https://oxapay.com",
+          "snippet": "Jul 21, 2026 — How blockchain network congestion slows transactions, raises fees , and changes confirmation timing across networks.",
+          "date": "Jul 21, 2026"
+        },
+        {
+          "title": "Blockchain Consensus Mechanisms: A Primer for Supervisors",
+          "url": "https://www.elibrary.imf.org",
+          "snippet": "Sep 19, 2025 — Consensus mechanisms underpin the effective operation of blockchains by ensuring a single consistent and honest ledger. The design and ...",
+          "date": "Sep 19, 2025"
+        },
+        {
+          "title": "Selfish & opaque transaction ordering in the Bitcoin",
+          "url": "https://dl.acm.org",
+          "snippet": "In this paper, we audit the Bitcoin blockchain and present statistically significant evidence of mining pools deviating from the norms to accelerate the ... Read more",
+          "date": ""
+        }
+      ]
+    },
+    {
+      "query": "transaction fee markets priority queuing mechanism design research 2025",
+      "n": 6,
+      "hits": [
+        {
+          "title": "Design and Performance Analysis of Queue-based Group",
+          "url": "https://itiis.org",
+          "snippet": "Jul 29, 2013 — An alternate approach to group key generation that reduces delays is the dynamic prioritizing mechanism of queue -based group key generation. Read more",
+          "date": "Jul 29, 2013"
+        },
+        {
+          "title": "Top 10 Telecoms & Connectivity Trends 2025 Whitepaper",
+          "url": "https://www.juniperresearch.com",
+          "snippet": "Get your personal guide to what's next in telecoms and connectivity with our latest whitepaper, covering the 10 industry trends you can't afford to ignore.",
+          "date": ""
+        },
+        {
+          "title": "Queue Management System Market Set to Reach USD",
+          "url": "https://www.researchgate.net",
+          "snippet": "May 21, 2025 — Queue Management System Market Set to Reach USD 1.21 Billion by 2031. May 2025 ... According to a comprehensive market research report, the market ... Read more",
+          "date": "May 21, 2025"
+        },
+        {
+          "title": "The Economics of Application Traffic - TCO Benchmarking",
+          "url": "https://www.acgcc.com",
+          "snippet": "Jul 18, 2025 — This report presents an in-depth analysis of the total cost of ownership (TCO) for fixed and mobile broadband networks, focusing on how ... Read more",
+          "date": "Jul 18, 2025"
+        },
+        {
+          "title": "Algorithmic Collusion of Pricing and Advertising on E",
+          "url": "https://arxiv.org",
+          "snippet": "Nov 2, 2025 — We show that when consumers have high search costs , learning algorithms can coordinate on prices lower than competitive prices, facilitating a ... Read more",
+          "date": "Nov 2, 2025"
+        },
+        {
+          "title": "https://scholar.google.com/citations?view_op=view_",
+          "url": "https://scholar.google.com/citations?view_op=view_citation&hl=en&user=cwKDp2kAAAAJ&citation_for_view=cwKDp2kAAAAJ:JV2RwH3_ST0C",
+          "snippet": "No information is available for this page. Learn why",
+          "date": ""
+        }
+      ]
+    },
+    {
+      "query": "replace-by-fee child-pays-for-parent mempool economics 2025",
+      "n": 7,
+      "hits": [
+        {
+          "title": "What the Mempool Clearing Means for Bitcoin | Lisa Neigut",
+          "url": "https://www.tftc.io",
+          "snippet": "Feb 14, 2025 — Bitcoin's mempool clearing reignites scalability debates, but Lisa Neigut sees it as proof of success. Staff. · February 14, 2025 ·62 min read. Read more",
+          "date": "Feb 14, 2025"
+        },
+        {
+          "title": "Replacement Cycling Attacks on Bitcoin Miners Block",
+          "url": "https://ariard.github.io",
+          "snippet": "To replace Alice's parent batch transaction and Mallet's junk children transaction, a replace -by- fee must have an absolute fee superior to 9800 satoshis.",
+          "date": ""
+        },
+        {
+          "title": "Bitcoin is getting too expensive to mine profitably",
+          "url": "https://cryptoslate.com",
+          "snippet": "Nov 6, 2025 — Bitcoin Core v28 introduced one- parent -one- child package relay, enabling nodes to relay low- fee parent transactions when paired with a paying  ...",
+          "date": "Nov 6, 2025"
+        },
+        {
+          "title": "How Bitcoin Works",
+          "url": "https://chemaclass.com",
+          "snippet": "Dec 22, 2025 — Replace-By-Fee (RBF) lets you bump a stuck transaction's fee . Child-Pays-For-Parent (CPFP) lets recipients accelerate incoming payments by ...",
+          "date": "Dec 22, 2025"
+        },
+        {
+          "title": "Bitcoin Inscriptions & Ordinals: A Maturing Ecosystem | Galaxy",
+          "url": "https://www.galaxy.com",
+          "snippet": "Oct 2, 2023 — This report provides a comprehensive overview of significant developments in Ordinals infrastructure, and compares Ordinals activity NFT ...",
+          "date": "Oct 2, 2023"
+        },
+        {
+          "title": "Quick questions about OP_RETURN? Quick answers here.",
+          "url": "https://stacker.news",
+          "snippet": "Additionally, if your code relies on mempool estimates for fees it will have a less accurate prediction of what to use for a fee rate.",
+          "date": ""
+        },
+        {
+          "title": "Bitcoin Transaction Fee Calculator | Optimize Your Crypto Fees",
+          "url": "https://paywithflash.com",
+          "snippet": "May 17, 2025 — Replace -by- Fee (RBF) lets you increase the fee on an unconfirmed transaction. This is helpful if you initially set a low fee and the transaction ... Read more",
+          "date": "May 17, 2025"
+        }
+      ]
+    }
+  ]
+}

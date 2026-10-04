@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-04T16:38:21.981Z",
+  "transport": "z-ai CLI web_search (sdk absent)",
+  "fields": [
+    {
+      "slug": "A",
+      "name": "quorum sensing + horizontal gene transfer",
+      "file": "/home/z/my-project/scripts/w68-research/w68_field_A.json",
+      "queries": 3
+    },
+    {
+      "slug": "B",
+      "name": "viral quasispecies error threshold",
+      "file": "/home/z/my-project/scripts/w68-research/w68_field_B.json",
+      "queries": 3
+    },
+    {
+      "slug": "C",
+      "name": "mempool fee market under congestion",
+      "file": "/home/z/my-project/scripts/w68-research/w68_field_C.json",
+      "queries": 3
+    }
+  ]
+}

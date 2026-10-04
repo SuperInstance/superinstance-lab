@@ -1,0 +1,527 @@
+{
+  "arm": "B",
+  "runAt": "2026-10-04T17:09:36.127Z",
+  "base": "http://127.0.0.1:8792",
+  "feeMode": true,
+  "corpus": {
+    "tasks": 60,
+    "dupeCount": 20,
+    "trickleFeeds": 33
+  },
+  "admissions": {
+    "lrs": 0,
+    "fee": 60,
+    "other": 0
+  },
+  "taskStats": {
+    "ok": 60,
+    "failures": 0,
+    "hashChanges": 60
+  },
+  "reward": {
+    "first10": 0.7678,
+    "last10": 0.9898,
+    "all": 0.9535
+  },
+  "tissue": {
+    "population": 8,
+    "maxGeneration": 3,
+    "meanAffinity": 0.9922,
+    "bestAffinity": null,
+    "mitosis": 19,
+    "apoptosis": 12,
+    "graves": 12,
+    "causeSplit": {
+      "starvation": 12
+    },
+    "lineageEdges": 19
+  },
+  "preRegisteredRules": {
+    "R1": "B wins iff last10(B) > last10(A) + 0.02",
+    "R2": "B final population >= 2",
+    "R3": "B mitosis >= 1",
+    "R4": "if B fails R1 the negative stands, no rerun tuning"
+  },
+  "perTask": [
+    {
+      "i": 0,
+      "fee": 0,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 0.4,
+      "learned": true
+    },
+    {
+      "i": 1,
+      "fee": 0.37,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 0.4,
+      "learned": true
+    },
+    {
+      "i": 2,
+      "fee": 0.74,
+      "cellId": "c-a4c3d3e28fa362cd",
+      "generation": 0,
+      "reward": 0.55,
+      "learned": true
+    },
+    {
+      "i": 3,
+      "fee": 0.11,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 0.975,
+      "learned": true
+    },
+    {
+      "i": 4,
+      "fee": 0.48,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 0.4,
+      "learned": true
+    },
+    {
+      "i": 5,
+      "fee": 0.85,
+      "cellId": "c-a4c3d3e28fa362cd",
+      "generation": 0,
+      "reward": 0.9844,
+      "learned": true
+    },
+    {
+      "i": 6,
+      "fee": 0.22,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 7,
+      "fee": 0.59,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 0.9786,
+      "learned": true
+    },
+    {
+      "i": 8,
+      "fee": 0.96,
+      "cellId": "c-a4c3d3e28fa362cd",
+      "generation": 0,
+      "reward": 0.99,
+      "learned": true
+    },
+    {
+      "i": 9,
+      "fee": 0.33,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 10,
+      "fee": 0.7,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 0.99,
+      "learned": true
+    },
+    {
+      "i": 11,
+      "fee": 0.07,
+      "cellId": "c-a4c3d3e28fa362cd",
+      "generation": 0,
+      "reward": 0.99,
+      "learned": true
+    },
+    {
+      "i": 12,
+      "fee": 0.44,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 13,
+      "fee": 0.81,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 14,
+      "fee": 0.18,
+      "cellId": "c-75b9189ca22a4858",
+      "generation": 1,
+      "reward": 0.9786,
+      "learned": true
+    },
+    {
+      "i": 15,
+      "fee": 0.55,
+      "cellId": "c-47d2a694cfd62f02",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 16,
+      "fee": 0.92,
+      "cellId": "c-a4c3d3e28fa362cd",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 17,
+      "fee": 0.29,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 0.975,
+      "learned": true
+    },
+    {
+      "i": 18,
+      "fee": 0.66,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 19,
+      "fee": 0.03,
+      "cellId": "c-03bad1c33b14eaa5",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 20,
+      "fee": 0.4,
+      "cellId": "c-a1adce2a5dd172f0",
+      "generation": 1,
+      "reward": 0.9833,
+      "learned": true
+    },
+    {
+      "i": 21,
+      "fee": 0.77,
+      "cellId": "c-548a5eeebfafd1bb",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 22,
+      "fee": 0.14,
+      "cellId": "c-75b9189ca22a4858",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 23,
+      "fee": 0.51,
+      "cellId": "c-0a61f606adbb979b",
+      "generation": 1,
+      "reward": 0.9931,
+      "learned": true
+    },
+    {
+      "i": 24,
+      "fee": 0.88,
+      "cellId": "c-7666f1dbc90b05c9",
+      "generation": 1,
+      "reward": 0.9833,
+      "learned": true
+    },
+    {
+      "i": 25,
+      "fee": 0.25,
+      "cellId": "c-a51dcb1c43775499",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 26,
+      "fee": 0.62,
+      "cellId": "c-47d2a694cfd62f02",
+      "generation": 1,
+      "reward": 0.97,
+      "learned": true
+    },
+    {
+      "i": 27,
+      "fee": 0.99,
+      "cellId": "c-a4c3d3e28fa362cd",
+      "generation": 0,
+      "reward": 0.9786,
+      "learned": true
+    },
+    {
+      "i": 28,
+      "fee": 0.36,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 29,
+      "fee": 0.73,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 0.97,
+      "learned": true
+    },
+    {
+      "i": 30,
+      "fee": 0.1,
+      "cellId": "c-03bad1c33b14eaa5",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 31,
+      "fee": 0.47,
+      "cellId": "c-a1adce2a5dd172f0",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 32,
+      "fee": 0.84,
+      "cellId": "c-548a5eeebfafd1bb",
+      "generation": 1,
+      "reward": 0.97,
+      "learned": true
+    },
+    {
+      "i": 33,
+      "fee": 0.21,
+      "cellId": "c-75b9189ca22a4858",
+      "generation": 1,
+      "reward": 0.99,
+      "learned": true
+    },
+    {
+      "i": 34,
+      "fee": 0.58,
+      "cellId": "c-0a61f606adbb979b",
+      "generation": 1,
+      "reward": 0.9931,
+      "learned": true
+    },
+    {
+      "i": 35,
+      "fee": 0.95,
+      "cellId": "c-7666f1dbc90b05c9",
+      "generation": 1,
+      "reward": 0.97,
+      "learned": true
+    },
+    {
+      "i": 36,
+      "fee": 0.32,
+      "cellId": "c-a51dcb1c43775499",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 37,
+      "fee": 0.69,
+      "cellId": "c-47d2a694cfd62f02",
+      "generation": 1,
+      "reward": 0.9786,
+      "learned": true
+    },
+    {
+      "i": 38,
+      "fee": 0.06,
+      "cellId": "c-a4c3d3e28fa362cd",
+      "generation": 0,
+      "reward": 0.975,
+      "learned": true
+    },
+    {
+      "i": 39,
+      "fee": 0.43,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 40,
+      "fee": 0.8,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 41,
+      "fee": 0.17,
+      "cellId": "c-03bad1c33b14eaa5",
+      "generation": 1,
+      "reward": 0.975,
+      "learned": true
+    },
+    {
+      "i": 42,
+      "fee": 0.54,
+      "cellId": "c-a1adce2a5dd172f0",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 43,
+      "fee": 0.91,
+      "cellId": "c-548a5eeebfafd1bb",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 44,
+      "fee": 0.28,
+      "cellId": "c-75b9189ca22a4858",
+      "generation": 1,
+      "reward": 0.9881,
+      "learned": true
+    },
+    {
+      "i": 45,
+      "fee": 0.65,
+      "cellId": "c-0a61f606adbb979b",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 46,
+      "fee": 0.02,
+      "cellId": "c-7666f1dbc90b05c9",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 47,
+      "fee": 0.39,
+      "cellId": "c-a51dcb1c43775499",
+      "generation": 1,
+      "reward": 0.9844,
+      "learned": true
+    },
+    {
+      "i": 48,
+      "fee": 0.76,
+      "cellId": "c-47d2a694cfd62f02",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 49,
+      "fee": 0.13,
+      "cellId": "c-a4c3d3e28fa362cd",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 50,
+      "fee": 0.5,
+      "cellId": "c-d33b324b6903031d",
+      "generation": 0,
+      "reward": 0.9931,
+      "learned": true
+    },
+    {
+      "i": 51,
+      "fee": 0.87,
+      "cellId": "c-52b40d9e4a84e951",
+      "generation": 0,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 52,
+      "fee": 0.24,
+      "cellId": "c-03bad1c33b14eaa5",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 53,
+      "fee": 0.61,
+      "cellId": "c-a1adce2a5dd172f0",
+      "generation": 1,
+      "reward": 0.9931,
+      "learned": true
+    },
+    {
+      "i": 54,
+      "fee": 0.98,
+      "cellId": "c-548a5eeebfafd1bb",
+      "generation": 1,
+      "reward": 0.9931,
+      "learned": true
+    },
+    {
+      "i": 55,
+      "fee": 0.35,
+      "cellId": "c-75b9189ca22a4858",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 56,
+      "fee": 0.72,
+      "cellId": "c-0a61f606adbb979b",
+      "generation": 1,
+      "reward": 0.97,
+      "learned": true
+    },
+    {
+      "i": 57,
+      "fee": 0.09,
+      "cellId": "c-7666f1dbc90b05c9",
+      "generation": 1,
+      "reward": 0.9786,
+      "learned": true
+    },
+    {
+      "i": 58,
+      "fee": 0.46,
+      "cellId": "c-a51dcb1c43775499",
+      "generation": 1,
+      "reward": 1,
+      "learned": true
+    },
+    {
+      "i": 59,
+      "fee": 0.83,
+      "cellId": "c-47d2a694cfd62f02",
+      "generation": 1,
+      "reward": 0.97,
+      "learned": true
+    }
+  ]
+}

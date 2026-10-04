@@ -1431,3 +1431,34 @@ Work Log:
 
 Stage Summary:
 - Everything integrated, audited, and fired: push_all.sh running next (phase 1 fleet no-ops+exoj, phase 2 cot-quilt create+push, phase 3 superinstance-lab create+push, phase 4 ls-remote verify). Zero secrets on any pushed surface. Others' work absorbed, not clobbered.
+
+---
+Task ID: 68-e
+Agent: main (Super Z, keeper)
+Task: Lane C — Cloudflare Workers chemistry A/B: robustness-gated mitosis + fee-priority admission vs wave-67 baseline
+
+Work Log:
+- Implemented two config-gated mechanisms in cell-fleet (workerd local, wrangler 4.147.0): (1) ROBUST_GATE — cells track robustness = 1 − min(1, 2·std(last-8 rewards)); mitosis AND-requires robustness ≥ 0.75 (survival-of-the-flattest vs the receipted σ_m=2.3×σ_c noise floor); (2) ADMISSION=fee — routing scores cells by membraneEMA·(1+FEE_WEIGHT·fee) + CREDIT_WEIGHT·childCount (mempool fee-market + CPFP ancestor-credit nuggets; the market runs ON the KV membrane — newborn cells default 0.5 until first tick, wave-67's invisibility finding reused as a designed neutral).
+- Discipline: defaults in wrangler.toml stay wave-67-identical; arms override at runtime via --var; decision rules R1-R4 PRE-REGISTERED in the driver before any run (R4 = honest-negative clause, no rerun tuning); A/B driver uses a byte-copied corpus from simulate.mjs; fresh wiped workerd per arm.
+- BACKGROUND-JOB LESSON RE-LEARNED: nohup orchestrator + its wrangler child died silently (0-byte logs) — the wave-67-r receipted lesson stands: foreground bounded chunks only. Restructured as w68_ab_arm.sh (one arm per foreground call).
+- Arm A replicated wave-67's receipt nearly exactly (first10 0.680 vs 0.634, last10 0.990 vs 0.991, 13 starvation + 1 low-affinity vs 12 + 1, 20 mitoses vs 18, gen 3) — baseline faithful.
+- Arm B: first10 0.7678 (+0.088, faster maturation), all-mean 0.9535 (+0.014), last10 0.9898 == A (BOTH saturate), mitosis 19 (gate did NOT freeze the lineage), deaths 12 starvation + 0 low-affinity (A: 13 + 1).
+- VERDICT (applied mechanically, receipted): R1 FAIL (last10 equal — ceiling effect, zero headroom in the rubric's top band), R2 PASS, R3 PASS → REJECTED per R4 as written. Honest reading receipted in place: the fee+robustness chemistry LOOKS better on every unsaturated metric, but the pre-registered primary metric could not detect it; wave-69's A/B must use a harder corpus (non-saturating rubric) with rules written BEFORE the run — amending the metric now would be p-hacking.
+- Receipt of record: cell-fleet/receipts/W68-AB-REPLAY.md; full per-task streams: cell-fleet/scripts/w68-ab-arm{A,B}.json; chemistry documented in cell-fleet/README.md wave-68 section.
+
+Stage Summary:
+- Workers cellularize the NEW chemistry too: robustness and admission-market knobs are tissue-level [vars], arms differ by two --var flags, and the A/B leaves a pre-registered negative on the books — the fleet's first falsified-then-honest finding about its own selection regime.
+
+---
+Task ID: 68-x2
+Agent: main (Super Z, keeper)
+Task: INCIDENT receipt — old typesafe key exposed in monorepo history, found and remediated same wave
+
+Work Log:
+- Found during a routine key-presence check (new apikey_ audit pattern): the OLD wave-63-era typesafe key (apikey_22173e3b…, dead-era) was hardcoded in 4 tracked files (download/quilt-arena/jeve/run.mjs, download/quilt-cortex/experiments/holdem_chord/play.mjs + smoke_live.mjs, scripts/quilt-lab/e13_typesafe_probe.mjs) — invisible to every prior audit because the apikey_ pattern did not exist before wave-68.
+- Exposure window: the monorepo push (2f6c7dc, ~16:20Z) served those blobs on the PUBLIC SuperInstance/superinstance-lab for ~40 minutes. The LIVE key (apikey_22174190…) was verified ABSENT from the git tree at all times (git grep on HEAD + working tree).
+- REMEDIATION: (1) worktree scrub of all 4 files → env-read pattern, COMMITTED FIRST (67-x lesson honored); (2) git-filter-repo --replace-text across full history (reinstalled via pip --break-system-packages; first attempt no-op'd because /tmp replace-file was garbage-collected between tool calls — atomic re-run succeeded); reflog expired, gc --prune=now; verified 0 blobs match in full history (HEAD now 04c7b8e); (3) force-push-with-lease superinstance-lab → remote serves clean history only; (4) cot-quilt local ghost objects (leak-bearing receipt.json surviving under the stale origin/master remote-tracking ref from the pre-force-push fetch) purged via update-ref -d + reflog expire + gc; remote was already clean; (5) audit kit now carries apikey_ permanently.
+- RESIDUAL RISKS (honest): GitHub may retain unreachable commits (cache/forks) for the old monorepo tips 2f6c7dc/8aadffc — the old key should be REVOKED by the principal regardless of its presumed-dead status; download/github-mirror/ from wave-67 no longer exists on disk (no stale bundle to remediate); the masked fingerprint in quilt-cortex results.json ("apikey_22173…") is a display value, left in place.
+
+Stage Summary:
+- One old dead-era key exposed ~40 min on one public repo, fully scrubbed from local history + remote; live key never touched git. Leveled forever: every new credential FAMILY gets an audit pattern the same day it arrives, and mirror bundles must be re-cut after any history rewrite.

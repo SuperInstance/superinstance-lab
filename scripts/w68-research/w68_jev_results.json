@@ -1,0 +1,676 @@
+{
+  "ts": "2026-10-04T16:39:14Z",
+  "mask": "apikey_22174...",
+  "chunk_limit": 12000,
+  "artifacts": {
+    "raf-closure-receipt": {
+      "source": "3784 chars from download/w67-research/raf-closure-receipt-20261004T100637Z.md",
+      "n_chunks": 1,
+      "native_jev-latest": {
+        "model": "jev-latest",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 3784,
+            "canon_p": 0.45,
+            "depth": 2.65,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "doctrine": 0.03,
+              "engineering": 0.0,
+              "biology": 0.16,
+              "cs": 0.81,
+              "philosophy": 0.0
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 1778,
+              "output_tokens": 87
+            },
+            "latency_ms": 254
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.45,
+        "depth": 2.65,
+        "domain": "cs",
+        "usage_in": 1778,
+        "usage_out": 87,
+        "latency_ms": 254
+      },
+      "native_jev-preview": {
+        "model": "jev-preview",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 3784,
+            "canon_p": 0.48,
+            "depth": 2.65,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "doctrine": 0.04,
+              "biology": 0.19,
+              "philosophy": 0.0,
+              "engineering": 0.0,
+              "cs": 0.77
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 1778,
+              "output_tokens": 87
+            },
+            "latency_ms": 229
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.48,
+        "depth": 2.65,
+        "domain": "cs",
+        "usage_in": 1778,
+        "usage_out": 87,
+        "latency_ms": 229
+      },
+      "glm": {
+        "skeptic": {
+          "is_canon_noul": 0.7,
+          "depth": 2,
+          "domain": "doctrine",
+          "reason": "Strong experimental rigor in applying RAF theory to corpus analysis with clear metrics and sensitivity analysis, though claims about 'gate-as-catalyst' equivalence require stronger theoretical justification.",
+          "_model": "glm-4-plus"
+        },
+        "engineer": {
+          "is_canon_noul": 0.85,
+          "depth": 2,
+          "domain": "cs",
+          "reason": "Novel application of autocatalytic set theory to code corpus analysis reveals emergent metabolic properties with actionable design insights.",
+          "_model": "glm-4-plus"
+        },
+        "teacher": {
+          "is_canon_noul": 0.85,
+          "depth": 2,
+          "domain": "doctrine",
+          "reason": "Demonstrates RAF closure as a measurable property of distributed knowledge systems with transferable implications for knowledge architecture and integration.",
+          "_model": "glm-4-plus"
+        }
+      },
+      "glm_canon_p": 0.8,
+      "glm_depth": 2.0,
+      "glm_domains": [
+        "cs",
+        "doctrine"
+      ],
+      "glm_ok": "3/3"
+    },
+    "cell-fleet-readme": {
+      "source": "8723 chars from cell-fleet/README.md",
+      "n_chunks": 1,
+      "native_jev-latest": {
+        "model": "jev-latest",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 8723,
+            "canon_p": 0.43,
+            "depth": 2.71,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "cs": 0.96,
+              "philosophy": 0.0,
+              "engineering": 0.0,
+              "biology": 0.04,
+              "doctrine": 0.0
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 2849,
+              "output_tokens": 87
+            },
+            "latency_ms": 225
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.43,
+        "depth": 2.71,
+        "domain": "cs",
+        "usage_in": 2849,
+        "usage_out": 87,
+        "latency_ms": 225
+      },
+      "native_jev-preview": {
+        "model": "jev-preview",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 8723,
+            "canon_p": 0.44,
+            "depth": 2.74,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "biology": 0.05,
+              "philosophy": 0.0,
+              "engineering": 0.0,
+              "doctrine": 0.0,
+              "cs": 0.95
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 2849,
+              "output_tokens": 87
+            },
+            "latency_ms": 227
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.44,
+        "depth": 2.74,
+        "domain": "cs",
+        "usage_in": 2849,
+        "usage_out": 87,
+        "latency_ms": 227
+      },
+      "glm": {
+        "skeptic": {
+          "is_canon_noul": 0.85,
+          "depth": 2,
+          "domain": "cs",
+          "reason": "The work provides a concrete, well-documented implementation of a cellular decomposition system with clear mapping between biological structures and Worker primitives, supported by receipted simulation results showing significant learning improvement (0.634 \u2192 0.991).",
+          "_model": "glm-4-plus"
+        },
+        "engineer": {
+          "is_canon_noul": 0.85,
+          "depth": 2,
+          "domain": "engineering",
+          "reason": "The cellular decomposition model provides a novel, concrete implementation of biological principles in distributed systems with demonstrated learning capability.",
+          "_model": "glm-4-plus"
+        },
+        "teacher": {
+          "is_canon_noul": 0.9,
+          "depth": 3,
+          "domain": "doctrine",
+          "reason": "The cell-fleet presents a rigorous biologically-inspired mapping of distributed learning primitives to concrete Worker primitives, with receipted lineage tracking and emergent population dynamics that extend the fleet's existing organ-boot-bridge concept.",
+          "_model": "glm-4-plus"
+        }
+      },
+      "glm_canon_p": 0.8667,
+      "glm_depth": 2.333,
+      "glm_domains": [
+        "cs",
+        "doctrine",
+        "engineering"
+      ],
+      "glm_ok": "3/3"
+    },
+    "nugget-ledger": {
+      "source": "7058 chars from download/w67-research/nugget-ledger.md",
+      "n_chunks": 1,
+      "native_jev-latest": {
+        "model": "jev-latest",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 7058,
+            "canon_p": 0.55,
+            "depth": 2.88,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "engineering": 0.0,
+              "biology": 0.41,
+              "doctrine": 0.01,
+              "philosophy": 0.0,
+              "cs": 0.58
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 2436,
+              "output_tokens": 87
+            },
+            "latency_ms": 229
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.55,
+        "depth": 2.88,
+        "domain": "cs",
+        "usage_in": 2436,
+        "usage_out": 87,
+        "latency_ms": 229
+      },
+      "native_jev-preview": {
+        "model": "jev-preview",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 7058,
+            "canon_p": 0.54,
+            "depth": 2.87,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "doctrine": 0.01,
+              "philosophy": 0.0,
+              "biology": 0.4,
+              "cs": 0.59,
+              "engineering": 0.0
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 2436,
+              "output_tokens": 87
+            },
+            "latency_ms": 231
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.54,
+        "depth": 2.87,
+        "domain": "cs",
+        "usage_in": 2436,
+        "usage_out": 87,
+        "latency_ms": 231
+      },
+      "glm": {
+        "skeptic": {
+          "is_canon_noul": 0.85,
+          "depth": 2,
+          "domain": "cs",
+          "reason": "Strong methodological rigor with explicit RAF simulation and detailed mapping between biological concepts and computational systems; provides concrete testable hypotheses and artifacts.",
+          "_model": "glm-4-plus"
+        },
+        "engineer": {
+          "is_canon_noul": 0.85,
+          "depth": 2,
+          "domain": "engineering",
+          "reason": "Systematic mapping of biological computation principles (RAF, Physarum, immune systems) to distributed systems with rigorous simulation and measurable findings, demonstrating novel engineering approaches to self-organization.",
+          "_model": "glm-4-plus"
+        },
+        "teacher": {
+          "is_canon_noul": 0.85,
+          "depth": 2,
+          "domain": "doctrine",
+          "reason": "The text demonstrates exceptional doctrinal synthesis by mapping biological concepts (autocatalytic sets, immune selection, stigmergy) to computational fleet operations with novel transferable insights and actionable findings.",
+          "_model": "glm-4-plus"
+        }
+      },
+      "glm_canon_p": 0.85,
+      "glm_depth": 2.0,
+      "glm_domains": [
+        "cs",
+        "doctrine",
+        "engineering"
+      ],
+      "glm_ok": "3/3"
+    },
+    "exoj-wave69": {
+      "source": "inline-section (exoj/README.md '## Wave-69' only)",
+      "n_chunks": 1,
+      "native_jev-latest": {
+        "model": "jev-latest",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 1633,
+            "canon_p": 0.46,
+            "depth": 2.15,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "doctrine": 0.02,
+              "engineering": 0.0,
+              "philosophy": 0.0,
+              "cs": 0.98,
+              "biology": 0.0
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 947,
+              "output_tokens": 87
+            },
+            "latency_ms": 227
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.46,
+        "depth": 2.15,
+        "domain": "cs",
+        "usage_in": 947,
+        "usage_out": 87,
+        "latency_ms": 227
+      },
+      "native_jev-preview": {
+        "model": "jev-preview",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 1633,
+            "canon_p": 0.45,
+            "depth": 2.21,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "biology": 0.0,
+              "philosophy": 0.0,
+              "doctrine": 0.02,
+              "cs": 0.98,
+              "engineering": 0.0
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 947,
+              "output_tokens": 87
+            },
+            "latency_ms": 220
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.45,
+        "depth": 2.21,
+        "domain": "cs",
+        "usage_in": 947,
+        "usage_out": 87,
+        "latency_ms": 220
+      },
+      "glm": {
+        "skeptic": {
+          "is_canon_noul": 0.4,
+          "depth": 1,
+          "domain": "cs",
+          "reason": "The adversarial GAN design shows novel validation mechanisms but lacks empirical validation receipts beyond a single demo, and the constants appear arbitrarily chosen without theoretical justification.",
+          "_model": "glm-4-plus"
+        },
+        "engineer": {
+          "is_canon_noul": 0.75,
+          "depth": 2,
+          "domain": "engineering",
+          "reason": "The adversarial GAN-like architecture with strict validation and deterministic failure modes demonstrates sophisticated system design principles.",
+          "_model": "glm-4-plus"
+        },
+        "teacher": {
+          "is_canon_noul": 0.85,
+          "depth": 2,
+          "domain": "doctrine",
+          "reason": "Elegant adversarial validation with deterministic fallbacks and immutable scar ledger provides robust system integrity beyond simple consensus.",
+          "_model": "glm-4-plus"
+        }
+      },
+      "glm_canon_p": 0.6667,
+      "glm_depth": 1.667,
+      "glm_domains": [
+        "cs",
+        "doctrine",
+        "engineering"
+      ],
+      "glm_ok": "3/3"
+    },
+    "push-all-sh": {
+      "source": "6030 chars from scripts/push_all.sh",
+      "n_chunks": 1,
+      "native_jev-latest": {
+        "model": "jev-latest",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 6030,
+            "canon_p": 0.11,
+            "depth": 1.46,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "doctrine": 0.0,
+              "engineering": 0.05,
+              "biology": 0.0,
+              "cs": 0.95,
+              "philosophy": 0.0
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 2368,
+              "output_tokens": 87
+            },
+            "latency_ms": 242
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.11,
+        "depth": 1.46,
+        "domain": "cs",
+        "usage_in": 2368,
+        "usage_out": 87,
+        "latency_ms": 242
+      },
+      "native_jev-preview": {
+        "model": "jev-preview",
+        "chunks": [
+          {
+            "chunk": 0,
+            "chars": 6030,
+            "canon_p": 0.12,
+            "depth": 1.45,
+            "depth_legend": {
+              "0": "trivial",
+              "1": "useful",
+              "2": "deep",
+              "3": "frontier"
+            },
+            "domain": "cs",
+            "domain_probabilities": {
+              "engineering": 0.04,
+              "doctrine": 0.0,
+              "cs": 0.96,
+              "philosophy": 0.0,
+              "biology": 0.0
+            },
+            "model_served": "jev-1.13.0",
+            "usage": {
+              "input_tokens": 2368,
+              "output_tokens": 87
+            },
+            "latency_ms": 218
+          }
+        ],
+        "errors": [],
+        "canon_p": 0.12,
+        "depth": 1.45,
+        "domain": "cs",
+        "usage_in": 2368,
+        "usage_out": 87,
+        "latency_ms": 218
+      },
+      "glm": {
+        "skeptic": {
+          "is_canon_noul": 0.3,
+          "depth": 1,
+          "domain": "engineering",
+          "reason": "Solid token discipline and transient embedding pattern, but lacks originality - follows common CI/CD patterns without novel technical insights.",
+          "_model": "glm-4-plus"
+        },
+        "engineer": {
+          "is_canon_noul": 0.7,
+          "depth": 2,
+          "domain": "engineering",
+          "reason": "Well-engineered token discipline and dry-run capability demonstrate production-level CI/CD pipeline design with security best practices.",
+          "_model": "glm-4-plus"
+        },
+        "teacher": {
+          "is_canon_noul": 0.7,
+          "depth": 2,
+          "domain": "doctrine",
+          "reason": "Demonstrates rigorous token discipline and secure deployment protocols that could serve as a template for fleet-wide security practices.",
+          "_model": "glm-4-plus"
+        }
+      },
+      "glm_canon_p": 0.5667,
+      "glm_depth": 1.667,
+      "glm_domains": [
+        "doctrine",
+        "engineering"
+      ],
+      "glm_ok": "3/3"
+    }
+  },
+  "comparison": {
+    "raf-closure-receipt": {
+      "native_p": 0.465,
+      "native_d": 2.65,
+      "latest_p": 0.45,
+      "latest_d": 2.65,
+      "preview_p": 0.48,
+      "preview_d": 2.65,
+      "glm_p": 0.8,
+      "glm_d": 2.0,
+      "w67": {
+        "p": 0.82,
+        "d": 2.3
+      },
+      "gap_p": 0.335,
+      "gap_d": 0.65,
+      "disagree": true,
+      "dissent": {
+        "lens": "engineer",
+        "glm_p": 0.85,
+        "glm_depth": 2,
+        "reason": "Novel application of autocatalytic set theory to code corpus analysis reveals emergent metabolic properties with actionable design insights."
+      }
+    },
+    "cell-fleet-readme": {
+      "native_p": 0.435,
+      "native_d": 2.725,
+      "latest_p": 0.43,
+      "latest_d": 2.71,
+      "preview_p": 0.44,
+      "preview_d": 2.74,
+      "glm_p": 0.8667,
+      "glm_d": 2.333,
+      "w67": {
+        "p": 0.82,
+        "d": 2.3
+      },
+      "gap_p": 0.4317,
+      "gap_d": 0.392,
+      "disagree": true,
+      "dissent": {
+        "lens": "teacher",
+        "glm_p": 0.9,
+        "glm_depth": 3,
+        "reason": "The cell-fleet presents a rigorous biologically-inspired mapping of distributed learning primitives to concrete Worker primitives, with receipted lineage tracking and emergent population dynamics that extend the fleet's existing organ-boot-bridge concept."
+      }
+    },
+    "nugget-ledger": {
+      "native_p": 0.545,
+      "native_d": 2.875,
+      "latest_p": 0.55,
+      "latest_d": 2.88,
+      "preview_p": 0.54,
+      "preview_d": 2.87,
+      "glm_p": 0.85,
+      "glm_d": 2.0,
+      "w67": {
+        "p": 0.77,
+        "d": 2.0
+      },
+      "gap_p": 0.305,
+      "gap_d": 0.875,
+      "disagree": true,
+      "dissent": {
+        "lens": "skeptic",
+        "glm_p": 0.85,
+        "glm_depth": 2,
+        "reason": "Strong methodological rigor with explicit RAF simulation and detailed mapping between biological concepts and computational systems; provides concrete testable hypotheses and artifacts."
+      }
+    },
+    "exoj-wave69": {
+      "native_p": 0.455,
+      "native_d": 2.18,
+      "latest_p": 0.46,
+      "latest_d": 2.15,
+      "preview_p": 0.45,
+      "preview_d": 2.21,
+      "glm_p": 0.6667,
+      "glm_d": 1.667,
+      "w67": null,
+      "gap_p": 0.2117,
+      "gap_d": 0.513,
+      "disagree": true,
+      "dissent": {
+        "lens": "teacher",
+        "glm_p": 0.85,
+        "glm_depth": 2,
+        "reason": "Elegant adversarial validation with deterministic fallbacks and immutable scar ledger provides robust system integrity beyond simple consensus."
+      }
+    },
+    "push-all-sh": {
+      "native_p": 0.115,
+      "native_d": 1.455,
+      "latest_p": 0.11,
+      "latest_d": 1.46,
+      "preview_p": 0.12,
+      "preview_d": 1.45,
+      "glm_p": 0.5667,
+      "glm_d": 1.667,
+      "w67": {
+        "p": 0.63,
+        "d": 1.7,
+        "kin": "push-mirror-readme"
+      },
+      "gap_p": 0.4517,
+      "gap_d": 0.212,
+      "disagree": true,
+      "dissent": {
+        "lens": "engineer",
+        "glm_p": 0.7,
+        "glm_depth": 2,
+        "reason": "Well-engineered token discipline and dry-run capability demonstrate production-level CI/CD pipeline design with security best practices."
+      }
+    }
+  },
+  "disagreement_rule": "|native_p - glm_p| >= 0.15 or |native_d - glm_d| >= 1.0"
+}

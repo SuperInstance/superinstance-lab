@@ -1,0 +1,123 @@
+{
+  "timestamp": "2026-10-04T16:48:28Z",
+  "seed": 68,
+  "real_data": {
+    "cells_parsed": 20,
+    "live": 7,
+    "graves": 13,
+    "real_parent_child_deltas": 17,
+    "real_delta_std": 0.00966,
+    "real_delta_mean": 0.00461,
+    "real_live_spread": 0.0138,
+    "real_live_std": 0.00425,
+    "master_cell": "c-7f1d3bdca20dfe80",
+    "master_ema": 1.0,
+    "senescent_cell": "c-6897ab8d3c8072f5",
+    "senescent_ema": 0.5916,
+    "causes": {
+      "low-affinity": 1,
+      "starvation": 12
+    }
+  },
+  "chemistry_from_wrangler_toml": {
+    "TICK_MS": "3000",
+    "STARVE_TICKS": "5",
+    "CAP": "10",
+    "MUT_SIGMA": "0.08",
+    "MITOSIS_ABOVE": "0.85",
+    "MIN_TASKS": "4"
+  },
+  "calibration": {
+    "s0_per_coordinate": 0.021676,
+    "target_real_delta_std": 0.00966,
+    "note": "simulated parent->child fitness delta std fitted to the REAL receipt deltas"
+  },
+  "error_threshold_sweep": [
+    {
+      "m": 0.25,
+      "master_retention": 0.3663,
+      "mean_fitness": 0.9814,
+      "master_lineage_survival": 1.0
+    },
+    {
+      "m": 0.5,
+      "master_retention": 0.0425,
+      "mean_fitness": 0.952,
+      "master_lineage_survival": 0.95
+    },
+    {
+      "m": 1,
+      "master_retention": 0.0,
+      "mean_fitness": 0.8872,
+      "master_lineage_survival": 0.95
+    },
+    {
+      "m": 2,
+      "master_retention": 0.0,
+      "mean_fitness": 0.7712,
+      "master_lineage_survival": 0.55
+    },
+    {
+      "m": 4,
+      "master_retention": 0.0,
+      "mean_fitness": 0.5779,
+      "master_lineage_survival": 0.2
+    },
+    {
+      "m": 8,
+      "master_retention": 0.0,
+      "mean_fitness": 0.3056,
+      "master_lineage_survival": 0.0
+    },
+    {
+      "m": 16,
+      "master_retention": 0.0,
+      "mean_fitness": 0.0739,
+      "master_lineage_survival": 0.1
+    }
+  ],
+  "m_star_retention_lt_0.5": 0.25,
+  "flattest_sweep": [
+    {
+      "m": 0.25,
+      "plateau_share": 0.2875,
+      "mean_fitness": 0.9832
+    },
+    {
+      "m": 0.5,
+      "plateau_share": 0.4225,
+      "mean_fitness": 0.9608
+    },
+    {
+      "m": 1,
+      "plateau_share": 0.8887,
+      "mean_fitness": 0.9372
+    },
+    {
+      "m": 2,
+      "plateau_share": 1.0,
+      "mean_fitness": 0.8794
+    },
+    {
+      "m": 4,
+      "plateau_share": 1.0,
+      "mean_fitness": 0.7654
+    },
+    {
+      "m": 8,
+      "plateau_share": 1.0,
+      "mean_fitness": 0.5709
+    },
+    {
+      "m": 16,
+      "plateau_share": 1.0,
+      "mean_fitness": 0.2795
+    }
+  ],
+  "m_flat_plateau_wins": 1,
+  "starvation_overlay": {
+    "flux_required_tasks_per_s_to_sustain_CAP": 0.6667,
+    "receipted_first_starvation_lag_after_last_task_s": 15.2,
+    "expected_lag_s": 15.0
+  }
+}
