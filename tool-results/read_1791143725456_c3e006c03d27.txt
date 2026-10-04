@@ -1,0 +1,678 @@
+     1→/**
+     2→ * organ-boot-loader — quilt organ content-addressed store (Cloudflare Worker, KV-backed)
+     3→ *
+     4→ * The principal's "saved state bootable by others", made serverless: any agent
+     5→ * anywhere can upload a quilt ORGAN bundle (manifest + state + receipts),
+     6→ * and any other agent can boot it after verifying integrity remotely.
+     7→ *
+     8→ * Organ id = sha256hex(canonicalJSON(manifest))  → the store is content-addressed:
+     9→ *   - PUT re-derives the id server-side (client cannot choose an id)
+    10→ *   - GET serves immutable responses (ETag = id, Cache-Control immutable)
+    11→ *   - /verify recomputes every commitment server-side before boot
+    12→ *
+    13→ * Bindings:
+    14→ *   ORGANS               KV namespace (bundle bytes + meta records)
+    15→ *   WORKER_UPLOAD_TOKEN  secret — set via `wrangler secret put WORKER_UPLOAD_TOKEN`
+    16→ *                        (value recorded only in gitignored .env.keys, never here)
+    17→ *
+    18→ * DIALECTS (L15 unification — registered in schema/organ-manifest.v1.json):
+    19→ *   canonical  "quilt.organ.manifest/v1"  bundle.schema carries the string; manifest
+    20→ *             body is the quilt-jev-toolkit manifest law verbatim (manifestHash
+    21→ *             self-cover, per-cell stateHash, receiptRange {start,end,count},
+    22→ *             GENESIS-anchored 0-based receipt chain with hash = sha256 of
+    23→ *             canonical {seq, op, prev}, op an OBJECT carrying all effect content);
+    24→ *             plus the registered whole-state commitment manifest.stateHash.
+    25→ *   legacy     "quilt.organ.v1"  bundle.schemaVersion carries the string (worker
+    26→ *             original). STILL ACCEPTED during transition; every response to a
+    27→ *             legacy-dialect PUT carries header `x-quilt-schema-deprecated`.
+    28→ *   /verify ALWAYS reports which dialect the stored organ was served as (`dialect`).
+    29→ *
+    30→ * Canonical bundle shape (see schema/organ-manifest.v1.json for the full contract):
+    31→ * {
+    32→ *   "schema": "quilt.organ.manifest/v1",
+    33→ *   "manifest": {
+    34→ *     "schema": "quilt.organ.manifest", "schemaVersion": 1,
+    35→ *     "organId": "name@16hex", "name": str,
+    36→ *     "cells": [ {id, kind, stateHash, ...}, ... ],     // non-empty, unique ids
+    37→ *     "edges": [ {from, to}, ... ],
+    38→ *     "receiptRange": {start, end, count},
+    39→ *     "genesis": {seq, prevHash},                        // seq 0 → prevHash "GENESIS"
+    40→ *     "state": { "cellsSha256": hex64 },                 // sha256(canonicalJSON(state.cells))
+    41→ *     "stateHash": hex64,                                // sha256(canonicalJSON(state)) — whole state
+    42→ *     "supersedes": null | hex64,
+    43→ *     "manifestHash": hex64                              // sha256(canonicalJSON(manifest minus manifestHash))
+    44→ *   },
+    45→ *   "state": { "cells": {...}, ... },
+    46→ *   "receipts": [ {seq, op:{type, ...}, prev, hash}, ... ]  // hash = sha256(canonicalJSON({seq, op, prev}))
+    47→ * }
+    48→ *
+    49→ * Validation logic is exported (named exports) so scripts/validate-dialect.mjs
+    50→ * runs the EXACT production code against the shared fixture — one dialect, one
+    51→ * law, both implementations.
+    52→ */
+    53→
+    54→export const CANONICAL_SCHEMA = "quilt.organ.manifest/v1";
+    55→export const LEGACY_SCHEMA = "quilt.organ.v1";
+    56→const MANIFEST_SCHEMA = "quilt.organ.manifest";
+    57→const GENESIS = "GENESIS";
+    58→const MAX_BODY_BYTES = 8 * 1024 * 1024; // 8 MiB guard (KV value limit is 25 MiB; keep boots lean)
+    59→const LIST_LIMIT = 64;
+    60→
+    61→const DEPRECATION_NOTE =
+    62→  `legacy dialect ${LEGACY_SCHEMA} is accepted during transition; the canonical dialect is ${CANONICAL_SCHEMA} (schema/organ-manifest.v1.json in SuperInstance/quilt-organ-workers)`;
+    63→
+    64→const CORS_HEADERS = {
+    65→  "Access-Control-Allow-Origin": "*",
+    66→  "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
+    67→  "Access-Control-Allow-Headers": "Authorization, Content-Type, x-quilt-token",
+    68→  "Access-Control-Max-Age": "86400",
+    69→};
+    70→
+    71→function json(data, status = 200, extraHeaders = {}) {
+    72→  return new Response(JSON.stringify(data, null, 2) + "\n", {
+    73→    status,
+    74→    headers: { "content-type": "application/json; charset=utf-8", ...CORS_HEADERS, ...extraHeaders },
+    75→  });
+    76→}
+    77→
+    78→function fail(status, reason, extraHeaders = {}) {
+    79→  return json({ ok: false, error: reason }, status, extraHeaders);
+    80→}
+    81→
+    82→/** Canonical JSON — THE registered law (identical to quilt-jev-toolkit
+    83→ *  canonicalJson on every JSON-representable value; proven by the
+    84→ *  cross-canonicalizer battery in scripts/validate-dialect.mjs).
+    85→ *  Recursive key-sorted serialization; FAIL-CLOSED on values with no stable
+    86→ *  JSON meaning: undefined, NaN/Infinity, bigint, function, symbol. */
+    87→export function canonical(value, _path = "$") {
+    88→  if (value === undefined) {
+    89→    throw new TypeError(`canonical: undefined at ${_path} (fail-closed; JSON has no stable meaning for undefined)`);
+    90→  }
+    91→  if (typeof value === "number") {
+    92→    if (!Number.isFinite(value)) throw new TypeError(`canonical: non-finite number at ${_path}`);
+    93→    return JSON.stringify(value);
+    94→  }
+    95→  if (value === null || typeof value === "boolean" || typeof value === "string") {
+    96→    return JSON.stringify(value);
+    97→  }
+    98→  if (typeof value === "bigint") {
+    99→    throw new TypeError(`canonical: bigint at ${_path} (v1 refuses; serialize explicitly as string)`);
+   100→  }
+   101→  if (typeof value === "function" || typeof value === "symbol") {
+   102→    throw new TypeError(`canonical: ${typeof value} at ${_path} is not serializable (fail-closed)`);
+   103→  }
+   104→  if (Array.isArray(value)) {
+   105→    return "[" + value.map((v, i) => canonical(v, `${_path}[${i}]`)).join(",") + "]";
+   106→  }
+   107→  const keys = Object.keys(value).sort();
+   108→  return "{" + keys.map((k) => JSON.stringify(k) + ":" + canonical(value[k], `${_path}.${k}`)).join(",") + "}";
+   109→}
+   110→
+   111→export async function sha256hex(str) {
+   112→  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+   113→  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+   114→}
+   115→
+   116→/** Auth: Authorization: Bearer <token> or x-quilt-token: <token>. Compares
+   117→ *  digests (length-independent), never logs or reflects the token. */
+   118→async function authOk(request, env) {
+   119→  if (!env || !env.WORKER_UPLOAD_TOKEN) return false;
+   120→  const header = request.headers.get("authorization") || "";
+   121→  const bearer = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+   122→  const alt = (request.headers.get("x-quilt-token") || "").trim();
+   123→  const presented = bearer || alt;
+   124→  if (!presented) return false;
+   125→  const a = await sha256hex(presented);
+   126→  const b = await sha256hex(env.WORKER_UPLOAD_TOKEN);
+   127→  return a === b;
+   128→}
+   129→
+   130→const SHA256_RE = /^[a-f0-9]{64}$/;
+   131→const ORGAN_ID_RE = /^[a-z0-9][a-z0-9._-]{0,63}@[0-9a-f]{16}$/;
+   132→
+   133→/** Which dialect does this bundle speak? (exported for the harness + /verify) */
+   134→export function detectDialect(bundle) {
+   135→  if (typeof bundle !== "object" || bundle === null || Array.isArray(bundle)) return null;
+   136→  if (bundle.schema === CANONICAL_SCHEMA) return CANONICAL_SCHEMA;
+   137→  if (bundle.schemaVersion === LEGACY_SCHEMA) return LEGACY_SCHEMA;
+   138→  return null;
+   139→}
+   140→
+   141→// ---------------------------------------------------------------------------
+   142→// LEGACY dialect (quilt.organ.v1) — kept for transition, deprecated
+   143→// ---------------------------------------------------------------------------
+   144→
+   145→function validateManifestShape(manifest) {
+   146→  if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) {
+   147→    return "manifest must be an object";
+   148→  }
+   149→  if (!Array.isArray(manifest.cells) || manifest.cells.length === 0) {
+   150→    return "manifest.cells must be a non-empty array";
+   151→  }
+   152→  for (const c of manifest.cells) {
+   153→    if (typeof c !== "object" || c === null || typeof c.id !== "string" || c.id === "") {
+   154→      return "every manifest.cells[] entry must be an object with a non-empty string id";
+   155→    }
+   156→  }
+   157→  if (!Array.isArray(manifest.receiptRange) || manifest.receiptRange.length === 0) {
+   158→    return "manifest.receiptRange must be a non-empty array of receipt digests";
+   159→  }
+   160→  if (typeof manifest.stateHash !== "string" || !SHA256_RE.test(manifest.stateHash)) {
+   161→    return "manifest.stateHash must be a 64-hex sha256 of canonicalJSON(state)";
+   162→  }
+   163→  return null;
+   164→}
+   165→
+   166→/** Legacy receipt chain: receipts[i].digest = sha256(canon({seq,op,cell,prev,payload})),
+   167→ *  receipts[0].prev = "genesis", receipts[i].prev = receipts[i-1].digest.
+   168→ *  Recomputes every digest server-side (full re-derivation, not just linkage).
+   169→ *  Returns null if chain is sound, else a reason string. */
+   170→async function checkReceiptChain(receipts, receiptRange) {
+   171→  if (receipts.length !== receiptRange.length) {
+   172→    return `receipts.length (${receipts.length}) != manifest.receiptRange.length (${receiptRange.length})`;
+   173→  }
+   174→  let prev = "genesis";
+   175→  for (let i = 0; i < receipts.length; i++) {
+   176→    const r = receipts[i];
+   177→    if (typeof r !== "object" || r === null) return `receipts[${i}] is not an object`;
+   178→    if (r.prev !== prev) return `receipts[${i}].prev does not link to ${prev}`;
+   179→    const { digest, ...rest } = r;
+   180→    if (typeof digest !== "string" || !SHA256_RE.test(digest)) {
+   181→      return `receipts[${i}].digest is not 64-hex`;
+   182→    }
+   183→    if (JSON.stringify(rest.seq) === "undefined") return `receipts[${i}].seq missing`;
+   184→    if (rest.seq !== i + 1) return `receipts[${i}].seq out of order (expected ${i + 1})`;
+   185→    const recomputed = await sha256hex(canonical(rest));
+   186→    if (recomputed !== digest) {
+   187→      return `receipts[${i}] digest mismatch: recomputed ${recomputed}, stored ${digest}`;
+   188→    }
+   189→    if (receiptRange[i] !== digest) return `receipts[${i}].digest != manifest.receiptRange[${i}]`;
+   190→    prev = digest;
+   191→  }
+   192→  return null;
+   193→}
+   194→
+   195→// ---------------------------------------------------------------------------
+   196→// CANONICAL dialect (quilt.organ.manifest/v1) — the registered law
+   197→// ---------------------------------------------------------------------------
+   198→
+   199→/** Canonical receipt chain — the toolkit's verifyChain law:
+   200→ *  receipts[i] = {seq, op (object, non-empty type), prev, hash};
+   201→ *  hash = sha256(canon({seq, op, prev})); receipts[0].prev = genesis.prevHash;
+   202→ *  receipts[i].prev = receipts[i-1].hash; seq = receiptRange.start + i;
+   203→ *  a present chain must be the FULL window (length == receiptRange.count).
+   204→ *  Returns null if sound, else a reason string. */
+   205→export async function checkCanonicalReceiptChain(receipts, manifest) {
+   206→  const rr = manifest.receiptRange;
+   207→  if (receipts.length !== rr.count) {
+   208→    return `receipts.length (${receipts.length}) != manifest.receiptRange.count (${rr.count}) — a bootable organ carries its full window`;
+   209→  }
+   210→  let expectedPrev = manifest.genesis.prevHash;
+   211→  for (let i = 0; i < receipts.length; i++) {
+   212→    const r = receipts[i];
+   213→    if (typeof r !== "object" || r === null || Array.isArray(r)) {
+   214→      return `receipts[${i}] is not an object`;
+   215→    }
+   216→    if (r.seq !== rr.start + i) {
+   217→      return `receipts[${i}].seq discontinuity: expected ${rr.start + i}, got ${JSON.stringify(r.seq ?? null)}`;
+   218→    }
+   219→    if (r.prev !== expectedPrev) {
+   220→      return `receipts[${i}].prev does not link to ${expectedPrev}`;
+   221→    }
+   222→    if (typeof r.op !== "object" || r.op === null || Array.isArray(r.op) || typeof r.op.type !== "string" || r.op.type === "") {
+   223→      return `receipts[${i}].op must be an object with a non-empty string type`;
+   224→    }
+   225→    if (typeof r.hash !== "string" || !SHA256_RE.test(r.hash)) {
+   226→      return `receipts[${i}].hash is not 64-hex`;
+   227→    }
+   228→    const recomputed = await sha256hex(canonical({ seq: r.seq, op: r.op, prev: r.prev }));
+   229→    if (recomputed !== r.hash) {
+   230→      return `receipts[${i}] hash mismatch: recomputed ${recomputed}, stored ${r.hash}`;
+   231→    }
+   232→    expectedPrev = r.hash;
+   233→  }
+   234→  return null;
+   235→}
+   236→
+   237→/** Full canonical-dialect validation (the same law the toolkit's
+   238→ *  validateManifest + verifyChain + computeManifestHash enforce, plus the
+   239→ *  registered whole-state commitment). Returns {ok, errors:[{code, detail}]}.
+   240→ *  Exported so the harness runs the EXACT production code. */
+   241→export async function validateCanonicalBundle(bundle) {
+   242→  const errors = [];
+   243→  const bad = (code, detail) => errors.push({ code, detail });
+   244→
+   245→  if (typeof bundle !== "object" || bundle === null || Array.isArray(bundle)) {
+   246→    return { ok: false, errors: [{ code: "MANIFEST_INVALID", detail: "bundle must be a JSON object" }] };
+   247→  }
+   248→  const manifest = bundle.manifest;
+   249→  if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) {
+   250→    return { ok: false, errors: [{ code: "MANIFEST_INVALID", detail: "manifest must be an object" }] };
+   251→  }
+   252→
+   253→  // --- toolkit manifest law (mirrors validateManifest field-for-field) ---
+   254→  if (manifest.schema !== MANIFEST_SCHEMA) {
+   255→    bad("SCHEMA_DRIFT", `manifest.schema ${JSON.stringify(manifest.schema ?? null)} !== ${MANIFEST_SCHEMA}`);
+   256→  }
+   257→  if (manifest.schemaVersion !== 1) {
+   258→    bad("SCHEMA_DRIFT", `manifest.schemaVersion ${JSON.stringify(manifest.schemaVersion ?? null)} !== 1`);
+   259→  }
+   260→  if (errors.some((e) => e.code === "SCHEMA_DRIFT")) {
+   261→    return { ok: false, errors }; // drift: refuse before interpreting fields
+   262→  }
+   263→  if (typeof manifest.organId !== "string" || !ORGAN_ID_RE.test(manifest.organId)) {
+   264→    bad("MANIFEST_INVALID", `organId must match name@16hex, got ${JSON.stringify(manifest.organId ?? null)}`);
+   265→  }
+   266→  if (typeof manifest.name !== "string" || manifest.name.length === 0) {
+   267→    bad("MANIFEST_INVALID", "name must be a non-empty string");
+   268→  }
+   269→
+   270→  const cellIds = new Set();
+   271→  const cells = manifest.cells;
+   272→  if (!Array.isArray(cells) || cells.length === 0) {
+   273→    bad("MANIFEST_INVALID", "cells must be a non-empty array");
+   274→  } else {
+   275→    for (const c of cells) {
+   276→      if (typeof c !== "object" || c === null || Array.isArray(c) || typeof c.id !== "string" || c.id === "") {
+   277→        bad("MANIFEST_INVALID", "cell entry missing id"); continue;
+   278→      }
+   279→      if (cellIds.has(c.id)) bad("MANIFEST_INVALID", `duplicate cell id ${c.id}`);
+   280→      cellIds.add(c.id);
+   281→      if (typeof c.kind !== "string" || c.kind === "") bad("MANIFEST_INVALID", `cell ${c.id} missing kind`);
+   282→      if (typeof c.stateHash !== "string" || !SHA256_RE.test(c.stateHash)) {
+   283→        bad("MANIFEST_INVALID", `cell ${c.id} stateHash not sha256 hex`);
+   284→      }
+   285→    }
+   286→  }
+   287→  if (!Array.isArray(manifest.edges)) {
+   288→    bad("MANIFEST_INVALID", "edges must be an array");
+   289→  } else {
+   290→    for (const e of manifest.edges) {
+   291→      if (typeof e !== "object" || e === null || Array.isArray(e) || typeof e.from !== "string" || typeof e.to !== "string") {
+   292→        bad("MANIFEST_INVALID", "edge must be {from,to}"); continue;
+   293→      }
+   294→      if (!cellIds.has(e.from)) bad("MANIFEST_INVALID", `edge.from ${e.from} is not a known cell`);
+   295→      if (!cellIds.has(e.to)) bad("MANIFEST_INVALID", `edge.to ${e.to} is not a known cell`);
+   296→    }
+   297→  }
+   298→
+   299→  const rr = manifest.receiptRange;
+   300→  if (typeof rr !== "object" || rr === null || Array.isArray(rr) ||
+   301→      !Number.isInteger(rr.start) || !Number.isInteger(rr.end) || !Number.isInteger(rr.count)) {
+   302→    bad("MANIFEST_INVALID", "receiptRange must be {start:int, end:int, count:int}");
+   303→  } else if (rr.start < 0 || rr.end < rr.start || rr.count !== rr.end - rr.start + 1) {
+   304→    bad("MANIFEST_INVALID", `receiptRange inconsistent: start=${rr.start} end=${rr.end} count=${rr.count}`);
+   305→  }
+   306→
+   307→  const g = manifest.genesis;
+   308→  if (typeof g !== "object" || g === null || Array.isArray(g) ||
+   309→      !Number.isInteger(g.seq) || g.seq < 0 || typeof g.prevHash !== "string" || g.prevHash === "") {
+   310→    bad("MANIFEST_INVALID", "genesis must be {seq:int>=0, prevHash:string}");
+   311→  } else if (rr && Number.isInteger(rr.start) && g.seq !== rr.start) {
+   312→    bad("MANIFEST_INVALID", `genesis.seq ${g.seq} must equal receiptRange.start ${rr.start}`);
+   313→  } else if (g.seq === 0 && g.prevHash !== GENESIS) {
+   314→    bad("MANIFEST_INVALID", `genesis at seq 0 must anchor to ${GENESIS}, got ${JSON.stringify(g.prevHash)}`);
+   315→  } else if (g.seq > 0 && !SHA256_RE.test(g.prevHash)) {
+   316→    bad("MANIFEST_INVALID", "genesis.prevHash for seq>0 must be a sha256 checkpoint hash");
+   317→  }
+   318→
+   319→  const mstate = manifest.state;
+   320→  if (typeof mstate !== "object" || mstate === null || Array.isArray(mstate) ||
+   321→      typeof mstate?.cellsSha256 !== "string" || !SHA256_RE.test(mstate?.cellsSha256 ?? "")) {
+   322→    bad("MANIFEST_INVALID", "state.cellsSha256 must be sha256 hex");
+   323→  }
+   324→
+   325→  if (manifest.supersedes !== null && (typeof manifest.supersedes !== "string" || !SHA256_RE.test(manifest.supersedes))) {
+   326→    bad("MANIFEST_INVALID", "supersedes must be null or a sha256 manifestHash");
+   327→  }
+   328→
+   329→  if (typeof manifest.manifestHash !== "string" || !SHA256_RE.test(manifest.manifestHash)) {
+   330→    bad("MANIFEST_INVALID", "manifestHash missing or not sha256 hex");
+   331→  } else {
+   332→    const { manifestHash: _ignored, ...rest } = manifest;
+   333→    const recomputed = await sha256hex(canonical(rest));
+   334→    if (recomputed !== manifest.manifestHash) {
+   335→      bad("MANIFESTHASH_MISMATCH", `manifestHash self-cover broken: recomputed ${recomputed}, carried ${manifest.manifestHash}`);
+   336→    }
+   337→  }
+   338→
+   339→  // --- registered extension: WHOLE-state commitment (worker heritage) ---
+   340→  if (typeof manifest.stateHash !== "string" || !SHA256_RE.test(manifest.stateHash)) {
+   341→    bad("MANIFEST_INVALID", "stateHash (whole-state commitment) missing or not sha256 hex");
+   342→  }
+   343→  if (typeof bundle.state !== "object" || bundle.state === null || Array.isArray(bundle.state)) {
+   344→    bad("STATE_INVALID", "bundle.state must be an object");
+   345→  } else {
+   346→    if (typeof manifest.stateHash === "string" && SHA256_RE.test(manifest.stateHash)) {
+   347→      const wholeHash = await sha256hex(canonical(bundle.state));
+   348→      if (wholeHash !== manifest.stateHash) {
+   349→        bad("STATEHASH_MISMATCH", `stateHash mismatch: manifest says ${manifest.stateHash}, sha256(canonicalJSON(state)) is ${wholeHash}`);
+   350→      }
+   351→    }
+   352→    // --- cells-map commitment (toolkit heritage) + per-cell commitments ---
+   353→    const stateCells = bundle.state.cells;
+   354→    if (typeof stateCells !== "object" || stateCells === null || Array.isArray(stateCells)) {
+   355→      bad("STATE_INVALID", "bundle.state.cells must be an object map keyed by cell id");
+   356→    } else {
+   357→      if (typeof mstate?.cellsSha256 === "string" && SHA256_RE.test(mstate.cellsSha256)) {
+   358→        const cellsHash = await sha256hex(canonical(stateCells));
+   359→        if (cellsHash !== mstate.cellsSha256) {
+   360→          bad("CELLSSHA256_MISMATCH", `cellsSha256 mismatch: manifest says ${mstate.cellsSha256}, sha256(canonicalJSON(state.cells)) is ${cellsHash}`);
+   361→        }
+   362→      }
+   363→      if (Array.isArray(cells)) {
+   364→        for (const c of cells) {
+   365→          if (typeof c?.id !== "string" || c.id === "") continue;
+   366→          if (!Object.prototype.hasOwnProperty.call(stateCells, c.id)) {
+   367→            bad("CELL_STATE_MISSING", `state.cells missing entry for cell id ${c.id} (bootable organs carry their cells' state)`);
+   368→          } else if (typeof c.stateHash === "string" && SHA256_RE.test(c.stateHash)) {
+   369→            const cellHash = await sha256hex(canonical(stateCells[c.id]));
+   370→            if (cellHash !== c.stateHash) {
+   371→              bad("CELL_STATEHASH_MISMATCH", `cell ${c.id} stateHash mismatch: manifest says ${c.stateHash}, sha256(canonicalJSON(state.cells["${c.id}"])) is ${cellHash}`);
+   372→            }
+   373→          }
+   374→        }
+   375→      }
+   376→    }
+   377→  }
+   378→
+   379→  // --- receipt chain (toolkit law), verified when present ---
+   380→  if (bundle.receipts !== undefined) {
+   381→    if (!Array.isArray(bundle.receipts)) {
+   382→      bad("RECEIPT_INVALID", "bundle.receipts must be an array when present");
+   383→    } else if (rr && Number.isInteger(rr.count)) {
+   384→      const chainErr = await checkCanonicalReceiptChain(bundle.receipts, manifest);
+   385→      if (chainErr) bad("RECEIPT_INVALID", chainErr);
+   386→    }
+   387→  }
+   388→
+   389→  return { ok: errors.length === 0, errors };
+   390→}
+   391→
+   392→// ---------------------------------------------------------------------------
+   393→// worker
+   394→// ---------------------------------------------------------------------------
+   395→
+   396→export default {
+   397→  async fetch(request, env, ctx) {
+   398→    const url = new URL(request.url);
+   399→    const path = url.pathname.replace(/\/+$/, "") || "/";
+   400→    const method = request.method;
+   401→
+   402→    if (method === "OPTIONS") {
+   403→      return new Response(null, { status: 204, headers: CORS_HEADERS });
+   404→    }
+   405→
+   406→    // ---- GET / → service index -------------------------------------------------
+   407→    if (method === "GET" && (path === "/" || path === "")) {
+   408→      return json({
+   409→        service: "organ-boot-loader",
+   410→        dialects: {
+   411→          canonical: CANONICAL_SCHEMA,
+   412→          deprecated: { schemaVersion: LEGACY_SCHEMA, deprecationHeader: "x-quilt-schema-deprecated", status: "accepted-during-transition" },
+   413→          schemaDoc: "schema/organ-manifest.v1.json in SuperInstance/quilt-organ-workers (L15 unification registration)",
+   414→        },
+   415→        schema: CANONICAL_SCHEMA,
+   416→        store: "content-addressed (organ id = sha256hex(canonicalJSON(manifest)))",
+   417→        endpoints: {
+   418→          "GET /organs": "list uploaded organ bundle ids with schema version + cell count",
+   419→          "GET /organ/{sha256}": "serve the organ bundle JSON (manifest + state + receipts); ETag + x-quilt-organ-sha256 headers; immutable cache",
+   420→          "GET /organ/{sha256}/verify": "recompute every commitment server-side → {bootable, reason, dialect} — check before booting",
+   421→          "PUT /organ": "upload a bundle (canonical dialect quilt.organ.manifest/v1; legacy quilt.organ.v1 accepted during transition); auth via Authorization: Bearer <WORKER_UPLOAD_TOKEN> or x-quilt-token; server-side schema + hash validation",
+   422→        },
+   423→        cors: "open — any agent anywhere can boot organs",
+   424→      });
+   425→    }
+   426→
+   427→    // ---- GET /organs → list ----------------------------------------------------
+   428→    if (method === "GET" && path === "/organs") {
+   429→      const list = await env.ORGANS.list({ prefix: "meta:", limit: LIST_LIMIT });
+   430→      const organs = [];
+   431→      for (const key of list.keys) {
+   432→        const meta = await env.ORGANS.get(key.name, { type: "json" });
+   433→        if (meta) {
+   434→          organs.push({
+   435→            id: meta.id,
+   436→            schemaVersion: meta.schemaVersion,
+   437→            cellCount: meta.cellCount,
+   438→            receiptCount: meta.receiptCount,
+   439→            name: meta.name,
+   440→            stateHash: meta.stateHash,
+   441→            byteSize: meta.byteSize,
+   442→            uploadedAt: meta.uploadedAt,
+   443→          });
+   444→        }
+   445→      }
+   446→      return json({ ok: true, count: organs.length, organs });
+   447→    }
+   448→
+   449→    // ---- PUT /organ → validate + store ------------------------------------------
+   450→    if (method === "PUT" && (path === "/organ" || path === "/organ/")) {
+   451→      if (!(await authOk(request, env))) {
+   452→        return fail(401, "unauthorized — present WORKER_UPLOAD_TOKEN via 'Authorization: Bearer <token>' or 'x-quilt-token'");
+   453→      }
+   454→      const declared = Number(request.headers.get("content-length") || "0");
+   455→      if (declared > MAX_BODY_BYTES) {
+   456→        return fail(413, `body too large (${declared} bytes; limit ${MAX_BODY_BYTES})`);
+   457→      }
+   458→      let bodyText;
+   459→      try {
+   460→        bodyText = await request.text();
+   461→      } catch {
+   462→        return fail(400, "could not read request body");
+   463→      }
+   464→      if (bodyText.length > MAX_BODY_BYTES) {
+   465→        return fail(413, `body too large (${bodyText.length} bytes; limit ${MAX_BODY_BYTES})`);
+   466→      }
+   467→      let bundle;
+   468→      try {
+   469→        bundle = JSON.parse(bodyText);
+   470→      } catch (e) {
+   471→        return fail(400, `body is not valid JSON: ${e.message}`);
+   472→      }
+   473→      const dialect = detectDialect(bundle);
+   474→      if (dialect === null) {
+   475→        return fail(
+   476→          400,
+   477→          `unsupported schema dialect: expected "${CANONICAL_SCHEMA}" (bundle.schema) or legacy "${LEGACY_SCHEMA}" (bundle.schemaVersion), got neither — see schema/organ-manifest.v1.json`
+   478→        );
+   479→      }
+   480→      const legacyHeaders = dialect === LEGACY_SCHEMA ? { "x-quilt-schema-deprecated": LEGACY_SCHEMA } : {};
+   481→      const canonicalHeaders = dialect === CANONICAL_SCHEMA ? { "x-quilt-schema": CANONICAL_SCHEMA } : {};
+   482→      const dialectHeaders = { ...legacyHeaders, ...canonicalHeaders };
+   483→
+   484→      let manifest, stateHashField, cellCount, receiptCount;
+   485→      if (dialect === CANONICAL_SCHEMA) {
+   486→        const { ok, errors } = await validateCanonicalBundle(bundle);
+   487→        if (!ok) {
+   488→          return fail(400, `canonical bundle invalid: ${errors.map((e) => `${e.code}: ${e.detail}`).join("; ")}`, dialectHeaders);
+   489→        }
+   490→        manifest = bundle.manifest;
+   491→        stateHashField = manifest.stateHash;
+   492→        cellCount = manifest.cells.length;
+   493→        receiptCount = manifest.receiptRange.count;
+   494→      } else {
+   495→        // legacy path — same law as the original worker, unchanged
+   496→        const shapeErr = validateManifestShape(bundle.manifest);
+   497→        if (shapeErr) return fail(400, `manifest invalid: ${shapeErr}`, dialectHeaders);
+   498→        if (typeof bundle.state !== "object" || bundle.state === null) {
+   499→          return fail(400, "bundle.state must be an object", dialectHeaders);
+   500→        }
+   501→        const recomputedStateHash = await sha256hex(canonical(bundle.state));
+   502→        if (recomputedStateHash !== bundle.manifest.stateHash) {
+   503→          return fail(400, `stateHash mismatch: manifest says ${bundle.manifest.stateHash}, sha256(canonicalJSON(state)) is ${recomputedStateHash}`, dialectHeaders);
+   504→        }
+   505→        if (bundle.receipts !== undefined) {
+   506→          if (!Array.isArray(bundle.receipts)) return fail(400, "bundle.receipts must be an array when present", dialectHeaders);
+   507→          const chainErr = await checkReceiptChain(bundle.receipts, bundle.manifest.receiptRange);
+   508→          if (chainErr) return fail(400, `receipt chain invalid: ${chainErr}`, dialectHeaders);
+   509→        }
+   510→        manifest = bundle.manifest;
+   511→        stateHashField = manifest.stateHash;
+   512→        cellCount = manifest.cells.length;
+   513→        receiptCount = manifest.receiptRange.length;
+   514→      }
+   515→
+   516→      // Content-addressed id — derived server-side from the manifest bytes
+   517→      const id = await sha256hex(canonical(manifest));
+   518→
+   519→      const now = new Date().toISOString();
+   520→      const envelope = {
+   521→        schemaVersion: dialect,
+   522→        id,
+   523→        name: manifest.name ?? "unnamed",
+   524→        cellCount,
+   525→        receiptCount,
+   526→        stateHash: stateHashField,
+   527→        uploadedAt: now,
+   528→        bundle,
+   529→      };
+   530→      const meta = {
+   531→        id,
+   532→        schemaVersion: dialect,
+   533→        name: envelope.name,
+   534→        cellCount: envelope.cellCount,
+   535→        receiptCount: envelope.receiptCount,
+   536→        stateHash: envelope.stateHash,
+   537→        byteSize: bodyText.length,
+   538→        uploadedAt: now,
+   539→      };
+   540→      // Content-addressed → identical re-upload is idempotent, not a conflict
+   541→      const existing = await env.ORGANS.get(`organ:${id}`, { type: "json" });
+   542→      if (existing) {
+   543→        await env.ORGANS.put(`meta:${id}`, JSON.stringify(meta));
+   544→        return json(
+   545→          { ok: true, stored: false, alreadyExisted: true, id, dialect, verifyPath: `/organ/${id}/verify`, ...(dialect === LEGACY_SCHEMA ? { deprecation: DEPRECATION_NOTE } : {}) },
+   546→          200,
+   547→          dialectHeaders
+   548→        );
+   549→      }
+   550→      await env.ORGANS.put(`organ:${id}`, JSON.stringify(envelope));
+   551→      await env.ORGANS.put(`meta:${id}`, JSON.stringify(meta));
+   552→      return json(
+   553→        {
+   554→          ok: true,
+   555→          stored: true,
+   556→          id,
+   557→          dialect,
+   558→          cellCount: envelope.cellCount,
+   559→          receiptCount: envelope.receiptCount,
+   560→          stateHash: envelope.stateHash,
+   561→          paths: { bundle: `/organ/${id}`, verify: `/organ/${id}/verify` },
+   562→          ...(dialect === LEGACY_SCHEMA ? { deprecation: DEPRECATION_NOTE } : {}),
+   563→        },
+   564→        201,
+   565→        { etag: `"${id}"`, ...dialectHeaders }
+   566→      );
+   567→    }
+   568→
+   569→    // ---- GET /organ/{sha256}[/verify] -------------------------------------------
+   570→    const organMatch = path.match(/^\/organ\/([a-f0-9]{64})(\/verify)?$/);
+   571→    if (organMatch && (method === "GET" || method === "HEAD")) {
+   572→      const id = organMatch[1];
+   573→      const wantVerify = Boolean(organMatch[2]);
+   574→      const raw = await env.ORGANS.get(`organ:${id}`);
+   575→      if (!raw) {
+   576→        return fail(404, `no organ with id ${id} in this store`);
+   577→      }
+   578→      let envelope;
+   579→      try {
+   580→        envelope = JSON.parse(raw);
+   581→      } catch (e) {
+   582→        return fail(500, `stored envelope corrupt: ${e.message}`);
+   583→      }
+   584→      const bundle = envelope.bundle;
+   585→      const dialect = detectDialect(bundle) ?? envelope.schemaVersion ?? "unknown";
+   586→      const commonHeaders = {
+   587→        etag: `"${id}"`,
+   588→        "x-quilt-organ-sha256": id,
+   589→        "x-quilt-schema": dialect,
+   590→        "cache-control": "public, max-age=31536000, immutable",
+   591→        ...(dialect === LEGACY_SCHEMA ? { "x-quilt-schema-deprecated": LEGACY_SCHEMA } : {}),
+   592→      };
+   593→
+   594→      if (wantVerify) {
+   595→        // Boot-readiness: recompute everything server-side, trust nothing on arrival
+   596→        const checks = {};
+   597→        checks.manifestDigestMatchesId = (await sha256hex(canonical(bundle.manifest))) === id;
+   598→        checks.stateHashMatchesState =
+   599→          (await sha256hex(canonical(bundle.state))) === (bundle.manifest && bundle.manifest.stateHash);
+   600→        let receiptReason = null;
+   601→        const firstDetail = (code) => recheckErrs.find((e) => e.code === code)?.detail ?? null;
+   602→        let recheckErrs = [];
+   603→        if (dialect === CANONICAL_SCHEMA) {
+   604→          // canonical: full law re-derivation (delegates to the exported validator)
+   605→          const recheck = await validateCanonicalBundle(bundle);
+   606→          recheckErrs = recheck.errors;
+   607→          checks.manifestHashSelfCover = !recheckErrs.some((e) => e.code === "MANIFESTHASH_MISMATCH");
+   608→          checks.cellsSha256MatchesState = !recheckErrs.some((e) => e.code === "CELLSSHA256_MISMATCH");
+   609→          checks.perCellStateHashes = !recheckErrs.some(
+   610→            (e) => e.code === "CELL_STATEHASH_MISMATCH" || e.code === "CELL_STATE_MISSING"
+   611→          );
+   612→          if (!Array.isArray(bundle.receipts)) {
+   613→            checks.receiptChain = true; // receipts optional in both dialects; verified when present
+   614→          }
+   615→          const chainErrs = recheckErrs.filter((e) => e.code === "RECEIPT_INVALID");
+   616→          if (chainErrs.length > 0) receiptReason = chainErrs.map((e) => e.detail).join("; ");
+   617→        } else {
+   618→          if (Array.isArray(bundle.receipts)) {
+   619→            receiptReason = await checkReceiptChain(bundle.receipts, bundle.manifest.receiptRange);
+   620→          }
+   621→        }
+   622→        if (!("receiptChain" in checks)) checks.receiptChain = receiptReason === null;
+   623→        const bootable =
+   624→          checks.manifestDigestMatchesId && checks.stateHashMatchesState && checks.receiptChain &&
+   625→          checks.manifestHashSelfCover !== false && checks.cellsSha256MatchesState !== false && checks.perCellStateHashes !== false;
+   626→        let reason;
+   627→        if (bootable) {
+   628→          reason =
+   629→            dialect === CANONICAL_SCHEMA
+   630→              ? "manifest digest == id; manifestHash self-cover holds; sha256(canonicalJSON(state)) == manifest.stateHash; sha256(canonicalJSON(state.cells)) == state.cellsSha256; every cell stateHash re-derives; receipt chain links GENESIS→tip with every hash re-derived (toolkit law)"
+   631→              : "manifest digest == id; sha256(canonicalJSON(state)) == manifest.stateHash; every receipt digest re-derives and the chain links genesis→tip matching receiptRange";
+   632→        } else if (!checks.manifestDigestMatchesId) {
+   633→          reason = "manifest digest mismatch: stored manifest no longer hashes to the addressed id";
+   634→        } else if (checks.manifestHashSelfCover === false) {
+   635→          reason = firstDetail("MANIFESTHASH_MISMATCH") ?? "manifest no longer hashes to its carried manifestHash";
+   636→        } else if (checks.cellsSha256MatchesState === false) {
+   637→          reason = firstDetail("CELLSSHA256_MISMATCH") ?? "stored state.cells does not hash to manifest.state.cellsSha256";
+   638→        } else if (checks.perCellStateHashes === false) {
+   639→          reason = firstDetail("CELL_STATEHASH_MISMATCH") ?? firstDetail("CELL_STATE_MISSING") ?? "a stored cell state no longer hashes to its manifest claim";
+   640→        } else if (!checks.stateHashMatchesState) {
+   641→          reason = "stateHash mismatch: stored state does not hash to manifest.stateHash";
+   642→        } else {
+   643→          reason = `receipt chain invalid: ${receiptReason}`;
+   644→        }
+   645→        return json(
+   646→          {
+   647→            ok: true,
+   648→            bootable,
+   649→            reason,
+   650→            dialect,
+   651→            checks: { ...checks, receiptReason },
+   652→            id,
+   653→            schemaVersion: envelope.schemaVersion,
+   654→            cellCount: envelope.cellCount,
+   655→            receiptCount: envelope.receiptCount,
+   656→          },
+   657→          200,
+   658→          commonHeaders
+   659→        );
+   660→      }
+   661→
+   662→      return new Response(JSON.stringify(bundle, null, 2) + "\n", {
+   663→        status: 200,
+   664→        headers: {
+   665→          "content-type": "application/json; charset=utf-8",
+   666→          ...CORS_HEADERS,
+   667→          ...commonHeaders,
+   668→        },
+   669→      });
+   670→    }
+   671→
+   672→    if (path.startsWith("/organ") || path === "/organs") {
+   673→      return fail(404, `no route: ${method} ${path}`);
+   674→    }
+   675→    return fail(404, `no route: ${method} ${path}`);
+   676→  },
+   677→};
+   678→

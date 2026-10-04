@@ -1,0 +1,620 @@
+     1→#!/usr/bin/env python3
+     2→# -*- coding: utf-8 -*-
+     3→"""conformance.py — the proof that qcells is CORRECT (task 49-c).
+     4→
+     5→Oracle: micromoth's own simulate() (vendored byte-identical copy, sha256
+     6→pinned). Checks, per a deterministic battery of circuits:
+     7→
+     8→  (a) P1 — the cell-ledger replay reproduces the simulator's
+     9→      statevector/counts EXACTLY (rebuilt.data == wrapped.data;
+    10→      statevector ==; sealed counts == and fold from EFFECT rows; PROOF
+    11→      and VIEW digests re-derive by replay).
+    12→  (b) P2 — the fnv1a-64 chain verifies from genesis
+    13→      0x0000000000000000 for every circuit; canonical form round-trips;
+    14→      no sugar op ever enters a ledger.
+    15→  (c) P3 — single-byte tamper of ANY ledger row (id / kind / prev flips,
+    16→      exhaustive over every row of every ledger) is detected fail-closed
+    17→      at exactly the tampered row; a fully re-forged chain carrying a
+    18→      doctored init payload is still caught by the payload pin + anchor.
+    19→  (d) P4 — determinism crown: two independent builds of the same circuit
+    20→      with the same seed produce byte-identical ledgers.
+    21→
+    22→Seal discipline (registration BEFORE runs): `python3 conformance.py
+    23→--register` writes registration.json with claims P1-P4 (status PENDING)
+    24→and the sha256 + mtime + size of qcells.py / conformance.py / micromoth.py.
+    25→Every run first re-verifies those seals and refuses (exit 2, fail-closed)
+    26→if the code moved — re-register and re-run is the documented remedy.
+    27→
+    28→Receipts: receipts/conformance.jsonl is itself an fnv1a-64 chain from
+    29→genesis (fleet WAL convention); receipts/summary.json carries the claim
+    30→outcomes, per-ledger anchors (tip + row count) and totals. No wall-clock
+    31→values enter any receipt — two full runs must produce byte-identical
+    32→receipt files (verified manually; noted in verdict.md).
+    33→"""
+    34→
+    35→from __future__ import annotations
+    36→
+    37→import json
+    38→import random
+    39→import sys
+    40→import time
+    41→from pathlib import Path
+    42→
+    43→HERE = Path(__file__).resolve().parent
+    44→sys.path.insert(0, str(HERE))
+    45→
+    46→import micromoth
+    47→from micromoth import simulate
+    48→from qcells import (GENESIS, PRIMITIVE_OPS, SUGAR_OPS, CellCircuit,
+    49→                    LedgerError, canon, check_anchor, fnv1a64, parse_ledger,
+    50→                    rebuild_from_rows, row_id, sha256_hex, verify_ledger)
+    51→
+    52→EXPECTED_MICROMOTH_SHA256 = (
+    53→    "bbd10ac2ffd4dd8bdee86480866107b3c0917ab09286b1d9e2ed144faed482df")
+    54→MICROMOTH_SHA256 = sha256_hex((HERE / "micromoth.py").read_bytes())
+    55→
+    56→REG_PATH = HERE / "registration.json"
+    57→RECEIPTS = HERE / "receipts"
+    58→LEDGERS = RECEIPTS / "ledgers"
+    59→
+    60→CLAIMS = {
+    61→    "P1": ("Ledger replay reproduces micromoth simulate() EXACTLY for every "
+    62→           "battery circuit: rebuilt.data == wrapped.data (the ledger is the "
+    63→           "circuit); statevector == (bit-exact); sealed counts == and fold "
+    64→           "exactly from the EFFECT/collapse rows; PROOF and VIEW digests "
+    65→           "re-derive by replay; init payloads pin-verified."),
+    66→    "P2": ("The fnv1a-64 chain verifies from genesis 0x0000000000000000 for "
+    67→           "every ledger in the battery; every exported line round-trips "
+    68→           "canonical JSON; BIND rows carry only primitive ops (no y/z/ry/t "
+    69→           "sugar ever enters a ledger)."),
+    70→    "P3": ("Single-byte tamper of any ledger row — exhaustive id/kind/prev "
+    71→           "flips over every row of every ledger — is detected fail-closed "
+    72→           "at exactly the tampered row; forged-tail and forged-payload "
+    73→           "attacks are caught by anchor and init-pin respectively."),
+    74→    "P4": ("Determinism crown: two independent builds of the same circuit "
+    75→           "with the same seed produce byte-identical ledgers (sha256 "
+    76→           "equal); unsealed sampling is honestly excluded (the hole)."),
+    77→}
+    78→
+    79→
+    80→# --- seal discipline ----------------------------------------------------------
+    81→
+    82→SEAL_FILES = ("qcells.py", "conformance.py", "micromoth.py")
+    83→
+    84→
+    85→def file_seal(path: Path):
+    86→    b = path.read_bytes()
+    87→    st = path.stat()
+    88→    return {"sha256": sha256_hex(b), "mtime": st.st_mtime, "size": st.st_size}
+    89→
+    90→
+    91→def register():
+    92→    reg = {
+    93→        "task": "49-c",
+    94→        "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    95→        "claims": {k: {"claim": v, "status": "PENDING"}
+    96→                   for k, v in CLAIMS.items()},
+    97→        "seals": {f: file_seal(HERE / f) for f in SEAL_FILES},
+    98→        "expected_micromoth_sha256": EXPECTED_MICROMOTH_SHA256,
+    99→        "note": ("claims registered BEFORE any conformance run; seals bind "
+   100→                 "the claims to the exact code version under test. If any "
+   101→                 "seal is stale at run time the run refuses (fail-closed); "
+   102→                 "the remedy is re-register + re-run."),
+   103→    }
+   104→    REG_PATH.write_text(json.dumps(reg, indent=2, sort_keys=True) + "\n")
+   105→    print("registration sealed -> %s" % REG_PATH)
+   106→    for f, s in reg["seals"].items():
+   107→        print("  %-15s sha256=%s mtime=%.3f" % (f, s["sha256"][:16], s["mtime"]))
+   108→
+   109→
+   110→def check_registration():
+   111→    if not REG_PATH.exists():
+   112→        print("FATAL: registration.json missing — claims must be registered "
+   113→              "BEFORE running conformance: python3 conformance.py --register")
+   114→        sys.exit(2)
+   115→    reg = json.loads(REG_PATH.read_text())
+   116→    for f, seal in reg["seals"].items():
+   117→        cur = file_seal(HERE / f)
+   118→        if cur["sha256"] != seal["sha256"]:
+   119→            print("FATAL: seal stale for %s (sha256 moved since registration) "
+   120→                  "— re-register and re-run" % f)
+   121→            sys.exit(2)
+   122→        if abs(cur["mtime"] - seal["mtime"]) > 1.0:
+   123→            print("FATAL: seal stale for %s (mtime moved since registration) "
+   124→                  "— re-register and re-run" % f)
+   125→            sys.exit(2)
+   126→    if MICROMOTH_SHA256 != EXPECTED_MICROMOTH_SHA256:
+   127→        print("FATAL: vendored micromoth.py sha256 %s != pinned %s — the "
+   128→              "oracle moved; re-seal deliberately" % (MICROMOTH_SHA256,
+   129→                                                      EXPECTED_MICROMOTH_SHA256))
+   130→        sys.exit(2)
+   131→    return reg
+   132→
+   133→
+   134→# --- receipt chain (fnv1a-64, genesis 0 — same convention as the ledgers) -----
+   135→
+   136→class ReceiptChain:
+   137→    def __init__(self):
+   138→        self.rows = []
+   139→        self.tip = GENESIS
+   140→
+   141→    def add(self, check, outcome, detail):
+   142→        row = {"seq": len(self.rows), "check": check, "outcome": outcome,
+   143→               "detail": detail, "prev": self.tip}
+   144→        self.rows.append(row)
+   145→        self.tip = fnv1a64(canon(row))
+   146→
+   147→    def export(self) -> bytes:
+   148→        lines = [canon({**r, "id": fnv1a64(canon(r))}) for r in self.rows]
+   149→        return b"\n".join(lines) + (b"\n" if lines else b"")
+   150→
+   151→
+   152→# --- battery ------------------------------------------------------------------
+   153→
+   154→def _bell(cc):
+   155→    cc.h(0); cc.cx(0, 1); cc.measure(0, 0); cc.measure(1, 1)
+   156→
+   157→
+   158→def _ghz3(cc):
+   159→    cc.h(0); cc.cx(0, 1); cc.cx(1, 2)
+   160→    cc.measure(0, 0); cc.measure(1, 1); cc.measure(2, 2)
+   161→
+   162→
+   163→def _ry(cc):
+   164→    cc.ry(0.7, 0); cc.measure(0, 0)
+   165→
+   166→
+   167→def _zt(cc):
+   168→    cc.z(0); cc.t(0); cc.measure(0, 0)
+   169→
+   170→
+   171→def _y(cc):
+   172→    cc.y(0); cc.measure(0, 0)
+   173→
+   174→
+   175→def _crx(cc):
+   176→    cc.h(0); cc.crx(0.7, 0, 1); cc.measure(0, 0); cc.measure(1, 1)
+   177→
+   178→
+   179→def _swap(cc):
+   180→    cc.x(0); cc.swap(0, 1); cc.measure(0, 0); cc.measure(1, 1)
+   181→
+   182→
+   183→def _crossed(cc):
+   184→    cc.h(0); cc.h(1); cc.measure(1, 0); cc.measure(0, 1)
+   185→
+   186→
+   187→def _init_flat(cc):
+   188→    cc.initialize([0.6, 0.8, 0, 0]); cc.x(1)
+   189→    cc.measure(0, 0); cc.measure(1, 1)
+   190→
+   191→
+   192→def _init_complex(cc):
+   193→    cc.initialize([[0, 1], [0, 0]]); cc.h(0); cc.measure(0, 0)
+   194→
+   195→
+   196→def _xx(cc):
+   197→    cc.x(0); cc.x(0); cc.measure(0, 0)
+   198→
+   199→
+   200→def _layers(cc):
+   201→    cc.h(0); cc.h(1); cc.cx(0, 2); cc.x(1); cc.rz(0.5, 2)
+   202→    cc.measure(0, 0); cc.measure(1, 1); cc.measure(2, 2)
+   203→
+   204→
+   205→def _measure_only(cc):
+   206→    cc.measure(0, 0)
+   207→
+   208→
+   209→BATTERY = [
+   210→    {"name": "bell",           "n": 2, "m": 2, "build": _bell,
+   211→     "shots": 64,  "seed": 42, "views": ["statevector", "probabilities_dict"]},
+   212→    {"name": "ghz3",           "n": 3, "m": 3, "build": _ghz3,
+   213→     "shots": 128, "seed": 7,  "views": ["statevector"]},
+   214→    {"name": "ry_decomposition", "n": 1, "m": 1, "build": _ry,
+   215→     "shots": 64,  "seed": 11, "views": [], "expect_heads": ["rx", "rz", "rx"]},
+   216→    {"name": "zt_decomposition", "n": 1, "m": 1, "build": _zt,
+   217→     "shots": 64,  "seed": 3,  "views": [], "expect_heads": ["rz", "rz"]},
+   218→    {"name": "y_decomposition",  "n": 1, "m": 1, "build": _y,
+   219→     "shots": 64,  "seed": 5,  "views": [], "expect_heads": ["rz", "x"]},
+   220→    {"name": "crx_case",       "n": 2, "m": 2, "build": _crx,
+   221→     "shots": 128, "seed": 13, "views": ["statevector"]},
+   222→    {"name": "swap_case",      "n": 2, "m": 2, "build": _swap,
+   223→     "shots": 64,  "seed": 17, "views": ["statevector"]},
+   224→    {"name": "crossed_measure", "n": 2, "m": 2, "build": _crossed,
+   225→     "shots": 128, "seed": 21, "views": []},
+   226→    {"name": "init_flat",      "n": 2, "m": 2, "build": _init_flat,
+   227→     "shots": 64,  "seed": 23, "views": ["statevector"]},
+   228→    {"name": "init_complex",   "n": 1, "m": 1, "build": _init_complex,
+   229→     "shots": 64,  "seed": 29, "views": ["statevector"]},
+   230→    {"name": "xx_return",      "n": 1, "m": 1, "build": _xx,
+   231→     "shots": 32,  "seed": 31, "views": ["statevector"],
+   232→     "expect_sv0": [1.0, 0.0]},
+   233→    {"name": "layers_depth",   "n": 3, "m": 3, "build": _layers,
+   234→     "shots": 128, "seed": 37, "views": [], "expect_ticks": 3},
+   235→    {"name": "noise_bell",     "n": 2, "m": 2, "build": _bell,
+   236→     "shots": 128, "seed": 41, "views": [], "noise": 0.05},
+   237→    {"name": "forget_bell",    "n": 2, "m": 2, "build": _bell,
+   238→     "shots": 64,  "seed": 43, "views": ["statevector"],
+   239→     "forget": {"shots": list(range(40)), "reason": "right-to-be-erased demo"}},
+   240→    {"name": "measure_only",   "n": 1, "m": 1, "build": _measure_only,
+   241→     "shots": 16,  "seed": 99, "views": []},
+   242→    {"name": "unsealed_bell",  "n": 2, "m": 2, "build": _bell,
+   243→     "shots": 64,  "seed": None, "views": ["statevector"],
+   244→     "unsealed": True},
+   245→]
+   246→
+   247→
+   248→def build_circuit(spec):
+   249→    cc = CellCircuit(spec["n"], spec["m"], name=spec["name"],
+   250→                     shots_plan={"shots": spec["shots"],
+   251→                                 "seed_policy": "unsealed" if spec.get(
+   252→                                     "unsealed") else "sealed"},
+   253→                     simulator_sha256=MICROMOTH_SHA256)
+   254→    spec["build"](cc)
+   255→    cc.seal()
+   256→    cc.proof(precision=12)
+   257→    for v in spec["views"]:
+   258→        cc.view(v)
+   259→    if spec["shots"]:
+   260→        cc.sample(spec["shots"], seed=spec["seed"], noise_model=spec.get("noise"))
+   261→    if spec.get("forget"):
+   262→        cc.forget(shots=spec["forget"]["shots"],
+   263→                  reason=spec["forget"]["reason"])
+   264→    return cc
+   265→
+   266→
+   267→# --- tamper machinery -----------------------------------------------------------
+   268→
+   269→def _flip_char(line: bytes, pos: int) -> bytes:
+   270→    c = line[pos:pos + 1]
+   271→    ch = c.decode()
+   272→    if ch in "0123456789abcdef":
+   273→        new = "0123456789abcdef"[(int(ch, 16) + 1) % 16]
+   274→    elif "a" <= ch <= "z":
+   275→        new = chr((ord(ch) - 97 + 1) % 26 + 97)
+   276→    elif ch.isdigit():
+   277→        new = str((int(ch) + 1) % 10)
+   278→    else:
+   279→        new = "x" if ch != "x" else "y"
+   280→    return line[:pos] + new.encode() + line[pos + 1:]
+   281→
+   282→
+   283→def tamper_variants(data: bytes):
+   284→    """For every row: three single-byte tampers (id flip, kind flip, prev
+   285→    flip — the row-0 prev flip IS the genesis tamper). Yields
+   286→    (row_index, variant, tampered_bytes)."""
+   287→    lines = data.split(b"\n")[:-1]
+   288→    out = []
+   289→    for i, line in enumerate(lines):
+   290→        for field in ("id", "kind", "prev"):
+   291→            marker = ('"%s":"' % field).encode()
+   292→            pos = line.index(marker) + len(marker)
+   293→            tampered = lines[:]
+   294→            tampered[i] = _flip_char(line, pos)
+   295→            out.append((i, "%s-flip" % field,
+   296→                        b"\n".join(tampered) + b"\n"))
+   297→    return out
+   298→
+   299→
+   300→def _reforge_from(rows, seq, mutate):
+   301→    """Full re-forgery: mutate row `seq`'s args, then recompute ids and
+   302→    prev links for that row and every row after it (defeats chain
+   303→    verification; the anchor and the init payload pin remain)."""
+   304→    rows = [json.loads(json.dumps(r)) for r in rows]
+   305→    mutate(rows[seq]["args"])
+   306→    prev = rows[seq - 1]["id"] if seq > 0 else GENESIS
+   307→    for r in rows[seq:]:
+   308→        r["prev"] = prev
+   309→        body = {k: r[k] for k in ("seq", "op", "kind", "args", "prev")}
+   310→        r["id"] = fnv1a64(canon(body))
+   311→        prev = r["id"]
+   312→    return b"\n".join(canon(r) for r in rows) + b"\n", rows
+   313→
+   314→
+   315→# --- the runner ------------------------------------------------------------------
+   316→
+   317→def run():
+   318→    RECEIPTS.mkdir(exist_ok=True)
+   319→    LEDGERS.mkdir(exist_ok=True)
+   320→    rc = ReceiptChain()
+   321→    totals = {"circuits": 0, "ledger_rows": 0, "tamper_cases": 0,
+   322→              "tamper_localized_exact": 0, "negatives": 0, "failures": 0}
+   323→    anchors = {}
+   324→    failures = []
+   325→
+   326→    def check(where, cond, msg, detail=None):
+   327→        if not cond:
+   328→            totals["failures"] += 1
+   329→            failures.append("%s: %s" % (where, msg))
+   330→            rc.add(where, "FAIL", {"msg": msg, **(detail or {})})
+   331→            return False
+   332→        return True
+   333→
+   334→    for spec in BATTERY:
+   335→        name = spec["name"]
+   336→        cc = build_circuit(spec)
+   337→        data = cc.ledger.export()
+   338→        rows = parse_ledger(data)
+   339→        gates = [r for r in rows if r["op"] == "BIND"]
+   340→        collapses = [r for r in rows if r["kind"] == "collapse"]
+   341→        forgets = [r for r in rows if r["op"] == "FORGET"]
+   342→
+   343→        # --- P2: chain from genesis + canonical round-trip + no sugar ---
+   344→        ok, bad, why = verify_ledger(data)
+   345→        check(name + "/chain", ok, "chain verify failed: %s" % why)
+   346→        check(name + "/genesis",
+   347→              rows[0]["prev"] == GENESIS,
+   348→              "row 0 prev is not genesis")
+   349→        check(name + "/link-first",
+   350→              rows[0]["op"] == "LINK" and rows[0]["kind"] == "circuit-boundary",
+   351→              "ledger does not open with LINK circuit-boundary")
+   352→        bad_sugar = sorted({g["args"]["op"] for g in gates}
+   353→                           - PRIMITIVE_OPS)
+   354→        check(name + "/no-sugar", not bad_sugar,
+   355→              "sugar ops in ledger: %s" % bad_sugar)
+   356→        bad_ops = sorted({g["args"]["op"] for g in gates} - PRIMITIVE_OPS)
+   357→        check(name + "/primitive-only", not bad_ops,
+   358→              "non-primitive BIND ops: %s" % bad_ops)
+   359→
+   360→        # --- P1: replay == oracle ---
+   361→        rebuilt = rebuild_from_rows(rows)
+   362→        check(name + "/faithful",
+   363→              rebuilt.data == cc.qc.data and rebuilt.name == cc.qc.name,
+   364→              "rebuilt circuit != wrapped circuit")
+   365→        sv_wrap = simulate(cc.qc, get="statevector")
+   366→        sv_rebuild = simulate(rebuilt, get="statevector")
+   367→        check(name + "/sv-exact", sv_wrap == sv_rebuild,
+   368→              "statevector replay != oracle")
+   369→        if spec.get("expect_sv0") is not None:
+   370→            check(name + "/xx-nuance", sv_rebuild[0] == spec["expect_sv0"],
+   371→                  "x·x state did not return home")
+   372→        # PROOF digest re-derives by replay
+   373→        proof_row = [r for r in rows if r["op"] == "PROOF"][0]
+   374→        prec = proof_row["args"]["precision"]
+   375→        rounded = [[round(float(a[0]), prec), round(float(a[1]), prec)]
+   376→                   for a in sv_rebuild]
+   377→        check(name + "/proof-replay",
+   378→              sha256_hex(canon(rounded)) == proof_row["args"]["digest"],
+   379→              "PROOF digest does not re-derive")
+   380→        # VIEW digests re-derive
+   381→        for vr in [r for r in rows if r["op"] == "VIEW"
+   382→                   and r["args"]["get"] != "counts"]:
+   383→            get = vr["args"]["get"]
+   384→            r2 = simulate(rebuilt, get=get)
+   385→            check(name + "/view-%s" % get,
+   386→                  sha256_hex(canon(r2)) == vr["args"]["digest"],
+   387→                  "VIEW %s digest does not re-derive" % get)
+   388→        # counts: sealed sampling replays exactly; folds from EFFECT rows
+   389→        counts_view = [r for r in rows if r["op"] == "VIEW"
+   390→                       and r["args"]["get"] == "counts"]
+   391→        if counts_view and not spec.get("unsealed"):
+   392→            cv = counts_view[0]["args"]
+   393→            random.seed(spec["seed"])
+   394→            oracle = simulate(rebuilt, shots=spec["shots"], get="counts",
+   395→                              noise_model=(spec.get("noise") or []))
+   396→            check(name + "/counts-exact", oracle == cv["counts"],
+   397→                  "sealed counts replay != ledger counts")
+   398→            fold = {}
+   399→            for cr in cc.ledger.collapse_records(serve=False):
+   400→                fold[cr["args"]["outcome"]] = \
+   401→                    fold.get(cr["args"]["outcome"], 0) + 1
+   402→            check(name + "/counts-fold", fold == cv["counts"],
+   403→                  "EFFECT/collapse rows do not fold to the VIEW counts")
+   404→            if spec.get("noise") is not None:
+   405→                check(name + "/noise-params",
+   406→                      cv["noise_model"] == [spec["noise"]] * spec["n"],
+   407→                      "noise_model not recorded as EFFECT parameters")
+   408→        if spec.get("expect_heads") is not None:
+   409→            heads = [g["args"]["op"] for g in gates]
+   410→            check(name + "/decomp", heads == spec["expect_heads"],
+   411→                  "decomposition heads %s != %s" % (heads,
+   412→                                                    spec["expect_heads"]))
+   413→        if spec.get("expect_ticks") is not None:
+   414→            check(name + "/depth",
+   415→                  cc.ledger.ticks == spec["expect_ticks"],
+   416→                  "ticks %d != %d" % (cc.ledger.ticks,
+   417→                                      spec["expect_ticks"]))
+   418→
+   419→        # --- FORGET semantics (tombstone; counts retained) ---
+   420→        if spec.get("forget"):
+   421→            kept = cc.ledger.collapse_records(serve=True)
+   422→            check(name + "/forget-tombstone",
+   423→                  len(kept) == spec["shots"] - len(spec["forget"]["shots"]),
+   424→                  "serving surface did not filter tombstoned collapse rows")
+   425→            check(name + "/forget-counts-retained",
+   426→                  counts_view and counts_view[0]["args"]["counts"],
+   427→                  "counts VIEW not retained after FORGET")
+   428→            check(name + "/forget-receipted", len(forgets) == 1
+   429→                  and len(forgets[0]["args"]["erased_ids"])
+   430→                  == len(spec["forget"]["shots"]),
+   431→                  "FORGET row missing or incomplete")
+   432→            ok2, _, why2 = verify_ledger(cc.ledger.export())
+   433→            check(name + "/forget-chain", ok2,
+   434→                  "chain broken after FORGET: %s" % why2)
+   435→
+   436→        # --- P4: determinism crown (byte-identical double build) ---
+   437→        if spec.get("unsealed"):
+   438→            # the hole is real: unsealed runs are honestly excluded and
+   439→            # must differ (checked globally below)
+   440→            pass
+   441→        else:
+   442→            cc2 = build_circuit(spec)
+   443→            data2 = cc2.ledger.export()
+   444→            check(name + "/determinism",
+   445→                  sha256_hex(data) == sha256_hex(data2),
+   446→                  "two builds of the same circuit differ")
+   447→
+   448→        # --- P3: exhaustive single-byte tamper localization ---
+   449→        for i, variant, tam in tamper_variants(data):
+   450→            okt, at, whyt = verify_ledger(tam)
+   451→            totals["tamper_cases"] += 1
+   452→            if okt or at != i:
+   453→                totals["failures"] += 1
+   454→                failures.append("%s: tamper %s row %d localized at %r (%s)"
+   455→                                % (name, variant, i, at, whyt))
+   456→            else:
+   457→                totals["tamper_localized_exact"] += 1
+   458→        # anchor + receipts
+   459→        (LEDGERS / (name + ".jsonl")).write_bytes(data)
+   460→        anchors[name] = {"rows": len(rows), "tip": rows[-1]["id"],
+   461→                         "sha256": sha256_hex(data),
+   462→                         "gates": len(gates), "collapses": len(collapses),
+   463→                         "ticks": cc.ledger.ticks}
+   464→        totals["circuits"] += 1
+   465→        totals["ledger_rows"] += len(rows)
+   466→        rc.add("circuit:" + name, "PASS", {
+   467→            "rows": len(rows), "tip": rows[-1]["id"],
+   468→            "sha256": sha256_hex(data), "ticks": cc.ledger.ticks,
+   469→        })
+   470→
+   471→    # --- negative controls (fail-closed on tampered copies) ---------------
+   472→    bell = parse_ledger((LEDGERS / "bell.jsonl").read_bytes())
+   473→    bell_bytes = (LEDGERS / "bell.jsonl").read_bytes()
+   474→    bell_anchor = anchors["bell"]
+   475→
+   476→    # N1: forged tail extension passes the chain but MUST fail the anchor.
+   477→    forged = bell + [{"seq": len(bell), "op": "VIEW", "kind": "view",
+   478→                      "args": {"get": "counts", "digest": "0" * 64},
+   479→                      "prev": bell[-1]["id"]}]
+   480→    body = {k: forged[-1][k] for k in ("seq", "op", "kind", "args", "prev")}
+   481→    forged[-1]["id"] = fnv1a64(canon(body))
+   482→    fdata = b"\n".join(canon(r) for r in forged) + b"\n"
+   483→    okN, _, _ = verify_ledger(fdata)
+   484→    okA, whyA = check_anchor(fdata, bell_anchor["tip"], bell_anchor["rows"])
+   485→    totals["negatives"] += 1
+   486→    check("negative/forged-tail-anchor", okN and not okA,
+   487→          "forged tail must pass chain but fail anchor (%s)" % whyA)
+   488→    rc.add("negative:forged-tail-anchor", "PASS",
+   489→           {"detail": "chain verifies; anchor catches the extension"})
+   490→
+   491→    # N2: dropped middle row must fail at the sequence break.
+   492→    dropped = b"\n".join(l for i, l in
+   493→                         enumerate(bell_bytes.split(b"\n")[:-1]) if i != 3) + b"\n"
+   494→    okD, atD, _ = verify_ledger(dropped)
+   495→    totals["negatives"] += 1
+   496→    check("negative/dropped-row", (not okD) and atD == 3,
+   497→          "dropped row must fail at seq 3 (got %r)" % atD)
+   498→    rc.add("negative:dropped-row", "PASS", {"localized_at": atD})
+   499→
+   500→    # N3: truncated tail passes the chain but MUST fail the anchor count.
+   501→    trunc = b"\n".join(bell_bytes.split(b"\n")[:-2]) + b"\n"
+   502→    okT, _, _ = verify_ledger(trunc)
+   503→    okTA, _ = check_anchor(trunc, bell_anchor["tip"], bell_anchor["rows"])
+   504→    totals["negatives"] += 1
+   505→    check("negative/truncated-tail-anchor", okT and not okTA,
+   506→          "truncated tail must pass chain but fail anchor")
+   507→    rc.add("negative:truncated-tail-anchor", "PASS",
+   508→           {"detail": "honest limit receipted: chains need an anchor"})
+   509→
+   510→    # N4: fully re-forged chain with a doctored init payload —
+   511→    # chain verifies, but the init pin refuses replay and the anchor fails.
+   512→    init_rows = parse_ledger((LEDGERS / "init_flat.jsonl").read_bytes())
+   513→    init_seq = next(i for i, r in enumerate(init_rows)
+   514→                    if r["op"] == "BIND" and r["args"]["op"] == "init")
+   515→
+   516→    def _doctor(args):
+   517→        args["payload"] = [0.6, 0.8, 0.5, 0.0]  # smuggled amplitude
+   518→
+   519→    fdata2, frows2 = _reforge_from(init_rows, init_seq, _doctor)
+   520→    okF, _, _ = verify_ledger(fdata2)
+   521→    anchor_ok, _ = check_anchor(
+   522→        fdata2,
+   523→        anchors["init_flat"]["tip"], anchors["init_flat"]["rows"])
+   524→    try:
+   525→        rebuild_from_rows(frows2)
+   526→        replay_refused = False
+   527→    except LedgerError:
+   528→        replay_refused = True
+   529→    totals["negatives"] += 1
+   530→    check("negative/forged-payload", okF and (not anchor_ok)
+   531→          and replay_refused,
+   532→          "forged payload must be caught by anchor AND init pin")
+   533→    rc.add("negative:forged-payload", "PASS",
+   534→           {"detail": "depth-2: anchor + payload sha256 pin both fire"})
+   535→
+   536→    # N5: the determinism hole is REAL (unsealed runs disagree) — this is
+   537→    # the design's own tripwire, kept live as an honest observation.
+   538→    random.seed()
+   539→    seen = set()
+   540→    for _ in range(4):
+   541→        random.seed()
+   542→        cc = build_circuit(BATTERY[-1])
+   543→        rows_u = parse_ledger(cc.ledger.export())
+   544→        seen.add(rows_u[-1]["id"])
+   545→    totals["negatives"] += 1
+   546→    hole = len(seen) > 1
+   547→    check("negative/hole-is-real", hole,
+   548→          "4 unsealed runs agreed — sampling semantics changed; revisit "
+   549→          "EFFECT/UNSEALED claims")
+   550→    rc.add("negative:hole-is-real", "PASS" if hole else "FAIL",
+   551→           {"distinct_unsealed_tips": len(seen),
+   552→            "note": "only the boolean is receipted (unsealed values are "
+   553→                    "not reproducible, so they are not receipted)"})
+   554→
+   555→    # --- claims + summary ---------------------------------------------------
+   556→    # Honest claim mapping: a failure is attributed to the claim its check
+   557→    # prefix belongs to; any unattributed failure fails ALL claims
+   558→    # (conservative, fail-closed).
+   559→    CLAIM_PREFIX = {
+   560→        "P2": ("/chain", "/genesis", "/link-first", "/no-sugar",
+   561→               "/primitive-only"),
+   562→        "P3": ("tamper", "negative/forged", "negative/truncated",
+   563→               "negative/dropped"),
+   564→        "P4": ("/determinism", "negative/hole"),
+   565→    }
+   566→    claims = {k: "PASS" for k in ("P1", "P2", "P3", "P4")}
+   567→    for f in failures:
+   568→        hit = False
+   569→        for claim, prefixes in CLAIM_PREFIX.items():
+   570→            if any(p in f for p in prefixes):
+   571→                claims[claim] = "FAIL"
+   572→                hit = True
+   573→        if not hit:
+   574→            claims["P1"] = "FAIL"  # replay-semantics failures + unknowns
+   575→            for k in claims:
+   576→                claims[k] = "FAIL"  # conservative: unknown failure taints all
+   577→
+   578→    summary = {
+   579→        "task": "49-c",
+   580→        "claims": claims,
+   581→        "totals": totals,
+   582→        "anchors": anchors,
+   583→        "receipt_chain_tip": rc.tip,
+   584→        "receipt_rows": len(rc.rows),
+   585→        "micromoth_sha256": MICROMOTH_SHA256,
+   586→        "conventions": {
+   587→            "hash": "fnv1a-64 (basis 0xcbf29ce484222325, prime 0x100000001b3)",
+   588→            "genesis_prev": GENESIS,
+   589→            "encoding": "canonical JSON (sort_keys, compact, ensure_ascii)",
+   590→            "chain": "single linear chain over all rows regardless of opcode",
+   591→        },
+   592→    }
+   593→    (RECEIPTS / "conformance.jsonl").write_bytes(rc.export())
+   594→    (RECEIPTS / "summary.json").write_text(
+   595→        json.dumps(summary, indent=2, sort_keys=True) + "\n")
+   596→
+   597→    print("=" * 64)
+   598→    print("conformance: %d circuits, %d ledger rows, %d tamper cases "
+   599→          "(%d localized exact), %d negatives"
+   600→          % (totals["circuits"], totals["ledger_rows"],
+   601→             totals["tamper_cases"], totals["tamper_localized_exact"],
+   602→             totals["negatives"]))
+   603→    for k in ("P1", "P2", "P3", "P4"):
+   604→        print("  %s: %s" % (k, claims[k]))
+   605→    print("receipt chain tip: %s (%d rows)" % (rc.tip, len(rc.rows)))
+   606→    if failures:
+   607→        print("FAILURES:")
+   608→        for f in failures[:20]:
+   609→            print("  -", f)
+   610→        sys.exit(1)
+   611→    print("ALL GREEN")
+   612→
+   613→
+   614→if __name__ == "__main__":
+   615→    if "--register" in sys.argv:
+   616→        register()
+   617→    else:
+   618→        check_registration()
+   619→        run()
+   620→

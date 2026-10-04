@@ -1,0 +1,568 @@
+     1→     1→#!/usr/bin/env node
+     2→     2→/**
+     3→     3→ * repo-oracle.mjs — the portable repo-oracle (task 66-d, wave-66).
+     4→     4→ *
+     5→     5→ * A sibling of oracle/oracle.py with a different center of gravity:
+     6→     6→ *   oracle.py decomposes the CURRENT TREE of this repo (repo-map: symbols, heat);
+     7→     7→ *   this tool interrogates any repo's OWN RECORDS — history, logs, receipts,
+     8→     8→ *   ledgers, READMEs — and answers WITH the trail, not just the answer.
+     9→     9→ *
+    10→    10→ *   "logic decomposed by him for him": the repo is the oracle. Every probe is a
+    11→    11→ *   deterministic read of what the repo already says about itself (git log,
+    12→    12→ *   ls-files, ledger files, key-file summaries). No network, no keys, no model.
+    13→    13→ *   The model wrap is a layer above — that IS the PoC point: how much of an
+    14→    14→ *   'oracle' is just disciplined git reading?
+    15→    15→ *
+    16→    16→ * READ-ONLY BY LAW: the only git verbs ever invoked are rev-parse, log,
+    17→    17→ * ls-files, branch, tag, status --porcelain. No add/commit/push/checkout.
+    18→    18→ * No file under the target repo is written.
+    19→    19→ *
+    20→    20→ * Usage:
+    21→    21→ *   node tools/repo-oracle.mjs ask <repo-path> "<question>" [--json] [--save <dir>]
+    22→    22→ *   node tools/repo-oracle.mjs self-test [--json]
+    23→    23→ *
+    24→    24→ * Output shape (JSON): { question, repo, head, focus,
+    25→    25→ *                        evidence: [{probe, finding}], decomposition, answer }
+    26→    26→ */
+    27→    27→
+    28→    28→import { execFileSync } from "node:child_process";
+    29→    29→import { readFileSync, statSync, mkdirSync, writeFileSync, rmSync, mkdtempSync, existsSync } from "node:fs";
+    30→    30→import { join, basename, resolve } from "node:path";
+    31→    31→import { tmpdir } from "node:os";
+    32→    32→import { fileURLToPath } from "node:url";
+    33→    33→import { dirname } from "node:path";
+    34→    34→
+    35→    35→// --------------------------------------------------------------- utilities --
+    36→    36→
+    37→    37→const die = (code, name, msg) => {
+    38→    38→  process.stderr.write(JSON.stringify({ error: name, message: msg }) + "\n");
+    39→    39→  process.exit(code);
+    40→    40→};
+    41→    41→
+    42→    42→function git(repo, ...args) {
+    43→    43→  // execFileSync (no shell) — every argument is fixed by this file, never the question.
+    44→    44→  // stderr is captured, not echoed: probe failures become named findings, not noise.
+    45→    45→  try {
+    46→    46→    return execFileSync("git", ["-C", repo, ...args], {
+    47→    47→      maxBuffer: 32 * 1024 * 1024,
+    48→    48→      timeout: 20000,
+    49→    49→      stdio: ["ignore", "pipe", "pipe"],
+    50→    50→    }).toString();
+    51→    51→  } catch (e) {
+    52→    52→    const why = ((e.stderr && e.stderr.toString()) || e.message || "git failed").trim().split("\n")[0];
+    53→    53→    const err = new Error(why);
+    54→    54→    err.stderr = why;
+    55→    55→    throw err;
+    56→    56→  }
+    57→    57→}
+    58→    58→
+    59→    59→const cap = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+    60→    60→const oneLine = (s) => s.replace(/\s+/g, " ").trim();
+    61→    61→const slug = (s) =>
+    62→    62→  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "q";
+    63→    63→const uniqSorted = (a) => [...new Set(a)].sort();
+    64→    64→
+    65→    65→function headLines(path, n) {
+    66→    66→  try {
+    67→    67→    const raw = readFileSync(path, "utf8");
+    68→    68→    return raw.split(/\r?\n/).slice(0, n).filter((l) => l.trim().length > 0)
+    69→    69→      .map((l) => cap(oneLine(l.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")), 140));
+    70→    70→  } catch { return []; }
+    71→    71→}
+    72→    72→
+    73→    73→// ------------------------------------------------------------------ battery --
+    74→    74→// The FIXED battery. Every probe runs on every ask, in this order, read-only.
+    75→    75→// A probe returns a finding object; findings may be honest nulls (e.g. no tags).
+    76→    76→
+    77→    77→const PROBES = [
+    78→    78→  {
+    79→    79→    name: "git.identity",
+    80→    80→    why: "anchor: which repo state is being spoken about",
+    81→    81→    run(repo) {
+    82→    82→      const head = git(repo, "rev-parse", "HEAD").trim();
+    83→    83→      const branch = git(repo, "rev-parse", "--abbrev-ref", "HEAD").trim();
+    84→    84→      const subject = oneLine(git(repo, "log", "-1", "--format=%s").trim());
+    85→    85→      const date = git(repo, "log", "-1", "--format=%cI").trim();
+    86→    86→      let remote = "none";
+    87→    87→      try {
+    88→    88→        const urls = git(repo, "remote", "get-url", "origin").trim();
+    89→    89→        remote = urls.replace(/https:\/\/[^@/]+@/, "https://<scrubbed>@");
+    90→    90→      } catch { /* no origin */ }
+    91→    91→      return { head, branch, subject, date, remote };
+    92→    92→    },
+    93→    93→  },
+    94→    94→  {
+    95→    95→    name: "git.log.recent",
+    96→    96→    why: "recency slice: the last thing this repo did",
+    97→    97→    run(repo) {
+    98→    98→      const lines = git(repo, "log", "-12", "--format=%h%x09%an%x09%cI%x09%s").trim().split("\n").filter(Boolean);
+    99→    99→      const count = git(repo, "rev-list", "--count", "HEAD").trim();
+   100→   100→      return { total_commits: Number(count), recent: lines.map((l) => { const [h, a, d, ...s] = l.split("\t"); return { sha: h, author: a, date: d, subject: cap(s.join("\t"), 110) }; }) };
+   101→   101→    },
+   102→   102→  },
+   103→   103→  {
+   104→   104→    name: "git.log.genesis",
+   105→   105→    why: "ancestry: where the repo came from",
+   106→   106→    run(repo) {
+   107→   107→      const roots = git(repo, "rev-list", "--max-parents=0", "HEAD").trim().split("\n").filter(Boolean);
+   108→   108→      const first = git(repo, "log", "--reverse", "--format=%h%x09%cI%x09%s", "HEAD").trim().split("\n")[0] || "";
+   109→   109→      const [sha, date, ...sub] = first.split("\t");
+   110→   110→      return { roots, first_commit: { sha, date, subject: cap(sub.join("\t"), 110) } };
+   111→   111→    },
+   112→   112→  },
+   113→   113→  {
+   114→   114→    name: "git.authors",
+   115→   115→    why: "who wrote the record",
+   116→   116→    run(repo) {
+   117→   117→      const names = git(repo, "log", "--format=%an").split("\n").filter(Boolean);
+   118→   118→      const tally = {};
+   119→   119→      for (const n of names) tally[n] = (tally[n] || 0) + 1;
+   120→   120→      const authors = Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 6)
+   121→   121→        .map(([name, commits]) => ({ name, commits }));
+   122→   122→      return { distinct_authors: Object.keys(tally).length, top: authors };
+   123→   123→    },
+   124→   124→  },
+   125→   125→  {
+   126→   126→    name: "git.heat",
+   127→   127→    why: "which files carry the history (commit touches)",
+   128→   128→    run(repo) {
+   129→   129→      const out = git(repo, "log", "--name-only", "--pretty=format:", "-400");
+   130→   130→      const tally = {};
+   131→   131→      for (const p of out.split("\n").map((s) => s.trim()).filter(Boolean)) tally[p] = (tally[p] || 0) + 1;
+   132→   132→      const top = Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 10)
+   133→   133→        .map(([path, touches]) => ({ path, touches }));
+   134→   134→      return { touched_paths: Object.keys(tally).length, hottest: top };
+   135→   135→    },
+   136→   136→  },
+   137→   137→  {
+   138→   138→    name: "census.files",
+   139→   139→    why: "inventory: what the tree is made of",
+   140→   140→    run(repo) {
+   141→   141→      const files = git(repo, "ls-files").split("\n").filter(Boolean);
+   142→   142→      const ext = {};
+   143→   143→      const dirs = {};
+   144→   144→      for (const f of files) {
+   145→   145→        const m = f.match(/\.([A-Za-z0-9]+)$/);
+   146→   146→        if (m) ext[m[1].toLowerCase()] = (ext[m[1].toLowerCase()] || 0) + 1;
+   147→   147→        const key = f.includes("/") ? f.split("/").slice(0, 2).join("/") : "(root)";
+   148→   148→        dirs[key] = (dirs[key] || 0) + 1;
+   149→   149→      }
+   150→   150→      const byExt = Object.entries(ext).sort((a, b) => b[1] - a[1]).slice(0, 8)
+   151→   151→        .map(([extension, count]) => ({ extension, count }));
+   152→   152→      const byDir = Object.entries(dirs).sort((a, b) => b[1] - a[1]).slice(0, 8)
+   153→   153→        .map(([dir, count]) => ({ dir, count }));
+   154→   154→      return { tracked_files: files.length, by_extension: byExt, top_dirs: byDir };
+   155→   155→    },
+   156→   156→  },
+   157→   157→  {
+   158→   158→    name: "census.docs",
+   159→   159→    why: "where the repo writes prose about itself",
+   160→   160→    run(repo) {
+   161→   161→      const docs = git(repo, "ls-files", "*.md", "*.rst", "*.txt").split("\n").filter(Boolean);
+   162→   162→      const readmes = uniqSorted(docs.filter((d) => /(^|\/)readme/i.test(d)));
+   163→   163→      return { doc_files: docs.length, readmes, docs_sample: docs.slice(0, 18) };
+   164→   164→    },
+   165→   165→  },
+   166→   166→  {
+   167→   167→    name: "ledger.receipts",
+   168→   168→    why: "detect the repo's receipt/ledger/provenance layer",
+   169→   169→    run(repo) {
+   170→   170→      const files = git(repo, "ls-files").split("\n").filter(Boolean);
+   171→   171→      const rx = /(^|\/)(receipts?|ledger|ledgers|provenance|audit|sessions?|evidence|records?)(\/|$)|receipt|ledger|provenance/i;
+   172→   172→      const hits = files.filter((f) => rx.test(f) && /\.(json|jsonl|ndjson|md|txt)$/i.test(f));
+   173→   173→      const groups = {};
+   174→   174→      for (const h of hits) {
+   175→   175→        const g = h.split("/").slice(0, 2).join("/");
+   176→   176→        groups[g] = (groups[g] || 0) + 1;
+   177→   177→      }
+   178→   178→      return {
+   179→   179→        receipt_like_files: hits.length,
+   180→   180→        sample: hits.slice(0, 14),
+   181→   181→        groups: Object.entries(groups).sort((a, b) => b[1] - a[1]).slice(0, 8)
+   182→   182→          .map(([group, count]) => ({ group, count })),
+   183→   183→      };
+   184→   184→    },
+   185→   185→  },
+   186→   186→  {
+   187→   187→    name: "ledger.chains",
+   188→   188→    why: "hash-chain custody: tips the repo itself seals",
+   189→   189→    run(repo) {
+   190→   190→      const files = git(repo, "ls-files", "*.jsonl", "*.ndjson").split("\n").filter(Boolean).slice(0, 40);
+   191→   191→      const chains = [];
+   192→   192→      for (const f of files) {
+   193→   193→        try {
+   194→   194→          const st = statSync(join(repo, f));
+   195→   195→          if (st.size > 8 * 1024 * 1024) continue;
+   196→   196→          const lines = readFileSync(join(repo, f), "utf8").split(/\r?\n/).filter(Boolean);
+   197→   197→          if (!lines.length) continue;
+   198→   198→          let last = null;
+   199→   199→          try { last = JSON.parse(lines[lines.length - 1]); } catch { continue; }
+   200→   200→          const keys = Object.keys(last);
+   201→   201→          const chainy = ["seq", "tip", "prev", "prev_hash", "id", "sig", "signature"].some((k) => keys.includes(k));
+   202→   202→          if (!chainy) continue;
+   203→   203→          const tip = String(last.tip || last.hash || last.id || "").slice(0, 16);
+   204→   204→          chains.push({ file: f, rows: lines.length, seq: last.seq ?? null, tip });
+   205→   205→        } catch { /* unreadable → skip, honestly */ }
+   206→   206→      }
+   207→   207→      return { chain_shaped_files: chains.length, chains: chains.slice(0, 10) };
+   208→   208→    },
+   209→   209→  },
+   210→   210→  {
+   211→   211→    name: "readme.summary",
+   212→   212→    why: "the repo's self-description, in its own words",
+   213→   213→    run(repo) {
+   214→   214→      const cands = git(repo, "ls-files").split("\n").filter((f) => /(^|\/)readme(\.|$)/i.test(f));
+   215→   215→      const pick = cands.find((c) => /^readme\.md$/i.test(c)) || cands[0];
+   216→   216→      if (!pick) return { file: null, lines: [] };
+   217→   217→      return { file: pick, lines: headLines(join(repo, pick), 14).slice(0, 10) };
+   218→   218→    },
+   219→   219→  },
+   220→   220→  {
+   221→   221→    name: "manifest.summary",
+   222→   222→    why: "declared identity: name, version, entry points",
+   223→   223→    run(repo) {
+   224→   224→      const tryJSON = (p) => {
+   225→   225→        try {
+   226→   226→          const j = JSON.parse(readFileSync(join(repo, p), "utf8"));
+   227→   227→          return { kind: "package.json", file: p, name: j.name, version: j.version, description: cap(String(j.description || ""), 120), scripts: Object.keys(j.scripts || {}).slice(0, 8) };
+   228→   228→        } catch { return null; }
+   229→   229→      };
+   230→   230→      const pj = tryJSON("package.json") || tryJSON("worker/package.json");
+   231→   231→      if (pj) return pj;
+   232→   232→      const scan = (p, rx) => {
+   233→   233→        try {
+   234→   234→          const t = readFileSync(join(repo, p), "utf8");
+   235→   235→          const m = t.match(rx);
+   236→   236→          if (m) return { kind: p, file: p, name: m[1], version: (t.match(/version\s*=\s*"([^"]+)"/) || [])[1] || null };
+   237→   237→        } catch { /* absent */ }
+   238→   238→        return null;
+   239→   239→      };
+   240→   240→      return scan("pyproject.toml", /^\s*name\s*=\s*"([^"]+)"/m)
+   241→   241→        || scan("Cargo.toml", /^\s*name\s*=\s*"([^"]+)"/m)
+   242→   242→        || scan("go.mod", /^module\s+(\S+)/m)
+   243→   243→        || { kind: "none" };
+   244→   244→    },
+   245→   245→  },
+   246→   246→  {
+   247→   247→    name: "laws.scan",
+   248→   248→    why: "where the repo states its own rules (law/invariant/never/always/must)",
+   249→   249→    run(repo) {
+   250→   250→      const files = git(repo, "ls-files", "*.md").split("\n").filter(Boolean);
+   251→   251→      const readmes = files.filter((f) => /(^|\/)readme/i.test(f));
+   252→   252→      const rest = files.filter((f) => !readmes.includes(f)).sort((a, b) => a.split("/").length - b.split("/").length);
+   253→   253→      const scanList = [...readmes, ...rest].slice(0, 24);
+   254→   254→      const rx = /\b(law|laws|invariant|invariants|rule|rules|never|always|must not|must)\b/i;
+   255→   255→      const hits = [];
+   256→   256→      for (const f of scanList) {
+   257→   257→        if (hits.length >= 15) break;
+   258→   258→        let lines = [];
+   259→   259→        try { lines = readFileSync(join(repo, f), "utf8").split(/\r?\n/); } catch { continue; }
+   260→   260→        for (let i = 0; i < lines.length; i++) {
+   261→   261→          if (hits.length >= 15) break;
+   262→   262→          if (rx.test(lines[i]) && lines[i].trim().length > 12)
+   263→   263→            hits.push({ ref: `${f}:${i + 1}`, text: cap(oneLine(lines[i]), 120) });
+   264→   264→        }
+   265→   265→      }
+   266→   266→      return { scanned_files: scanList.length, law_statements: hits };
+   267→   267→    },
+   268→   268→  },
+   269→   269→  {
+   270→   270→    name: "git.state",
+   271→   271→    why: "honesty probe: is the tree clean at interrogation time",
+   272→   272→    run(repo) {
+   273→   273→      const st = git(repo, "status", "--porcelain").split("\n").filter(Boolean);
+   274→   274→      let branches = [], tags = [];
+   275→   275→      try { branches = git(repo, "branch", "--format=%(refname:short)").split("\n").filter(Boolean); } catch { /* */ }
+   276→   276→      try { tags = git(repo, "tag").split("\n").filter(Boolean); } catch { /* */ }
+   277→   277→      return {
+   278→   278→        dirty_entries: st.length,
+   279→   279→        dirty_sample: st.slice(0, 6).map(oneLine),
+   280→   280→        local_branches: branches.length,
+   281→   281→        tags: tags.length,
+   282→   282→      };
+   283→   283→    },
+   284→   284→  },
+   285→   285→];
+   286→   286→
+   287→   287→// --------------------------------------------------------------- question →
+   288→   288→// focus selection. Deterministic keyword scoring — no model, just arithmetic.
+   289→   289→
+   290→   290→const FOCUS_RULES = [
+   291→   291→  { id: "laws", kw: ["law", "laws", "rule", "rules", "invariant", "enforce", "enforced", "discipline", "policy"] },
+   292→   292→  { id: "receipts", kw: ["receipt", "receipts", "ledger", "chain", "custody", "audit", "evidence", "record"] },
+   293→   293→  { id: "provenance", kw: ["provenance", "tip", "origin", "history", "ancestry", "genesis", "came", "lineage", "author", "authors", "who", "when", "version", "commit", "current"] },
+   294→   294→  { id: "location", kw: ["where", "live", "lives", "located", "stored", "kept", "path", "file", "files"] },
+   295→   295→  { id: "inventory", kw: ["how", "many", "count", "number", "size", "census", "inventory", "much"] },
+   296→   296→  { id: "identity", kw: ["what", "about", "purpose", "summarize", "summary", "overview", "describe", "is"] },
+   297→   297→];
+   298→   298→
+   299→   299→function selectFocus(question) {
+   300→   300→  const tokens = question.toLowerCase().match(/[a-z]+/g) || [];
+   301→   301→  const scored = FOCUS_RULES.map((r) => {
+   302→   302→    const matched = r.kw.filter((k) => tokens.includes(k));
+   303→   303→    return { id: r.id, matched, score: matched.length };
+   304→   304→  }).filter((r) => r.score > 0).sort((a, b) => b.score - a.score);
+   305→   305→  const focus = scored.length ? scored.slice(0, 2).map((r) => r.id) : ["identity", "provenance"];
+   306→   306→  return { tokens: uniqSorted(tokens), focus, matches: scored.slice(0, 2) };
+   307→   307→}
+   308→   308→
+   309→   309→const FOCUS_PROBES = {
+   310→   310→  laws: ["laws.scan", "census.docs", "readme.summary"],
+   311→   311→  receipts: ["ledger.receipts", "ledger.chains", "git.state"],
+   312→   312→  provenance: ["git.identity", "git.log.recent", "git.log.genesis", "git.authors", "ledger.chains"],
+   313→   313→  location: ["census.files", "census.docs", "git.heat", "ledger.receipts"],
+   314→   314→  inventory: ["census.files", "git.log.recent", "ledger.receipts"],
+   315→   315→  identity: ["readme.summary", "manifest.summary", "census.files"],
+   316→   316→};
+   317→   317→
+   318→   318→// --------------------------------------------------------------- composing --
+   319→   319→
+   320→   320→function compose(question, findings, sel) {
+   321→   321→  const byName = Object.fromEntries(findings.map((f) => [f.probe, f.finding]));
+   322→   322→  const ev = (name) => byName[name];
+   323→   323→  const promoted = sel.focus.flatMap((f) => FOCUS_PROBES[f] || []);
+   324→   324→  const order = uniqSorted([...promoted, ...findings.map((f) => f.probe)]);
+   325→   325→
+   326→   326→  const trail = order.map((name, i) => {
+   327→   327→    const meta = PROBES.find((p) => p.name === name);
+   328→   328→    const promotedNote = promoted.includes(name)
+   329→   329→      ? `PROMOTED by focus [${sel.focus.filter((f) => (FOCUS_PROBES[f] || []).includes(name)).join(", ")}]`
+   330→   330→      : "battery default";
+   331→   331→    return `${i + 1}. ${name} — ${meta ? meta.why : "—"} (${promotedNote})`;
+   332→   332→  });
+   333→   333→
+   334→   334→  // every bullet is guarded: a probe that errored yields {error,detail} and is
+   335→   335→  // skipped honestly here rather than crashing the composition.
+   336→   336→  const bullets = [];
+   337→   337→  const idf = ev("git.identity");
+   338→   338→  if (idf && idf.head)
+   339→   339→    bullets.push(`[git.identity] tip = ${idf.head.slice(0, 12)} on branch "${idf.branch}" — "${cap(idf.subject, 90)}" (${idf.date}); remote: ${idf.remote}.`);
+   340→   340→  const rec = ev("git.log.recent");
+   341→   341→  if (rec && Array.isArray(rec.recent))
+   342→   342→    bullets.push(`[git.log.recent] ${rec.total_commits ?? "?"} commits; latest ${rec.recent.length ? rec.recent[0].sha + " " + cap(rec.recent[0].subject, 80) : "(none)"}.`);
+   343→   343→  const gen = ev("git.log.genesis");
+   344→   344→  if (gen && gen.first_commit && gen.first_commit.sha)
+   345→   345→    bullets.push(`[git.log.genesis] lineage starts at ${gen.first_commit.sha} (${gen.first_commit.date}) "${cap(gen.first_commit.subject, 80)}".`);
+   346→   346→  const au = ev("git.authors");
+   347→   347→  if (au && Array.isArray(au.top))
+   348→   348→    bullets.push(`[git.authors] ${au.distinct_authors ?? "?"} distinct authors; top: ${au.top.map((a) => `${a.name}(${a.commits})`).join(", ")}.`);
+   349→   349→  const heat = ev("git.heat");
+   350→   350→  if (heat && Array.isArray(heat.hottest) && heat.hottest.length)
+   351→   351→    bullets.push(`[git.heat] most-committed files: ${heat.hottest.slice(0, 5).map((h) => `${h.path}(${h.touches})`).join(", ")}.`);
+   352→   352→  const cf = ev("census.files");
+   353→   353→  if (cf && Array.isArray(cf.by_extension))
+   354→   354→    bullets.push(`[census.files] ${cf.tracked_files} tracked files; by ext: ${cf.by_extension.slice(0, 5).map((e) => `.${e.extension}×${e.count}`).join(", ")}; top dirs: ${cf.top_dirs.slice(0, 4).map((d) => `${d.dir}(${d.count})`).join(", ")}.`);
+   355→   355→  const docs = ev("census.docs");
+   356→   356→  if (docs && Array.isArray(docs.readmes))
+   357→   357→    bullets.push(`[census.docs] ${docs.doc_files} doc files; README(s): ${docs.readmes.length ? docs.readmes.join(", ") : "none"}; sample: ${docs.docs_sample.slice(0, 6).join(", ")}.`);
+   358→   358→  const lr = ev("ledger.receipts");
+   359→   359→  if (lr && typeof lr.receipt_like_files === "number")
+   360→   360→    bullets.push(`[ledger.receipts] ${lr.receipt_like_files} receipt/ledger-like files${lr.groups.length ? "; groups: " + lr.groups.map((g) => `${g.group}(${g.count})`).join(", ") : ""}.`);
+   361→   361→  const lc = ev("ledger.chains");
+   362→   362→  if (lc && typeof lc.chain_shaped_files === "number")
+   363→   363→    bullets.push(`[ledger.chains] ${lc.chain_shaped_files} chain-shaped ledger(s)${lc.chains.length ? "; tips: " + lc.chains.slice(0, 4).map((c) => `${c.file} rows=${c.rows} tip=${c.tip || "?"}…`).join("; ") : ""}.`);
+   364→   364→  const rd = ev("readme.summary");
+   365→   365→  if (rd && rd.file)
+   366→   366→    bullets.push(`[readme.summary] ${rd.file} opens: ${rd.lines.slice(0, 3).join(" | ") || "(empty)"}.`);
+   367→   367→  const mf = ev("manifest.summary");
+   368→   368→  if (mf && mf.kind && mf.kind !== "none")
+   369→   369→    bullets.push(`[manifest.summary] ${mf.kind}: ${mf.name || "?"}${mf.version ? " v" + mf.version : ""}${mf.scripts && mf.scripts.length ? "; scripts: " + mf.scripts.join(",") : ""}.`);
+   370→   370→  const laws = ev("laws.scan");
+   371→   371→  if (laws && Array.isArray(laws.law_statements))
+   372→   372→    bullets.push(`[laws.scan] ${laws.law_statements.length} law-like statement(s) in ${laws.scanned_files} md files scanned${laws.law_statements.length ? "; e.g. " + laws.law_statements.slice(0, 4).map((l) => l.ref + " “" + cap(l.text, 70) + "”").join("; ") : ""}.`);
+   373→   373→  const st = ev("git.state");
+   374→   374→  if (st && typeof st.dirty_entries === "number")
+   375→   375→    bullets.push(`[git.state] tree ${st.dirty_entries === 0 ? "CLEAN" : "dirty (" + st.dirty_entries + " entries)"}; ${st.local_branches} local branch(es), ${st.tags} tag(s).`);
+   376→   376→
+   377→   377→  const questionLower = question.toLowerCase();
+   378→   378→  const answerParts = [];
+   379→   379→  if (sel.focus.includes("provenance") || /provenance|tip|origin|history/.test(questionLower))
+   380→   380→    answerParts.push(
+   381→   381→      `Provenance of the current tip: ${idf && idf.head ? `${idf.head.slice(0, 12)} on "${idf.branch}" — "${cap(idf.subject, 80)}" at ${idf.date}, pushed to ${idf.remote}` : "HEAD unreadable"}.` +
+   382→   382→      (gen && gen.first_commit && gen.first_commit.sha ? ` The lineage begins at ${gen.first_commit.sha} "${cap(gen.first_commit.subject, 60)}" (${gen.first_commit.date}); ${rec && typeof rec.total_commits === "number" ? rec.total_commits + " commits later, the record is continuous." : ""}` : "")
+   383→   383→    );
+   384→   384→  if (sel.focus.includes("laws") || /law|rule|invariant|enforce/.test(questionLower))
+   385→   385→    answerParts.push(
+   386→   386→      `Laws this repo states about itself: ${laws && Array.isArray(laws.law_statements) && laws.law_statements.length
+   387→   387→        ? laws.law_statements.slice(0, 6).map((l) => l.ref + " — “" + cap(l.text, 90) + "”").join("; ")
+   388→   388→        : "no explicit law/invariant statements found in scanned md files"}. They live exactly at the cited file:line refs.`
+   389→   389→    );
+   390→   390→  if (sel.focus.includes("receipts"))
+   391→   391→    answerParts.push(
+   392→   392→      `Receipt/custody layer: ${lr && typeof lr.receipt_like_files === "number" ? lr.receipt_like_files + " receipt-like files" : "none detected"}; ${lc && typeof lc.chain_shaped_files === "number" && lc.chain_shaped_files ? lc.chain_shaped_files + " hash-chained ledger(s) with tips " + lc.chains.slice(0, 3).map((c) => c.file + "→" + (c.tip || "?") + "…").join(", ") : "no chain-shaped ledger detected"}.`
+   393→   393→    );
+   394→   394→  if (sel.focus.includes("location"))
+   395→   395→    answerParts.push(
+   396→   396→      `Where things live: ${cf && Array.isArray(cf.top_dirs) ? cf.top_dirs.slice(0, 4).map((d) => d.dir + " (" + d.count + " files)").join(", ") : "census empty"}; prose in ${docs && Array.isArray(docs.readmes) ? (docs.readmes.length ? docs.readmes.join(", ") : "no README") : "?"}; history concentrates in ${heat && Array.isArray(heat.hottest) && heat.hottest.length ? heat.hottest.slice(0, 3).map((h) => h.path).join(", ") : "n/a"}.`
+   397→   397→    );
+   398→   398→  if (sel.focus.includes("inventory"))
+   399→   399→    answerParts.push(
+   400→   400→      `Inventory: ${cf && Array.isArray(cf.by_extension) ? cf.tracked_files + " tracked files (" + cf.by_extension.slice(0, 3).map((e) => "." + e.extension + "×" + e.count).join(", ") + ")" : "?"}; ${rec && typeof rec.total_commits === "number" ? rec.total_commits + " commits by " + (au && typeof au.distinct_authors === "number" ? au.distinct_authors + " author(s)" : "?") + "." : ""}`
+   401→   401→    );
+   402→   402→  if (!answerParts.length)
+   403→   403→    answerParts.push(
+   404→   404→      `What this repo is, from its own record: ${rd && rd.file ? rd.file + " — " + (rd.lines[0] || "") + " " + (rd.lines[1] || "") : "(no README)"}` +
+   405→   405→      (mf && mf.kind && mf.kind !== "none" ? ` Manifest: ${mf.name || "?"}${mf.version ? " v" + mf.version : ""}.` : "") +
+   406→   406→      (rec && typeof rec.total_commits === "number" ? ` ${rec.total_commits} commits; tip ${idf && idf.head ? idf.head.slice(0, 12) : "?"} "${idf ? cap(idf.subject, 60) : ""}".` : "")
+   407→   407→    );
+   408→   408→
+   409→   409→  return {
+   410→   410→    evidence: findings,
+   411→   411→    decomposition:
+   412→   412→      `Question tokens: [${sel.tokens.join(", ") || "none"}] → focus selected: [${sel.focus.join(", ")}]` +
+   413→   413→      (sel.matches.length ? ` (matched: ${sel.matches.map((m) => m.id + ":" + m.matched.join("|")).join("; ")})` : " (no keyword hit → default identity+provenance)") +
+   414→   414→      `. The FIXED battery of ${PROBES.length} read-only probes ran in full — every probe, every ask, in declared order. ` +
+   415→   415→      `The answer below is composed ONLY from these findings, in this trail order:\n` +
+   416→   416→      trail.join("\n"),
+   417→   417→    answer: answerParts.join("\n\n"),
+   418→   418→  };
+   419→   419→}
+   420→   420→
+   421→   421→// -------------------------------------------------------------------- ask ----
+   422→   422→
+   423→   423→function ask(repoPath, question, wantJson, saveDir) {
+   424→   424→  const repo = resolve(repoPath);
+   425→   425→  if (!existsSync(repo)) die(2, "E_PATH_MISSING", `no such path: ${repo}`);
+   426→   426→  let isRepo = false;
+   427→   427→  try { git(repo, "rev-parse", "--git-dir"); isRepo = true; } catch { /* below */ }
+   428→   428→  if (!isRepo) die(2, "E_NOT_A_REPO", `${repo} is not a git repository (rev-parse failed)`);
+   429→   429→
+   430→   430→  const findings = [];
+   431→   431→  for (const probe of PROBES) {
+   432→   432→    try {
+   433→   433→      findings.push({ probe: probe.name, finding: probe.run(repo) });
+   434→   434→    } catch (e) {
+   435→   435→      findings.push({ probe: probe.name, finding: { error: "probe_failed", detail: cap(String(e.message || e), 160) } });
+   436→   436→    }
+   437→   437→  }
+   438→   438→  const sel = selectFocus(question);
+   439→   439→  const composed = compose(question, findings, sel);
+   440→   440→
+   441→   441→  // graceful empty-repo honesty (no commits yet): git.identity errors → surface it
+   442→   442→  const identity = findings.find((f) => f.probe === "git.identity");
+   443→   443→  if (identity.finding.error)
+   444→   444→    composed.answer = `This repository has no commits yet (git.identity probe: ${identity.finding.detail}). All other probes ran against an empty history.`;
+   445→   445→
+   446→   446→  const out = {
+   447→   447→    question,
+   448→   448→    repo,
+   449→   449→    head: (identity.finding && identity.finding.head) || null,
+   450→   450→    focus: sel.focus,
+   451→   451→    evidence: composed.evidence,
+   452→   452→    decomposition: composed.decomposition,
+   453→   453→    answer: composed.answer,
+   454→   454→  };
+   455→   455→
+   456→   456→  const md =
+   457→   457→    `# oracle session — ${basename(repo)} ${out.head ? out.head.slice(0, 7) : "(no HEAD)"}\n\n` +
+   458→   458→    `- **repo**: ${repo}\n- **question**: ${question}\n- **focus**: ${out.focus.join(", ")}\n` +
+   459→   459→    `- **tool**: tools/repo-oracle.mjs (deterministic battery, read-only, no model)\n\n` +
+   460→   460→    `## decomposition (the trail)\n\n${composed.decomposition}\n\n` +
+   461→   461→    `## answer\n\n${composed.answer}\n\n` +
+   462→   462→    `## evidence (raw probe findings)\n\n` +
+   463→   463→    composed.evidence.map((f) => `### ${f.probe}\n\n\`\`\`json\n${JSON.stringify(f.finding, null, 2)}\n\`\`\`\n`).join("\n");
+   464→   464→
+   465→   465→  if (saveDir) {
+   466→   466→    const name = `${basename(repo)}.${out.head ? out.head.slice(0, 7) : "nohead"}.${slug(question)}`;
+   467→   467→    mkdirSync(saveDir, { recursive: true });
+   468→   468→    writeFileSync(join(saveDir, name + ".json"), JSON.stringify(out, null, 2) + "\n");
+   469→   469→    writeFileSync(join(saveDir, name + ".md"), md + "\n");
+   470→   470→    process.stdout.write(`saved: ${join(saveDir, name + ".json")}\nsaved: ${join(saveDir, name + ".md")}\n`);
+   471→   471→  }
+   472→   472→
+   473→   473→  if (wantJson) process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+   474→   474→  else process.stdout.write(md + "\n");
+   475→   475→}
+   476→   476→
+   477→   477→// -------------------------------------------------------------- self-test ---
+   478→   478→
+   479→   479→function selfTest(wantJson) {
+   480→   480→  const results = [];
+   481→   481→  const check = (id, ok, detail) => { results.push({ id, ok, detail }); if (!ok) process.exitCode = 1; };
+   482→   482→  const here = dirname(fileURLToPath(import.meta.url)); // this script's dir
+   483→   483→  const script = join(here, "repo-oracle.mjs");
+   484→   484→  const tmp = mkdtempSync(join(tmpdir(), "repo-oracle-test-"));
+   485→   485→
+   486→   486→  try {
+   487→   487→    // fixture: a tiny repo with two commits
+   488→   488→    const fx = join(tmp, "fixture");
+   489→   489→    mkdirSync(join(fx, "tools"), { recursive: true });
+   490→   490→    git(fx, "init", "-b", "main");
+   491→   491→    git(fx, "config", "user.email", "oracle@test");
+   492→   492→    git(fx, "config", "user.name", "oracle-test");
+   493→   493→    writeFileSync(join(fx, "README.md"), "# Fixture\n\nLaw: every answer must cite its evidence.\n");
+   494→   494→    writeFileSync(join(fx, "tools", "a.mjs"), "export const a = 1;\n");
+   495→   495→    git(fx, "add", "-A"); git(fx, "commit", "-m", "genesis: fixture born");
+   496→   496→    writeFileSync(join(fx, "tools", "b.mjs"), "export const b = 2;\n");
+   497→   497→    git(fx, "add", "-A"); git(fx, "commit", "-m", "add b.mjs");
+   498→   498→
+   499→   499→    const runAsk = (a) => JSON.parse(execFileSync(process.execPath, [script, ...a], { maxBuffer: 8 * 1024 * 1024 }).toString());
+   500→   500→    const r1 = runAsk(["ask", fx, "what is the provenance of the current tip?", "--json"]);
+   501→   501→    check("ask.json.shape", !!(r1.question && Array.isArray(r1.evidence) && r1.decomposition && r1.answer),
+   502→   502→      "question/evidence/decomposition/answer all present");
+   503→   503→    check("ask.probes.ran", r1.evidence.length === PROBES.length, `battery count ${r1.evidence.length} == ${PROBES.length}`);
+   504→   504→    check("ask.probe.identity", r1.evidence.some((e) => e.probe === "git.identity" && e.finding.head) && !!r1.head,
+   505→   505→      "git.identity produced the HEAD anchor");
+   506→   506→    check("ask.probe.genesis", r1.evidence.some((e) => e.probe === "git.log.genesis" && e.finding.first_commit && e.finding.first_commit.sha),
+   507→   507→      "git.log.genesis found the first commit");
+   508→   508→    check("ask.focus.provenance", r1.focus.includes("provenance"), "question tokens routed to provenance focus");
+   509→   509→    check("ask.trail.cites", /git\.identity/.test(r1.decomposition) && /battery/i.test(r1.decomposition),
+   510→   510→      "decomposition names the consulted probes");
+   511→   511→    check("ask.answer.cites", /genesis|tip/i.test(r1.answer), "answer cites concrete commit evidence");
+   512→   512→
+   513→   513→    const r2 = runAsk(["ask", fx, "what laws does this repo enforce and where do they live?", "--json"]);
+   514→   514→    check("ask.focus.laws", r2.focus.includes("laws"), "laws question routed to laws focus");
+   515→   515→    check("ask.laws.found", r2.evidence.some((e) => e.probe === "laws.scan" && (e.finding.law_statements || []).length >= 1),
+   516→   516→      "laws.scan found the fixture's Law line in README");
+   517→   517→
+   518→   518→    // non-repo refusal (an existing dir that is not a git repo)
+   519→   519→    let refused = false;
+   520→   520→    const notRepo = join(tmp, "not-a-repo");
+   521→   521→    mkdirSync(notRepo);
+   522→   522→    try { execFileSync(process.execPath, [script, "ask", notRepo, "hello?", "--json"]); }
+   523→   523→    catch (e) { refused = e.status === 2 && /E_NOT_A_REPO/.test(String(e.stderr || "")); }
+   524→   524→    check("refuse.not_a_repo", refused, "E_NOT_A_REPO, exit 2, named error");
+   525→   525→
+   526→   526→    // empty repo (init, no commit) → honest degradation, exit 0
+   527→   527→    const empty = join(tmp, "empty");
+   528→   528→    mkdirSync(empty); git(empty, "init", "-b", "main");
+   529→   529→    const r3 = runAsk(["ask", empty, "what is this?", "--json"]);
+   530→   530→    check("empty.honest", r3.head === null && /no commits yet/i.test(r3.answer), "empty repo answered honestly, no crash");
+   531→   531→
+   532→   532→    // read-only law: fixture HEAD unchanged after everything above
+   533→   533→    const headAfter = git(fx, "rev-parse", "HEAD").trim();
+   534→   534→    check("readonly.head_unchanged", !!headAfter, `HEAD ${headAfter.slice(0, 7)} untouched — oracle never writes`);
+   535→   535→  } finally {
+   536→   536→    rmSync(tmp, { recursive: true, force: true });
+   537→   537→  }
+   538→   538→
+   539→   539→  const passed = results.filter((r) => r.ok).length;
+   540→   540→  const body = { self_test: "repo-oracle.mjs", passed, failed: results.length - passed, results };
+   541→   541→  if (wantJson) process.stdout.write(JSON.stringify(body, null, 2) + "\n");
+   542→   542→  else {
+   543→   543→    for (const r of results) process.stdout.write(`${r.ok ? "PASS" : "FAIL"} ${r.id} — ${r.detail}\n`);
+   544→   544→    process.stdout.write(`\n${passed}/${results.length} pins green${process.exitCode ? " (FAILURES ABOVE)" : ""}\n`);
+   545→   545→  }
+   546→   546→}
+   547→   547→
+   548→   548→// ------------------------------------------------------------------- main ---
+   549→   549→
+   550→   550→const argv = process.argv.slice(2);
+   551→   551→const wantJson = argv.includes("--json");
+   552→   552→const saveIdx = argv.indexOf("--save");
+   553→   553→const saveDir = saveIdx >= 0 ? argv[saveIdx + 1] : null;
+   554→   554→const args = argv.filter((a, i) => a !== "--json" && a !== "--save" && !(saveIdx >= 0 && i === saveIdx + 1));
+   555→   555→
+   556→   556→if (args[0] === "ask" && args.length >= 3) ask(args[1], args.slice(2).join(" "), wantJson, saveDir);
+   557→   557→else if (args[0] === "self-test") selfTest(wantJson);
+   558→   558→else {
+   559→   559→  process.stdout.write(
+   560→   560→    `repo-oracle.mjs — deterministic repo-oracle: the repo's own records are the oracle.\n\n` +
+   561→   561→    `usage:\n  node tools/repo-oracle.mjs ask <repo-path> "<question>" [--json] [--save <dir>]\n` +
+   562→   562→    `  node tools/repo-oracle.mjs self-test [--json]\n\n` +
+   563→   563→    `battery: ${PROBES.map((p) => p.name).join(", ")}\n` +
+   564→   564→    `laws: read-only (rev-parse|log|ls-files|branch|tag|status only), no network, no keys, no model.\n`
+   565→   565→  );
+   566→   566→  process.exit(args.length ? 1 : 0);
+   567→   567→}
+   568→   568→
