@@ -4,7 +4,7 @@ import { makeChord, offlineReviewer } from './cortex/chord.mjs';
 import { makeMoth } from './cortex/moth.mjs';
 import { verifyChain } from './cortex/receipts.mjs';
 
-const KEY = 'KEY_REMOVED_FROM_SOURCE_W68';
+const KEY = process.env.TYPESAFEAI_KEY;
 const journal = [];
 const jev = new JevVault({ key: KEY, ns: 'LIVE', cap: 1, journal, cachePath: new URL('.cache/typesafe-LIVE.json', import.meta.url).pathname });
 const moth = await makeMoth({ live: false, journal });

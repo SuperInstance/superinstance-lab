@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 mkdirSync(join(here, '../../.cache'), { recursive: true });
 
-const KEY = 'KEY_REMOVED_FROM_SOURCE_W68';
+const KEY = process.env.TYPESAFEAI_KEY;
 const MOTH_KEY = 'moth_LK5TNffDcdDz4g5PQCCgrU';
 
 const CHECKS = [];

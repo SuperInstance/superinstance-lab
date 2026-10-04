@@ -18,7 +18,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const KEY = 'KEY_REMOVED_FROM_SOURCE_W68';
+const KEY = process.env.TYPESAFEAI_KEY;
 const MOTH_KEY = 'moth_LK5TNffDcdDz4g5PQCCgrU';
 const here = dirname(fileURLToPath(import.meta.url));
 

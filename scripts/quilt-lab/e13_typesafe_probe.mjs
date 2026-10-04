@@ -1,6 +1,6 @@
 // e13: probe the TypeSafe System One API with the user's key.
 // TINY budget: 2 calls max. Verifies wire format + calibrated probabilities.
-const KEY = 'KEY_REMOVED_FROM_SOURCE_W68';
+const KEY = process.env.TYPESAFEAI_KEY;
 const BASE = 'https://api.typesafe.ai';
 
 async function call(body) {
