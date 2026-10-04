@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://www.researchgate.net",
+    "name": "(PDF) Simulating Transport Networks With a Physarum",
+    "snippet": "Jul 10, 2026 — The experimental results demonstrate that Physarum foraging models excel in constructing highly efficient and robust networks , which can be ... Read more",
+    "host_name": "www.researchgate.net",
+    "rank": 0,
+    "date": "Jul 10, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://link.springer.com",
+    "name": "Adaptive Biological Networks | Springer Nature Link",
+    "snippet": "by MD Fricker · 2009 · Cited by 63 — Mycelial fungi and acellular slime molds grow as self-organized networks that explore new territory to search for resources, whilst maintaining an effective ...",
+    "host_name": "link.springer.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.sciencedirect.com",
+    "name": "A Physarum-inspired optimization algorithm for load-",
+    "snippet": "by C Gao · 2017 · Cited by 34 — This novel ACO algorithm will be used to solve 0/1 KP and load-shedding problems. Recently, some studies from biological experiments show that a slime , Physarum ... Read more",
+    "host_name": "www.sciencedirect.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://onlinelibrary.wiley.com",
+    "name": "An Improved Physarum polycephalum Algorithm for the",
+    "snippet": "by X Zhang · 2014 · Cited by 50 — We found that the improved Physarum algorithm matches well with existing Physarum -inspired approaches yet outperforms them in number of ... Read more",
+    "host_name": "onlinelibrary.wiley.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.aimspress.com",
+    "name": "The food seeking behavior of slime mold: a macroscopic",
+    "snippet": "Sep 28, 2020 — slime molds are known to be able to solve mazes, construct robust networks , and solve shortest path and spanning tree problems. A Physarum ...",
+    "host_name": "www.aimspress.com",
+    "rank": 4,
+    "date": "Sep 28, 2020",
+    "favicon": ""
+  }
+]
