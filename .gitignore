@@ -12,3 +12,5 @@ download/github-mirror/
 *.pem
 *.p12
 .credentials/
+playtest-external/
+si-dotgithub/
