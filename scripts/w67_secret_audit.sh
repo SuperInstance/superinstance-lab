@@ -12,6 +12,7 @@ PATTERNS='github_pat_[A-Za-z0-9_]{20,}
 ghp_[A-Za-z0-9]{20,}
 gho_[A-Za-z0-9]{20,}
 ghs_[A-Za-z0-9]{20,}
+apikey_[A-Za-z0-9_]{20,}
 sk-[A-Za-z0-9]{20,}
 sk-proj-[A-Za-z0-9_-]{20,}
 AKIA[0-9A-Z]{16}

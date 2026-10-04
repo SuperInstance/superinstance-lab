@@ -1414,3 +1414,20 @@ Work Log:
 
 Stage Summary:
 - Both secret files verified untracked+ignored+history-zero at wave close; keys remain on local disk only (hot, per the principal), unreachable by git. Mirror bundle refreshed on the post-purge state.
+
+---
+Task ID: 68-a
+Agent: main (Super Z, keeper)
+Task: THE PUSH WAVE — live token dropped by the principal; keys hot, never committed; everything pushed
+
+Work Log:
+- PRINCIPAL DROPPED LIVE MATERIAL: GITHUB_TOKEN + TYPESAFEAI_KEY pasted in-channel. Both landed in .env.keys (gitignored since wave-67 line `.env*`, chmod 600, verified `git check-ignore` + zero tracked refs). Keys hot on disk, unreachable by git — the standing law.
+- Token verified LIVE: api.github.com/user 200 → login=SuperInstance (user account, NOT an org — Casey Digennaro). Full scopes incl. repo+workflow. push_all.sh's org→user fallback handles repo creation correctly under the user account.
+- REMOTE CENSUS (31 repos with github remotes): 8 SYNCED, ~21 BEHIND-ONLY (others have been pushing: fleet-seeds +52, quilt-research-canons +245, si-fleet/jev-quilt +97, jev-quilt +38, quilt-atlas +38, MicroMoth-quilt +29...), 1 DIVERGED (exoj: 1 local ahead = atlas kit, 9 behind = others' wave-69).
+- Dirty-state triage: fleet "+dirty" was ~99% mode-bit churn (tar artifact) → core.fileMode=false per repo (local config only). crab-traps had 2 binary asset worktree changes → restored via checkout. quilt-playtest blocked by untracked node_modules/packages colliding with upstream's committed copies → set aside, ff-pulled, removed local copies.
+- INTEGRATION SWEEP (never clobber): 21 repos fast-forward-pulled (~560 commits of others' work absorbed — the T1 dog-food corpus, receipted by the gitlinks themselves). exoj REBASED (atlas-kit commit → c50575c on top of wave-69 tip bfbe461): README.md both-added-sections conflict resolved keep-both (wave-69 GAN section + wave-66 Atlas Kit section), package.json conflict resolved merge-both (remote metadata + atlas scripts folded into existing scripts block). exoj smoke.mjs PASS post-rebase.
+- AUDIT KIT HARDENED: scripts/w67_secret_audit.sh gains apikey_ pattern (the typesafe key family). Full-history 37-repo audit timed out (too heavy) → leveled scripts/w68_surgical_audit.sh: scans ONLY the real first-push surfaces (exoj full history, cot-quilt full history, monorepo post-purge commits 2ee276c..HEAD + working tree about to be committed). RESULT: ZERO HITS on every pattern incl. apikey_/ghp_/DATABASE_URL. The wave-67 purge held.
+- Monorepo state: 24 gitlinks advanced (the integration record), audit kit changes staged, stray root r5_waddington.json removed (canonical copy lives in scripts/w67-research/). Pack 34.18 MiB — light push.
+
+Stage Summary:
+- Everything integrated, audited, and fired: push_all.sh running next (phase 1 fleet no-ops+exoj, phase 2 cot-quilt create+push, phase 3 superinstance-lab create+push, phase 4 ls-remote verify). Zero secrets on any pushed surface. Others' work absorbed, not clobbered.
