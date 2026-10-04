@@ -32,6 +32,7 @@ for repo in "$ROOT" "$ROOT"/*/ "$ROOT"/*/*/; do
   git -C "$repo" rev-list --all --objects 2>/dev/null | \
   while read -r oid path; do
     [ -n "$path" ] || continue
+    case "$path" in *w67_secret_audit.sh) continue;; esac  # skip self (contains the pattern literals)
     content=$(git -C "$repo" cat-file blob "$oid" 2>/dev/null | head -c 400000)
     [ -z "$content" ] && continue
     while IFS= read -r pat; do
