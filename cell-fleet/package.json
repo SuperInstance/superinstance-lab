@@ -1,0 +1,13 @@
+{
+  "name": "cell-fleet",
+  "private": true,
+  "type": "module",
+  "description": "wave-67: cellularized function + learning on Cloudflare Workers (DO nucleus, KV membrane, alarm cell-cycle) — LOCAL workerd only, no deploy (no credentials exist; receipted)",
+  "scripts": {
+    "dev": "wrangler dev --local --port 8787",
+    "simulate": "node scripts/simulate.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

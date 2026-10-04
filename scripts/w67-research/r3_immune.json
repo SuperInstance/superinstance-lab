@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://arxiv.org",
+    "name": "SynChain: Inducing Computer-Use Agent Systems to",
+    "snippet": "Aug 7, 2026 — ( 2025 ) . Existing security research on LLM -based agents has primarily focused on prompt injection Jia et al. (2026); Schmotz et al. Read more",
+    "host_name": "arxiv.org",
+    "rank": 0,
+    "date": "Aug 7, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.biorxiv.org",
+    "name": "The Fitness Cost of Therapeutic Resistance in Cancer",
+    "snippet": "Aug 4, 2026 — Acquired resistance can result from selection of preexisting resistant mutants that comprise a small fraction of the therapy-naive population. Read more",
+    "host_name": "www.biorxiv.org",
+    "rank": 1,
+    "date": "Aug 4, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.sciencedirect.com",
+    "name": "STRATEGIES AND ROLE OF ARTIFICIAL INTELLIGENCE",
+    "snippet": "Sep 23, 2026 — This comprehensive review critically evaluates the strategic integration of artificial intelligence (AI), including machine learning (ML), deep ... Read more",
+    "host_name": "www.sciencedirect.com",
+    "rank": 2,
+    "date": "Sep 23, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://spj.science.org",
+    "name": "HELP-TCR: Harmonized Explainable Language",
+    "snippet": "by M Seweryn — HELP-TCR provides a versatile platform for functional TCR repertoire analysis with potential applications in immunotherapy development, vaccine design, and  ...",
+    "host_name": "spj.science.org",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://article.sciencepg.com",
+    "name": "Robust Power System Optimization Using LSTM-Based",
+    "snippet": "May 16, 2026 — Artificial Immune System stands out for its robust- ness and global search capability, using clonal selection and hypermutation mechanisms to ...",
+    "host_name": "article.sciencepg.com",
+    "rank": 4,
+    "date": "May 16, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.researchgate.net",
+    "name": "Negative selection in anomaly detection—A survey",
+    "snippet": "In this paper, inspired by artificial immune systems AIS and large language models LLM , we propose an LLM -based immune detection method, named LLM -IDS,",
+    "host_name": "www.researchgate.net",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  }
+]

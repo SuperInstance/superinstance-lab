@@ -1,0 +1,55 @@
+# cell-fleet — wrangler config (LOCAL ONLY)
+#
+# No Cloudflare account or API token exists in this container (all credential
+# material was lost — receipted in receipts/W67-CELL-FLEET.md). Everything in
+# this experiment runs on the local workerd runtime via `wrangler dev --local`
+# (real Durable Objects + real KV, emulated on-disk under .wrangler/state).
+# deployed=NO by honest constraint, not by omission.
+#
+# The KV namespace id is a LOCAL-dev placeholder (32-hex); local mode never
+# contacts the Cloudflare API, so no real namespace is needed or created.
+
+name = "cell-fleet"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# NUCLEI: the two Durable Object classes (cell nucleus + tissue coordinator).
+# SQLite-backed (default storage law in wrangler v4) so DO storage works in
+# local workerd exactly as it would in production.
+[durable_objects]
+bindings = [
+  { name = "TISSUE", class_name = "Tissue" },
+  { name = "CELL",   class_name = "Cell" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Tissue", "Cell"]
+
+# MEMBRANE: KV namespace = extracellular matrix. Cells exocytose state rows
+# (`cell:{id}`) and apoptotic bodies (`grave:{id}`) here every tick; /tissue
+# reads it back as the tissue state.
+[[kv_namespaces]]
+binding = "CELL_MATRIX"
+id = "ca11ce11000000000000000000000001"
+
+# CELL CHEMISTRY (tunables — the experiment's thresholds live here, not in
+# code; wave discipline: tune config, receipt the change, never hide it).
+[vars]
+TICK_MS = "3000"            # cell-cycle period (prod would use ~10000)
+ETA = "0.15"                # delta-rule learning rate
+EMA_ALPHA = "0.35"          # reward EMA responsiveness
+APOPTOSIS_BELOW = "0.72"    # reward EMA under this (after MIN_TASKS) → die
+MITOSIS_ABOVE = "0.85"      # reward EMA over this → eligible to divide
+MIN_TASKS = "4"             # minimum tasks before cycle decisions
+MITOSIS_LOAD = "4"          # tasks since last division required to divide
+STARVE_TICKS = "5"          # consecutive taskless ticks → apoptosis (starvation)
+CAP = "10"                  # tissue carrying capacity (mitosis blocked at CAP)
+MUT_SIGMA = "0.08"          # gaussian mutation std-dev per mitosis
+FOUNDER_N = "3"             # founders seeded by the stem-cell niche
+FOUNDER_RADIUS = "0.55"     # founder genome spread
+SENESCENT_FOUNDER = "1"     # founder #1 seeded inverted → exercises the affinity-failure apoptosis route
+HEARTBEAT_EVERY = "5"       # heartbeat receipt every N ticks
+
+[observability]
+enabled = false

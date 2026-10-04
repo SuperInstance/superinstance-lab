@@ -1,0 +1,529 @@
+part_id,work,family,layer,name,status,n_catalysts,catalysts,missing_inputs,elementary,gate
+exoj-P01,exoj,garden,0,hex geometry,HOLE:NO_CATALYST,0,,,True,
+exoj-P02,exoj,garden,0,content-addressing primitives,HOLE:NO_CATALYST,0,,value_rows,True,key order can never change a hash (sorted canonical form)
+exoj-P03,exoj,garden,0,cell state bundle,CLOSED,1,exoj-P01,,True,"a never-touched cell is fully open: prob_mass = 1.0, gamma = 0"
+exoj-P04,exoj,garden,1,soft_write (seed reference),HOLE:NO_CATALYST,0,,vector_params,True,alpha fixed at 0.4 default; write is convex (no overshoot of the targets)
+exoj-P05,exoj,garden,1,accumulate (ledger naturality policy),HOLE:NO_CATALYST,0,,vector_params,True,permutation of the same writes changes nothing beyond ~1e-15 float noise
+exoj-P06,exoj,garden,1,amps() aggregate read,HOLE:BLOCKED_PRODUCER,1,exoj-P05,accumulator,True,delta_override outranks the aggregate once set
+exoj-P07,exoj,garden,1,normalizeView (pure sense-time projection),HOLE:NO_CATALYST,0,,cell_list,True,state untouched after normalisation (pure read)
+exoj-P08,exoj,garden,0,field construction (the surface),HOLE:NO_CATALYST,0,,policy,True,lattice contains exactly the cells with hexDist <= radius
+exoj-P09,exoj,garden,4,receipt chain (_push / verifyChain),CLOSED,17,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P13;exoj-P15;exoj-P25,,True,"verifyChain ok in memory AND from the reloaded file (PoC 8: links=14, both ok)"
+exoj-P10,exoj,garden,3,attend (observer registration),HOLE:NO_CATALYST,0,,observer_name,True,attending leaves Sigma/prob_open identical to 1e-15 (PoC 4)
+exoj-P11,exoj,garden,1,seed _norm (honest negative kept),HOLE:NO_CATALYST,0,,field_state_after_emit,True,"collateral mutations are COUNTED, never hidden (e_x2 crowned the alternatives on"
+exoj-P12,exoj,garden,1,off-lattice fold to origin,CLOSED,1,exoj-P01,,True,
+exoj-P13,exoj,garden,2,refuse policy (conservation boundary),HOLE:NO_CATALYST,0,,jevemit target + amplitudes,True,post gamma+eta <= 1.0 + 1e-12 or the write never lands; refusals are never silen
+exoj-P14,exoj,garden,1,jev_emit (soft vectorized progression),CLOSED,1,exoj-P01,,True,"in-band emits conserve gamma+eta=1 exactly (PoC 5: 100/100, max deviation 0.0)"
+exoj-P15,exoj,garden,1,observe (the only collapse),CLOSED,1,exoj-P01,,True,PoC 3 sealed rule: target prob_mass == 0 AND hex-neighbour >= 0.999 AND distant 
+exoj-P16,exoj,garden,1,attachProgram (schedule receipt),CLOSED,1,exoj-P01,,True,the chained spec is a deep copy frozen at attach time
+exoj-P17,exoj,garden,1,tick (temporal programs fire),HOLE:NO_CATALYST,0,,time,True,"PoC 7: every-program fires exactly at t in {3,6,9} and at-program exactly once a"
+exoj-P18,exoj,garden,4,sense() (pure field readout),CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,PoC 1 sealed rule: |Sigma - 1.0| <= 1e-9 AND max_cell_Sigma <= 1 + 1e-9 after ba
+exoj-P19,exoj,garden,3,project (show-your-work slice),HOLE:NO_CATALYST,0,,observer_name,True,PoC 6: appends ZERO chain rows and leaves Sigma/prob_open unchanged to 1e-15
+exoj-P20,exoj,garden,3,quilt snapshot,CLOSED,5,exoj-P03;quilt-jev-toolkit-P05;quilt-upstream-P06;si-fleet-P12;superinstance-site-P07,,True,untouched cells never appear (the sheet shows only what the wave has visited)
+exoj-P21,exoj,garden,3,save (donnable shell v1),CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,cells_raw carries G/E/D/aSum/n so the ledger policy round-trips exactly
+exoj-P22,exoj,garden,3,load + post-load verification,CLOSED,2,fleet-seeds-P04;quilt-research-canons-P01,,True,PoC 8: verifyChain ok from the SAVED file after load; tip identical to in-memory
+exoj-P23,exoj,garden,2,conservation policy registry,HOLE:NO_CATALYST,0,,policy_string,True,"unrecognised policy simply takes the seed branch (documented default), all four "
+exoj-P24,exoj,garden,2,JEV backends (soft-only contract),HOLE:NO_CATALYST,0,,backend_step,True,"PoC 5: 100/100 emissions across 4 backends have Delta in [0.4,0.6] AND |gamma+et"
+exoj-P25,exoj,garden,2,decision rules sealed before results,HOLE:NO_CATALYST,0,,experiment_design,True,"rules rows precede result rows in the chain (structural, chain-ordered); no post"
+exoj-P26,exoj,garden,4,verdicts computed from telemetry,HOLE:NO_CATALYST,0,,results_object,True,EX0 VERDICT line is 8/8 PASS only if every sealed rule evaluates true AND the ch
+fleet-seeds-P01,fleet-seeds,garden,3,seed intake (the hopper mouth),HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P11,seed,True,spawn refuses an existing slug directory ('already exists — pick another slug')
+fleet-seeds-P02,fleet-seeds,garden,2,charter injection (seed verbatim),HOLE:NO_CATALYST,0,,text,True,seed text embedded verbatim (seed.trim() + newline only) — no editorial rewrite
+fleet-seeds-P03,fleet-seeds,garden,2,house doctrine block,HOLE:BLOCKED_PRODUCER,1,crab-traps-P20,template,True,all five laws present in the template (structural: template constant)
+fleet-seeds-P04,fleet-seeds,garden,3,CI workflow at birth,HOLE:NO_CATALYST,0,,template ci constant,True,
+fleet-seeds-P05,fleet-seeds,garden,4,smoke contract (count is the contract),CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,exit 0 iff fail === 0; the printed count is the CI-enforced contract
+fleet-seeds-P06,fleet-seeds,garden,1,deterministic scaffold + first commit,HOLE:NO_CATALYST,0,,path,True,commit message fixed; commit exists before the lane ever runs
+fleet-seeds-P07,fleet-seeds,garden,4,selftest loop (offline dog-food),HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P11,seed,True,PASS iff demo repo has 1 commit AND its smoke output includes 'SMOKE OK'; tree l
+fleet-seeds-P08,fleet-seeds,garden,3,dispatch contract,HOLE:NO_CATALYST,0,,argv,True,wrong arity -> usage line + exit 1 (never a half-spawn)
+fleet-seeds-P09,fleet-seeds,garden,2,seed-to-charter identity (exoj lineage),HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P11,seed,True,charter text in the spawned repo == seed text byte-for-byte (verbatim claim chec
+fleet-seeds-P10,fleet-seeds,garden,4,FLEET.md quilt fold map,HOLE:NO_CATALYST,0,,fleet_repo_inventory,True,"regenerable by tool, not hand-maintained prose"
+fleet-seeds-P11,fleet-seeds,garden,2,lode six-stage discovery loop,CLOSED,10,MicroMoth-quilt-P05;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12;jeviter-P19,,True,registration requires the sealed prediction hash + mine-id citation (admission i
+fleet-seeds-P12,fleet-seeds,garden,4,lode fail-closed validation,HOLE:NO_CATALYST,0,,registry_mines_lessons_jsonl,True,append-only enforced fail-closed (exit 2); tamper self-tests included
+fleet-seeds-P13,fleet-seeds,garden,3,Tap Tavern (sealed discourse),HOLE:NO_CATALYST,0,,round_predictions_model_answers,True,every claim carries verifier-checkable refs (house rules header)
+fleet-seeds-P14,fleet-seeds,garden,4,cross-chain witness rollup (46-e),HOLE:NO_CATALYST,0,,fleet_chains,True,exit 0 IFF every target verified AND the wave-46 chain verifies (with the unmodi
+fleet-seeds-P15,fleet-seeds,garden,4,tool verification battery (wave 45),CLOSED,2,fleet-seeds-P04;quilt-research-canons-P01,,True,"all artifacts offline only, zero deps, no keys (WAVE45 header law); truncate aud"
+fleet-seeds-P16,fleet-seeds,garden,4,registry of predictions (fleet memory),HOLE:NO_CATALYST,0,,verdict_commits_across_repos,True,append-only (enforced by P12's validator); each row cites its registration seal
+jev-garden-P01,jev-garden,garden,0,hex lattice substrate,HOLE:NO_CATALYST,0,,radius_default_4,True,cell count == 61 at radius 4 (axial formula 3r^2+3r+1)
+jev-garden-P02,jev-garden,garden,0,canonical byte discipline,HOLE:NO_CATALYST,0,,any js value / string / seed hex,True,no wall-clock or Math.random in any deterministic path (header law of canon.mjs)
+jev-garden-P03,jev-garden,garden,1,context-to-cell pre-registered mapping,HOLE:NO_CATALYST,0,,context_string,True,"same context string always yields the same cell (pre-registered, deterministic)"
+jev-garden-P04,jev-garden,garden,1,deform (JEV soft emit),HOLE:NO_CATALYST,0,,"contextstr, gamma, surprise, tag",True,"deform never emits a definite token — only (gamma,eta,delta) masses"
+jev-garden-P05,jev-garden,garden,1,observe — the only collapse,HOLE:NO_CATALYST,0,,"contextstr, op, source",True,observations are the only collapses (smoke-asserted)
+jev-garden-P06,jev-garden,garden,4,hash-chained growth journal,CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,verifyJournal ok after clean run; tamper detected AND localized at exact row (se
+jev-garden-P07,jev-garden,garden,1,rhizome prior (amplitude-weighted vote),HOLE:NO_CATALYST,0,,"contextstr, radius",True,"total<=0 falls back to uniform 1/7 (no crash, no invention)"
+jev-garden-P08,jev-garden,garden,1,counted memory prior (A1 addendum),HOLE:NO_CATALYST,0,,contextstr,True,"unseen context uses the global observed distribution, never zeros"
+jev-garden-P09,jev-garden,garden,3,sense table serialization (weave-2),CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,"byte-deterministic under canonicalJSON (sorted contexts, sorted ops, r6)"
+jev-garden-P10,jev-garden,garden,1,qthe prototype arm,HOLE:BLOCKED_PRODUCER,1,cot-quilt-P08,sample,True,zero-score tie falls back to honest uniform (tie flag returned)
+jev-garden-P11,jev-garden,garden,1,hash-arm SGD head,HOLE:BLOCKED_PRODUCER,1,cot-quilt-P08,sample,True,"deterministic: zero-init weights, no RNG (selftest 'trainHash deterministic')"
+jev-garden-P12,jev-garden,garden,2,bigram floor + sealed ensemble lambda,HOLE:NO_CATALYST,0,,head_probs,True,ENS_LAMBDA=0.5 sealed in PREDICTIONS.md before the run (decision rules before th
+jev-garden-P13,jev-garden,garden,1,feature builders,HOLE:NO_CATALYST,0,,receipt_rows_kind_op,True,K=3 window sealed (selftest 'K=3 window sealed'); hash features L2-normalised an
+jev-garden-P14,jev-garden,garden,1,grow stream law,CLOSED,2,jev-garden-P24;quilt-jepa-P01,,True,every stream sample does exactly one deform and one observe
+jev-garden-P15,jev-garden,garden,4,paired-arm evaluation,HOLE:NO_CATALYST,0,,model,True,arms differ only in the mechanism under test; identical sample list for every ar
+jev-garden-P16,jev-garden,garden,2,promotion gate (jeviter lifecycle),HOLE:NO_CATALYST,0,,"challenger evalmetrics, incumbent evalmetrics",True,gain >= +0.02 to promote; any tracked gain < -0.05 discards
+jev-garden-P17,jev-garden,garden,3,weave artifact v1 compilation,HOLE:NO_CATALYST,0,,"rhizome, train/eval samples, incumbent, weaveindex",True,artifact_sha256 = sha256(canonicalJSON(artifact)); journal_tip chain-tips the ar
+jev-garden-P18,jev-garden,garden,3,weave artifact v2 (sense table rides),HOLE:NO_CATALYST,0,,rhizome_train_eval_samples,True,schema jev-garden/weave-v2; registered weights only (wh/wq/wf)
+jev-garden-P19,jev-garden,garden,3,loadWeave fail-closed schema gate,HOLE:NO_CATALYST,0,,artifact json,True,unknown weave schema -> throw 'refuse: unknown weave schema'
+jev-garden-P20,jev-garden,garden,2,judge branch law (registered order),CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,gate-closed paths serve the byte-identical v1 expression; opt-in modes change no
+jev-garden-P21,jev-garden,garden,2,escalation budget organ (A13),HOLE:NO_CATALYST,0,,escalation_cap,True,"non-integer or negative cap throws at construction (fail-closed), not mid-walk"
+jev-garden-P22,jev-garden,garden,2,escalation threshold (sealed 0.55),CLOSED,1,jeviter-P02,,True,"threshold constant sealed, reused as H* by the A8/A9 gated modes"
+jev-garden-P23,jev-garden,garden,3,teacher bridge (escalation organ wire),HOLE:NO_CATALYST,0,,"state, questions, typesafe_api_key",True,missing TYPESAFE_API_KEY -> fail-closed throw ('teacher channel closed'); HTTP e
+jev-garden-P24,jev-garden,garden,3,qcells soil adapter,CLOSED,1,breakthrough-prospector-P11,,True,"split is byte-order sorted and sealed (selftest 'split: 12 train / 4 eval', 'spl"
+jev-garden-P25,jev-garden,garden,1,impact-sensitive anomaly injection,CLOSED,17,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,changes are impact-sensitive: op/seq/prev/args actually touched (selftest 'chang
+jev-garden-P26,jev-garden,garden,4,concentration detector + AUC pricing,HOLE:NO_CATALYST,0,,per_row_surprises,True,verdict of record: AUC 0.9294 >= 0.90 AND FPR 0.0353 <= 0.10 (P-G4); semantic-on
+jeviter-P01,jeviter,garden,0,fnv1a-64 chain basis (café pin),HOLE:NO_CATALYST,0,,string,True,café vector equality holds (pinned by tests)
+jeviter-P02,jeviter,garden,0,Q16 exact rationals,HOLE:NO_CATALYST,0,,count,True,"identity comparisons never pass through floats (floats live in the gain, not the"
+jeviter-P03,jeviter,garden,1,letter-class profile organ,HOLE:NO_CATALYST,0,,text,True,empty/whitespace text normalises against total=1 (no divide-by-zero)
+jeviter-P04,jeviter,garden,1,klGain,HOLE:NO_CATALYST,0,,distribution,True,p==0 or q==0 shared-support terms contribute nothing (documented semantics)
+jeviter-P05,jeviter,garden,1,klGainStrict (categorical replacement law),HOLE:NO_CATALYST,0,,distribution,True,"three independent lanes' falsifiers (flipped verdict digit, fixed-grammar stream"
+jeviter-P06,jeviter,garden,1,profileValue leaf-class organ,HOLE:NO_CATALYST,0,,json object,True,"'verdict=ok' -> 'verdict=fail' is a full class move (~1/leaves-per-row mass), th"
+jeviter-P07,jeviter,garden,2,dynamicThreshold,HOLE:NO_CATALYST,0,,gains_array,True,no admissions yet -> threshold 0 (the seed path stays open)
+jeviter-P08,jeviter,garden,2,dynamicThresholdEWMA (starvation cure),HOLE:BLOCKED_PRODUCER,1,jeviter-P04,gain,True,baseline moves on silences too ('25 quiet samples let the baseline forget the da
+jeviter-P09,jeviter,garden,4,hash-chained receipt ledger,CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,verify() false on any mutated body; a ledger that verifies with 0 events is rece
+jeviter-P10,jeviter,garden,1,"seed law (no belief, no refusal)",CLOSED,2,jev-garden-P24;quilt-jepa-P01,,True,"first pull MUST NOT yield as an event (law 1, pinned by tests)"
+jeviter-P11,jeviter,garden,4,silence booking,HOLE:BLOCKED_PRODUCER,2,jeviter-P07;jeviter-P08,threshold,True,EVERY silenced pull is booked (law 2) — admission accounting stays exact
+jeviter-P12,jeviter,garden,1,event admission + belief update,HOLE:BLOCKED_PRODUCER,2,jeviter-P07;jeviter-P08,threshold,True,yield happens iff gain > threshold (admission)
+jeviter-P13,jeviter,garden,4,scanLedger honest readings,HOLE:NO_CATALYST,0,,ledger_entry,True,"broken chain names its own row; QUIET is a verdict, not an error"
+jeviter-P14,jeviter,garden,2,Throttle (anti-DoS ratchet),HOLE:NO_CATALYST,0,,text,True,a flood of identical requests self-sheds after exactly one admission — alternati
+jeviter-P15,jeviter,garden,1,PR shape signature,HOLE:NO_CATALYST,0,,"pr {files, adds, dels}",True,signature is order-insensitive (areas sorted) — file order cannot fake divergenc
+jeviter-P16,jeviter,garden,2,MergeGovernor rest law,HOLE:NO_CATALYST,0,,pr stream,True,"rest length is fixed (restLen held PRs), NOT time — wall-clock smuggling is not "
+jeviter-P17,jeviter,garden,4,readGovernor audit readout,HOLE:NO_CATALYST,0,,governor_instance,True,chainVerified surfaces ledger integrity with every readout
+jeviter-P18,jeviter,garden,2,distill CITATION gate,HOLE:NO_CATALYST,0,,lesson_transcript,True,unresolved cite -> REFUSED (never silently pinned)
+jeviter-P19,jeviter,garden,2,distill DUP silence gate,CLOSED,7,crab-traps-P02;crab-traps-P21;jev-quilt-P15;jev-quilt-P16;quilt-jev-toolkit-P02;quilt-raw-P12,,True,"already-pinned hash -> silence, never re-pin (dormancy is not costume)"
+jeviter-P20,jeviter,garden,4,distill WELL-FORMEDNESS re-parse,HOLE:NO_CATALYST,0,,rendered canon stub,True,hand-edited stub fails re-parse against recomputed transcript hashes
+jeviter-P21,jeviter,garden,2,never-throw refusal receipts,HOLE:NO_CATALYST,0,,playtest_input,True,no code path throws on malformed input (NEVER-THROW doctrine header)
+jeviter-P22,jeviter,garden,1,dream consolidation (receipted sleep),HOLE:NO_CATALYST,0,,memory_entry,True,summarize null/undefined -> refusal receipt (precondition); no source entry is e
+jeviter-P23,jeviter,garden,3,MCP stdio server,HOLE:NO_CATALYST,0,,json-rpc tool calls,True,named handles only — unknown handle refuses rather than guessing
+jeviter-P24,jeviter,garden,3,CLI + TUI surfaces,HOLE:NO_CATALYST,0,,argv,True,"scan names the silence pattern; TUI renders quiet as data, not as failure costum"
+MicroMoth-quilt-P01,MicroMoth-quilt,labs,0,MicroMoth statevector core,HOLE:NO_CATALYST,0,,circuit,True,Upstream tree untouched — the fleet adds only receipts around it
+MicroMoth-quilt-P02,MicroMoth-quilt,labs,0,Circuit-as-ledger identity,HOLE:NO_CATALYST,0,,operation,True,
+MicroMoth-quilt-P03,MicroMoth-quilt,labs,1,BIND/LINK gate chaining,HOLE:NO_CATALYST,0,,gate_appends,True,Edit one gate and every downstream id moves — the tamper-evidence property
+MicroMoth-quilt-P04,MicroMoth-quilt,labs,1,"Primitives, not sugar",HOLE:NO_CATALYST,0,,call,True,Sugar ops in a chain are a refuse condition (sugar never ledgers)
+MicroMoth-quilt-P05,MicroMoth-quilt,labs,1,Collapse as EFFECT cells,HOLE:NO_CATALYST,0,,shot,True,A collapse event must never alter the gate chain
+MicroMoth-quilt-P06,MicroMoth-quilt,labs,1,VIEW cells over the same chain,HOLE:NO_CATALYST,0,,circuit_chain;view_choice,True,
+MicroMoth-quilt-P07,MicroMoth-quilt,labs,1,TICK: moments as layers,HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P03,gate_chain,True,
+MicroMoth-quilt-P08,MicroMoth-quilt,labs,2,Seal policy for collapse runs,HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P11,circuit;seed;shot,True,No seed plumbed and recorded => no seal
+MicroMoth-quilt-P09,MicroMoth-quilt,labs,2,Sibling-port gate,HOLE:BLOCKED_PRODUCER,1,craftmind-study-P08,claim,True,No quilt-native code lands in this repo until the sibling-port question is settl
+MicroMoth-quilt-P10,MicroMoth-quilt,labs,3,Import manifest tool,CLOSED,2,fleet-seeds-P04;quilt-research-canons-P01,,True,The tool must exclude itself by name — self-reference would make the manifest un
+MicroMoth-quilt-P11,MicroMoth-quilt,labs,3,quantum-wow plugin with honest degrade,HOLE:NO_PRODUCER,2,jev-garden-P01;jev-garden-P03,parameter,True,Every public method returns a usable result plus mode/degraded — the widget must
+MicroMoth-quilt-P12,MicroMoth-quilt,labs,4,Pins that re-derive and re-execute,HOLE:BLOCKED_PRODUCER,11,MicroMoth-quilt-P05;breakthrough-prospector-P09;fleet-seeds-P01;jeviter-P10;jeviter-P11;jeviter-P12,document;simulator,True,"Pins must fail loudly and name the fix (regenerate the manifest, never edit by h"
+MicroMoth-quilt-P13,MicroMoth-quilt,labs,4,Provenance honesty tags,HOLE:NO_CATALYST,0,,import_checks;repo_metadata,True,Nothing may be tagged VERIFIED without a run and a date
+cot-quilt-P01,cot-quilt,labs,0,Lens-sampled chain-of-thought,HOLE:NO_CATALYST,0,,persona;prompt,True,Burn-guard: finish=length with empty content triggers a 3x-budget retry
+cot-quilt-P02,cot-quilt,labs,1,Split: typed step compression,HOLE:NO_CATALYST,0,,cot markdown,True,"Steps must parse to the typed schema — malformed JSON goes through repair, not s"
+cot-quilt-P03,cot-quilt,labs,1,Wire: load-bearing battery,HOLE:NO_CATALYST,0,,step,True,
+cot-quilt-P04,cot-quilt,labs,1,Merge: cross-seed agreement as weight,HOLE:NO_CATALYST,0,,step_graphs,True,
+cot-quilt-P05,cot-quilt,labs,1,Judge and fold-back,HOLE:NO_PRODUCER,5,cot-quilt-P04;fleet-seeds-P10;quilt-quant-P01;quilt-upstream-P01;quilt-upstream-P10,prompt,True,"The judge's gaps must become cells, not a footnote"
+cot-quilt-P06,cot-quilt,labs,2,Compose/test separation,HOLE:NO_CATALYST,0,,per_arm_node_sets,True,A judge must never see only its own compositions
+cot-quilt-P07,cot-quilt,labs,2,Budget and retry policy,HOLE:BLOCKED_PRODUCER,2,quilt-mcp-receipts-P06;si-fleet-P07,phase_plans;response,True,"Total calls capped; every retry and remediation receipted, all-in spend declared"
+cot-quilt-P08,cot-quilt,labs,2,Quantum seed discipline,HOLE:NO_CATALYST,0,,quantum_job,True,Every bit must be labeled true-quantum or fail-closed — no unlabeled mixing
+cot-quilt-P09,cot-quilt,labs,3,"Atomic receipted runs, resumable",HOLE:NO_CATALYST,0,,pipeline_outputs,True,Receipt writes must be atomic — a mid-write kill once truncated a receipt and th
+cot-quilt-P10,cot-quilt,labs,3,Cell signature (drop into a quilt),HOLE:NO_PRODUCER,17,cot-quilt-P06;fleet-seeds-P05;fleet-seeds-P07;fleet-seeds-P12;fleet-seeds-P15;jeviter-P20,graph_version,True,
+cot-quilt-P11,cot-quilt,labs,4,Keyscan ritual,CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,Exit 1 on any un-receipted credential-shaped hit — the scanner must never become
+cot-quilt-P12,cot-quilt,labs,4,Incident ledger (never-delete-data),HOLE:NO_PRODUCER,8,jev-garden-P07;jev-garden-P08;jev-garden-P09;jev-garden-P12;jev-garden-P15;qthe-P21,security-incident.md,True,A suppression requires a written justification + pointer to the incident record
+moth-research-P01,moth-research,labs,0,Vendored primary-source snapshot,HOLE:NO_CATALYST,0,,site,True,
+moth-research-P02,moth-research,labs,0,Engine menu with economics,HOLE:BLOCKED_PRODUCER,1,fleet-seeds-P01,document,True,An engine without version + usage metadata is not selectable
+moth-research-P03,moth-research,labs,1,Endpoint contract,HOLE:NO_CATALYST,0,,http,True,Bearer auth required on every call — no anonymous paths
+moth-research-P04,moth-research,labs,1,Payload-shape taxonomy,HOLE:NO_CATALYST,0,,schema,True,"A payload with no extractable per-bit variability contributes provenance, never "
+moth-research-P05,moth-research,labs,1,Async job lifecycle,HOLE:NO_PRODUCER,2,jev-garden-P01;jev-garden-P03,parameter,True,
+moth-research-P06,moth-research,labs,2,Probe-first selection policy,HOLE:NO_CATALYST,0,,engine_menu;probe_results,True,No harvest before a probe and written caps — the decision precedes the spend
+moth-research-P07,moth-research,labs,2,Offline twin strategy,HOLE:NO_CATALYST,0,,vendored_upstream_packages,True,Twins are labeled as twins — simulated semantics never claim hardware provenance
+moth-research-P08,moth-research,labs,3,Exhibit interface,HOLE:NO_CATALYST,0,,docs html,True,
+moth-research-P09,moth-research,labs,3,Consumer lattice,HOLE:NO_CATALYST,0,,documented_engine,True,
+moth-research-P10,moth-research,labs,4,Provenance chain discipline,HOLE:BLOCKED_PRODUCER,1,moth-research-P05,job_results,True,No key material may ever enter a cache or receipt; provenance fields are mandato
+quilt-dba-P01,quilt-dba,labs,0,Fixed-point scaled-integer substrate,HOLE:BLOCKED_PRODUCER,2,qthe-P06;quilt-raw-P03,event,True,Boundary tolerance 1e-9 scaled units — comparisons are exact at the integers
+quilt-dba-P02,quilt-dba,labs,0,Checkpointable randomness,HOLE:NO_CATALYST,0,,evaln;worldseed,True,"Every draw must be recoverable from (seed, index) alone"
+quilt-dba-P03,quilt-dba,labs,0,Entropy vault over real cached packets,HOLE:NO_CATALYST,0,,packet_files,True,"Monobit sanity: pool rejected unless ones-ratio in (0.4, 0.6)"
+quilt-dba-P04,quilt-dba,labs,1,Deterministic world generation,HOLE:NO_CATALYST,0,,worldseed,True,"Start cell (8,8) is never a hazard"
+quilt-dba-P05,quilt-dba,labs,1,Z_in sensors,HOLE:NO_PRODUCER,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,config;task,True,"Salience clamped to [0,1000] (smoke pins 440 -> in range)"
+quilt-dba-P06,quilt-dba,labs,1,JEPA predict + integer surprise,HOLE:NO_PRODUCER,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,semantic_memory,True,Surprise is a pure integer function of state — recomputable at any checkpoint
+quilt-dba-P07,quilt-dba,labs,1,Pincher reflex fast path,HOLE:NO_CATALYST,0,,sensor,True,Strictly salience > 800 — the threshold is the whole reflex policy
+quilt-dba-P08,quilt-dba,labs,1,Growth: adding cells IS advancing stages,HOLE:NO_CATALYST,0,,state_position;world_surprise,True,"Position accrues ONLY on declining surprise (competence, not reward)"
+quilt-dba-P09,quilt-dba,labs,2,DoubleEntry conservation law,HOLE:NO_CATALYST,0,,log;probe_input;world_surprise,True,"gamma + eta <= C = log2(3) x 1000, exact at the scaled integers"
+quilt-dba-P10,quilt-dba,labs,2,JEV typed-decision gate (mock calibration),HOLE:NO_CATALYST,0,,env_success_ring;mode,True,Every gate row carries the mock label — the OFF voice never impersonates live ju
+quilt-dba-P11,quilt-dba,labs,2,Curriculum switching policy,HOLE:NO_PRODUCER,17,cot-quilt-P06;fleet-seeds-P05;fleet-seeds-P07;fleet-seeds-P12;fleet-seeds-P15;jeviter-P20,task,True,Only EXECUTE + noul > 0.95 + task < 3 may switch — and never downward
+quilt-dba-P12,quilt-dba,labs,3,"Live typesafe SystemOne client, fail-closed",HOLE:NO_CATALYST,0,,buildstate() developmental state;typesafe_key (runtime only),True,A live gate that cannot answer must never stall the loop and must never silently
+quilt-dba-P13,quilt-dba,labs,3,Live moth QRC stochasticity lane,HOLE:BLOCKED_PRODUCER,1,moth-research-P06,engine_choice;moth_key (runtime only),True,A batch is labeled live:true/mock:false ONLY if a real job completed
+quilt-dba-P14,quilt-dba,labs,4,Receipt chains + byte-identical replay,CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,verifyChain over the re-read file must pass; resumed hash must equal full hash
+quilt-dba-P15,quilt-dba,labs,4,Key hygiene doctrine,HOLE:NO_CATALYST,0,,process_env,True,No key material may appear in any artifact — selfScan must find zero matches
+quilt-quant-P01,quilt-quant,labs,0,Vendored patched quilt engine,HOLE:NO_CATALYST,0,,declaration;push,True,"If a quant check fails it is the sheet's fault, not the engine's (engine frozen,"
+quilt-quant-P02,quilt-quant,labs,0,Belief cells and the one tape,HOLE:NO_CATALYST,0,,market,True,Tape shorter than 60 bars or containing a non-finite positive bar halts everythi
+quilt-quant-P03,quilt-quant,labs,1,Waveform perception,HOLE:NO_CATALYST,0,,market_close,True,"Indicators may be null while warming up — nulls mean FLAT, never a guess"
+quilt-quant-P04,quilt-quant,labs,1,The world: sim.run publishes a receipt,HOLE:NO_CATALYST,0,,config;market_data;w_beliefs,True,No lookahead: bar i may only see bars <= i (truncated-tape policy replay probe)
+quilt-quant-P05,quilt-quant,labs,1,Moth-entropy learning step,HOLE:NO_CATALYST,0,,entropy_float;sim_last;w_state_participation,True,Accept iff score = sharpe - 2*maxdd - 0.5*[trades<3] strictly improves
+quilt-quant-P06,quilt-quant,labs,1,M8 dormancy (pruning),HOLE:NO_CATALYST,0,,w_state_metrics,True,"Dormancy requires >= 7 tries AND max delta < 0.02 — decided from data, not luck"
+quilt-quant-P07,quilt-quant,labs,2,Two-block edge-triggered proposal,HOLE:BLOCKED_PRODUCER,1,quilt-quant-P03,indicators;w_thresholds;wave_spectrum,True,"Edge-trigger: the vote must be absent on the previous bar (a signal is an event,"
+quilt-quant-P08,quilt-quant,labs,2,M5 confirmation rails,HOLE:BLOCKED_PRODUCER,1,quilt-quant-P07,"proposal;state (ddnow, changes);volz;wave",True,A proposal acts only if every rail returns null — verdict lists its checks
+quilt-quant-P09,quilt-quant,labs,2,Entanglement veto,HOLE:NO_CATALYST,0,,conflict;moth.entangle zz read,True,"|ZZ(mom,rev)| < 0.82 required for CONFLICT proposals"
+quilt-quant-P10,quilt-quant,labs,2,Analyst letter fence,HOLE:NO_CATALYST,0,,"regime, scores, dormant set, zz read, weights",True,Reply must decode to exactly one of A-E — anything else is REFUSED with a reason
+quilt-quant-P11,quilt-quant,labs,3,Moth-quantum client with cell-level honesty,HOLE:NO_CATALYST,0,,moth key (env only);return_waveform_feature_encoding,True,Every API call must land in moth.journal; offline substitutions must be labeled 
+quilt-quant-P12,quilt-quant,labs,3,"Glass: lamp, listener and sparkline",HOLE:NO_PRODUCER,17,cot-quilt-P06;fleet-seeds-P05;fleet-seeds-P07;fleet-seeds-P12;fleet-seeds-P15;jeviter-P20,metric,True,
+quilt-quant-P13,quilt-quant,labs,4,Independent reference stack,HOLE:NO_CATALYST,0,,tape,True,Return/Sharpe/maxdd/exposure and trade sequence must match the reference to 1e-9
+quilt-quant-P14,quilt-quant,labs,4,Witness chain over learning rounds,CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,Chain re-derivation must succeed; tampering must break it visibly
+quilt-raw-P01,quilt-raw,labs,0,Q32 fixed-point integer substrate,HOLE:NO_CATALYST,0,,integers,True,"mul must match the (i128>>32, wrap) reference; isqrt must be the exact floor"
+quilt-raw-P02,quilt-raw,labs,0,Substrate injection seam,HOLE:NO_CATALYST,0,,substrate_choice,True,"R2 contrast must be SUBSTRATE-ONLY: identical code path, identical op order"
+quilt-raw-P03,quilt-raw,labs,1,The seven-op tick,HOLE:NO_CATALYST,0,,"cfg {dt,c,gate};state {p,v,g,e,t,vprev}",True,
+quilt-raw-P04,quilt-raw,labs,1,Transactional conservation halt,HOLE:NO_CATALYST,0,,c;staged,True,On breach the ledger must be bit-unchanged (mini-R1 sealed check)
+quilt-raw-P05,quilt-raw,labs,1,Measurements write nothing,HOLE:NO_CATALYST,0,,"v, vprev, gate eval",True,
+quilt-raw-P06,quilt-raw,labs,1,Gates as signed-distance functionals,HOLE:NO_CATALYST,0,,position_velocity,True,A decision requires BOTH sign flip AND rising slope
+quilt-raw-P07,quilt-raw,labs,1,"Exact rewind: four undos, zero search",HOLE:NO_CATALYST,0,,config;journal_events;substrate,True,"rewind(50 events) must bit-equal the origin seed (integer equality, no tolerance"
+quilt-raw-P08,quilt-raw,labs,1,Token gluing grammar,HOLE:NO_CATALYST,0,,token_set,True,glueAll returns null on any disjoint pair — the shape must stay connected
+quilt-raw-P09,quilt-raw,labs,1,Egg lifecycle,HOLE:NO_CATALYST,0,,loop_decision;shape,True,The shell boundary must stay empty up to the break (R3 asserts exactly this)
+quilt-raw-P10,quilt-raw,labs,1,Field render: deltas to topology,HOLE:NO_CATALYST,0,,emitted_deltas,True,"render is pure: same journal -> same topology, hash-checked (R4)"
+quilt-raw-P11,quilt-raw,labs,3,Journal as lineage,HOLE:BLOCKED_PRODUCER,2,qthe-P06;quilt-raw-P03,event,True,Event t values must be contiguous 0..n-1 — a gap means an unrecorded write
+quilt-raw-P12,quilt-raw,labs,4,Canonical bytes and hashes,HOLE:NO_CATALYST,0,,journal,True,Same state must always produce the same bytes (deterministic serialization)
+quilt-raw-P13,quilt-raw,labs,4,Charter law: decision rules before the run,HOLE:NO_CATALYST,0,,text,True,No post-hoc verdicts — the rule must precede the numbers in the receipt chain
+quilt-raw-P14,quilt-raw,labs,4,Float64 contrast arm,HOLE:NO_CATALYST,0,,journal,True,The contrast must show NONZERO float drift while Q32 stays bit-equal
+breakthrough-prospector-P01,breakthrough-prospector,meta,0,scout log substrate,HOLE:NO_CATALYST,0,,research_material,True,"no URL/commit, no claim"
+breakthrough-prospector-P02,breakthrough-prospector,meta,0,abstraction card substrate,HOLE:NO_CATALYST,0,,deduped_claim,True,
+breakthrough-prospector-P03,breakthrough-prospector,meta,1,distill and dedup move,HOLE:BLOCKED_PRODUCER,1,craftmind-study-P08,claim,True,
+breakthrough-prospector-P04,breakthrough-prospector,meta,2,scout discipline rules,HOLE:NO_CATALYST,0,,session,True,scout reports what it verified by minute 25 even if incomplete
+breakthrough-prospector-P05,breakthrough-prospector,meta,1,B = V x F x S scorer,HOLE:NO_CATALYST,0,,"experiments table (id, name, cards, v, f, s, verified_citations, needs_casey, metric_measured, why)",True,
+breakthrough-prospector-P06,breakthrough-prospector,meta,2,candidate run gate,HOLE:NO_CATALYST,0,,experiment,True,B >= 40 AND F >= 3 AND >= 1 VERIFIED citation
+breakthrough-prospector-P07,breakthrough-prospector,meta,2,anti-gaming caps,HOLE:NO_CATALYST,0,,raw v/f/s inputs,True,"caps applied deterministically by the scorer, visible in output"
+breakthrough-prospector-P08,breakthrough-prospector,meta,1,sealed pre-registration,HOLE:NO_CATALYST,0,,experiment_hypothesis,True,registration sealed and pushed before any external call / draw
+breakthrough-prospector-P09,breakthrough-prospector,meta,1,receipted quantum arm draw,HOLE:BLOCKED_PRODUCER,1,breakthrough-prospector-P08,registration,True,draw attempts and channel health are receipted per attempt
+breakthrough-prospector-P10,breakthrough-prospector,meta,1,deterministic decide + replay check,HOLE:BLOCKED_PRODUCER,4,quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;quilt-jev-toolkit-P17;si-fleet-P16,bundle,True,decide --check must be byte-identical modulo timestamp
+breakthrough-prospector-P11,breakthrough-prospector,meta,4,per-slice receipt bundle,CLOSED,7,quilt-research-canons-P11;quilt-upstream-P05;si-fleet-P02;si-fleet-P03;si-fleet-P04;si-fleet-P05,,True,
+breakthrough-prospector-P12,breakthrough-prospector,meta,4,verdict of record with sealed threshold,HOLE:NO_CATALYST,0,,measurement,True,threshold fixed at registration; measured-but-failed arms published verbatim
+breakthrough-prospector-P13,breakthrough-prospector,meta,2,honest-negative filing rule,HOLE:NO_CATALYST,0,,fail verdict,True,
+breakthrough-prospector-P14,breakthrough-prospector,meta,2,ladder-claim rule,HOLE:BLOCKED_PRODUCER,1,external-scouts-P17,self_assessment,True,an L1 claim requires a held-out gate receipt
+breakthrough-prospector-P15,breakthrough-prospector,meta,3,DELTAS per-repo delta ledger,HOLE:NO_CATALYST,0,,registry_cards_fleet_repo_map,True,
+breakthrough-prospector-P16,breakthrough-prospector,meta,3,snowball queue handoff,HOLE:BLOCKED_PRODUCER,2,breakthrough-prospector-P07;cot-quilt-P05,score,True,
+craftmind-study-P01,craftmind-study,meta,0,heritable DNA blueprints,HOLE:NO_CATALYST,0,,species_definition,True,
+craftmind-study-P02,craftmind-study,meta,1,breed + mutate on success,HOLE:NO_CATALYST,0,,fitness_verified_population,True,
+craftmind-study-P03,craftmind-study,meta,2,no-proxy-reward rule,HOLE:NO_CATALYST,0,,task_submission,True,attempts award zero fitness
+craftmind-study-P04,craftmind-study,meta,1,task-confidence permanent boost,HOLE:NO_CATALYST,0,,task,True,
+craftmind-study-P05,craftmind-study,meta,2,soft population caps,HOLE:NO_CATALYST,0,,population_size,True,"population stays under the soft cap, oldest/weakest make room"
+craftmind-study-P06,craftmind-study,meta,0,empty knowledge graph substrate,CLOSED,5,cot-quilt-P04;fleet-seeds-P10;quilt-quant-P01;quilt-upstream-P01;quilt-upstream-P10,,True,
+craftmind-study-P07,craftmind-study,meta,1,gap -> single-variable experiment,CLOSED,5,cot-quilt-P04;fleet-seeds-P10;quilt-quant-P01;quilt-upstream-P01;quilt-upstream-P10,,True,
+craftmind-study-P08,craftmind-study,meta,2,reproducibility-before-fact rule,HOLE:NO_CATALYST,0,,experimental_result,True,a fact enters the KB only with reproducible results + experiment citation
+craftmind-study-P09,craftmind-study,meta,1,multi-agent research chain,HOLE:NO_CATALYST,0,,candidate_findings,True,
+craftmind-study-P10,craftmind-study,meta,0,boids flock + personality matrix,HOLE:NO_CATALYST,0,,"flock state, dog dna, weather",True,
+craftmind-study-P11,craftmind-study,meta,1,correction-driven tier ascent,HOLE:NO_CATALYST,0,,handler_corrections,True,
+craftmind-study-P12,craftmind-study,meta,2,emergent-only teamwork rule,HOLE:NO_CATALYST,0,,movement,True,no explicit inter-dog messaging channel
+craftmind-study-P13,craftmind-study,meta,2,fork-first lineage isolation,HOLE:NO_CATALYST,0,,code_fork,True,
+craftmind-study-P14,craftmind-study,meta,2,published budget ceilings,HOLE:NO_CATALYST,0,,"worker cpu limits, task flow",True,agent reasoning loop completes in <10ms CPU
+craftmind-study-P15,craftmind-study,meta,3,watchable live instances,HOLE:NO_CATALYST,0,,deployed worker,True,
+craftmind-study-P16,craftmind-study,meta,4,test trios + roadmap receipts,HOLE:NO_CATALYST,0,,repo_code,True,
+external-scouts-P01,external-scouts,meta,0,raw-search-receipt substrate,HOLE:NO_CATALYST,0,,web_search_results,True,raw receipts are archived before synthesis is written
+external-scouts-P02,external-scouts,meta,4,hit-to-garden mapping rows,HOLE:NO_CATALYST,0,,raw_hits,True,a hit enters synthesis only with a named 'what it gives the garden'
+external-scouts-P03,external-scouts,meta,1,V-JEPA 2 lineage claims,HOLE:NO_CATALYST,0,,hit,True,
+external-scouts-P04,external-scouts,meta,2,borrowed: mainstream-line confirmation,HOLE:NO_CATALYST,0,,jepa lineage claims,True,
+external-scouts-P05,external-scouts,meta,2,unexplored: JEPA at cell tempo,HOLE:NO_CATALYST,0,,current_garden_capability,True,
+external-scouts-P06,external-scouts,meta,1,TTT lineage claims,HOLE:NO_CATALYST,0,,hit,True,
+external-scouts-P07,external-scouts,meta,2,borrowed: idle-compile as regime,HOLE:NO_CATALYST,0,,ttt claims,True,
+external-scouts-P08,external-scouts,meta,2,unexplored: in-forward vs amortized,HOLE:NO_CATALYST,0,,weave_compile_cadence,True,
+external-scouts-P09,external-scouts,meta,1,distillation lineage claims,HOLE:NO_CATALYST,0,,hit,True,
+external-scouts-P10,external-scouts,meta,2,borrowed: the escalation organ,HOLE:NO_CATALYST,0,,distillation_claim,True,every escalation carries a usage receipt (pricing-first)
+external-scouts-P11,external-scouts,meta,2,unexplored: second-generation distill,HOLE:NO_CATALYST,0,,bakeoff_results,True,
+external-scouts-P12,external-scouts,meta,1,HDC lineage claims,HOLE:NO_CATALYST,0,,hit,True,
+external-scouts-P13,external-scouts,meta,2,borrowed: qthe as QTHE-flavored HDC,HOLE:NO_CATALYST,0,,hdc claims,True,
+external-scouts-P14,external-scouts,meta,2,unexplored: VSA-native receipt features,HOLE:NO_CATALYST,0,,receipt_chain_structure,True,
+external-scouts-P15,external-scouts,meta,4,the junk channel receipt,HOLE:NO_CATALYST,0,,query,True,"junk results are receipted and named in the report, never silently dropped"
+external-scouts-P16,external-scouts,meta,2,borrowed: nothing — the novel part,HOLE:NO_CATALYST,0,,empty_external_anchor,True,"an unanchored pillar must carry pre-registered claims, not borrowed citations"
+external-scouts-P17,external-scouts,meta,3,the honest ahead/behind interface,HOLE:NO_CATALYST,0,,synthesis_history,True,
+quilt-atlas-P01,quilt-atlas,meta,0,atlas.json as the standing receipt,HOLE:NO_CATALYST,0,,github api inventory run,True,
+quilt-atlas-P02,quilt-atlas,meta,0,marker-bounded generated block,CLOSED,2,breakthrough-prospector-P10;quilt-atlas-P01,,True,
+quilt-atlas-P03,quilt-atlas,meta,1,6h re-inventory loop,HOLE:NO_CATALYST,0,,repo_list,True,
+quilt-atlas-P04,quilt-atlas,meta,1,Link-header pagination with hard cap,HOLE:NO_CATALYST,0,,paginated github api,True,hard cap 120 pages; a cap hit must set pagination_cap_hit=true rather than trunc
+quilt-atlas-P05,quilt-atlas,meta,2,name-then-description classifier,HOLE:NO_CATALYST,0,,repo_name_description,True,
+quilt-atlas-P06,quilt-atlas,meta,4,per-repo classification evidence,HOLE:BLOCKED_PRODUCER,1,quilt-dba-P10,decision,True,no family assignment without its evidence row
+quilt-atlas-P07,quilt-atlas,meta,2,CI probed on the moving frontier only,HOLE:BLOCKED_PRODUCER,1,fleet-seeds-P06,repo,True,"absence of measurement must render as UNMEASURED, not 0"
+quilt-atlas-P08,quilt-atlas,meta,4,fleet keyword audit (54-c),HOLE:NO_CATALYST,0,,repo_sample,True,precision bar 70% must be met to keep the synonym table
+quilt-atlas-P09,quilt-atlas,meta,4,qthe keyword audit + canon census (55-c),HOLE:NO_CATALYST,0,,repo_census,True,"family precision >= 70% bar; residual below that is priced, not reclassified"
+quilt-atlas-P10,quilt-atlas,meta,3,top-motion table as the aliveness interface,HOLE:NO_CATALYST,0,,top-motion slice + ci probe,True,
+quilt-atlas-P11,quilt-atlas,meta,4,true-count generated statement,HOLE:NO_CATALYST,0,,pagination,True,
+quilt-atlas-P12,quilt-atlas,meta,2,honest residue + stability rule,HOLE:BLOCKED_PRODUCER,1,fleet-seeds-P06,repo,True,no reclassification without an audit forcing it
+quilt-codespace-P01,quilt-codespace,meta,0,devcontainer template substrate,HOLE:NO_CATALYST,0,,'use this template' + 'open in codespace',True,
+quilt-codespace-P02,quilt-codespace,meta,0,in-process engine with fallback,HOLE:NO_CATALYST,0,,module,True,
+quilt-codespace-P03,quilt-codespace,meta,3,three-service port layout,HOLE:NO_CATALYST,0,,one quilt engine,True,
+quilt-codespace-P04,quilt-codespace,meta,1,cell-grained HTTP API,HOLE:NO_CATALYST,0,,http requests with bearer token,True,
+quilt-codespace-P05,quilt-codespace,meta,2,bearer-token gate,HOLE:NO_CATALYST,0,,http request,True,missing/incorrect bearer token rejects the route
+quilt-codespace-P06,quilt-codespace,meta,3,browser TUI (ttyd),HOLE:NO_CATALYST,0,,quilt_serve,True,
+quilt-codespace-P07,quilt-codespace,meta,3,federation dashboard,HOLE:NO_CATALYST,0,,config,True,
+quilt-codespace-P08,quilt-codespace,meta,1,fed-autopilot three-tier stack,HOLE:NO_CATALYST,0,,tier_declaration,True,
+quilt-codespace-P09,quilt-codespace,meta,2,subscribe-down / push-up role split,HOLE:BLOCKED_PRODUCER,2,qthe-P06;quilt-raw-P03,event,True,"the codespace may write only tunables and audit rows, never actuator cells"
+quilt-codespace-P10,quilt-codespace,meta,1,federation URI scheme,HOLE:NO_CATALYST,0,,reference_string,True,
+quilt-codespace-P11,quilt-codespace,meta,2,ephemerality disclosure + exits,HOLE:NO_CATALYST,0,,codespace lifecycle,True,shutdown loses state unless one of the named exits was taken
+quilt-codespace-P12,quilt-codespace,meta,3,cocapn room -> tier mapping,HOLE:NO_CATALYST,0,,model,True,
+quilt-codespace-P13,quilt-codespace,meta,1,tier auto-detection,HOLE:NO_CATALYST,0,,probe,True,
+quilt-codespace-P14,quilt-codespace,meta,4,/health + /meta self-report,HOLE:NO_CATALYST,0,,service,True,
+quilt-upstream-P01,quilt-upstream,meta,0,cell graph as universal substrate,HOLE:NO_CATALYST,0,,function,True,
+quilt-upstream-P02,quilt-upstream,meta,1,the 8 primitives as per-cell ops,HOLE:BLOCKED_PRODUCER,2,qthe-P06;quilt-raw-P03,event,True,
+quilt-upstream-P03,quilt-upstream,meta,1,conservation law gamma + eta = budget,HOLE:NO_CATALYST,0,,decision_spending,True,"gamma + eta = budget at all times; no more, no less"
+quilt-upstream-P04,quilt-upstream,meta,2,watching as the primitive act,CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,
+quilt-upstream-P05,quilt-upstream,meta,1,ship as .qzt vessel,HOLE:NO_CATALYST,0,,sheet_manifest,True,
+quilt-upstream-P06,quilt-upstream,meta,2,zero-dependency onboarding claim,HOLE:NO_CATALYST,0,,quilt init/add/watch/ship cli,True,
+quilt-upstream-P07,quilt-upstream,meta,2,stage-wise belief outgrowth,HOLE:NO_CATALYST,0,,version_history,True,
+quilt-upstream-P08,quilt-upstream,meta,1,murmur-agent + five gossip strategies,HOLE:NO_CATALYST,0,,idle_cycles,True,
+quilt-upstream-P09,quilt-upstream,meta,2,law survives reimplementation,HOLE:NO_CATALYST,0,,conservation_law,True,the integrity of the idea must hold in every implementation
+quilt-upstream-P10,quilt-upstream,meta,1,polyglot opcode union,HOLE:NO_CATALYST,0,,unlambda / brainfuck / apl programs,True,gamma + eta = 1 conserved in all three embeddings
+quilt-upstream-P11,quilt-upstream,meta,1,Hodge decomposition of the learning signal,CLOSED,5,cot-quilt-P04;fleet-seeds-P10;quilt-quant-P01;quilt-upstream-P01;quilt-upstream-P10,,True,R_exp + R_expt + R_prior = 1 by construction
+quilt-upstream-P12,quilt-upstream,meta,2,Fifth Impossibility (observer effect),HOLE:NO_CATALYST,0,,agent_observation,True,pre-observation ratios are declared unknowable in principle
+quilt-upstream-P13,quilt-upstream,meta,1,notebook-to-quilt isomorphism,HOLE:NO_CATALYST,0,,notebook_pages,True,
+quilt-upstream-P14,quilt-upstream,meta,1,API iterator pattern family,HOLE:NO_CATALYST,0,,"external computational resources (llms, dbs, services)",True,
+quilt-upstream-P15,quilt-upstream,meta,1,CNS + Fascia split,CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,
+quilt-upstream-P16,quilt-upstream,meta,2,specialization impossibility,HOLE:NO_CATALYST,0,,assumed unified system u,True,no unified system claim may assert all three properties
+quilt-upstream-P17,quilt-upstream,meta,4,release v0.2.0 receipts,HOLE:NO_CATALYST,0,,engine_examples,True,
+quilt-upstream-P18,quilt-upstream,meta,1,federation release v0.5.0,HOLE:NO_CATALYST,0,,quilt,True,
+quilt-upstream-P19,quilt-upstream,meta,1,federated store + MQTT release v0.6.0,HOLE:NO_CATALYST,0,,artifact_events,True,R2 failures are best-effort — puts must not break when cold tier is down
+quilt-upstream-P20,quilt-upstream,meta,2,coordination protocol with Lucineer,HOLE:NO_CATALYST,0,,position,True,no code pushed to another lane's repos; issues with [SYNERGY] label are the chan
+quilt-upstream-P21,quilt-upstream,meta,4,unfiled SYNERGY issue stubs,HOLE:NO_CATALYST,0,,coordination_letter,True,a SYNERGY issue only counts once actually posted to the tracker
+quilt-upstream-P22,quilt-upstream,meta,4,ten-architecture mapping table,HOLE:NO_CATALYST,0,,published_architectures,True,
+quilt-upstream-P23,quilt-upstream,meta,4,filename/content drift in the essay corpus,HOLE:BLOCKED_PRODUCER,1,fleet-seeds-P01,document,True,
+quilt-upstream-P24,quilt-upstream,meta,0,nine cell-kind modules,HOLE:NO_CATALYST,0,,semantics,True,
+si-fleet-P01,si-fleet,meta,0,monorepo of fleet lanes,HOLE:NO_CATALYST,0,,fleet_repos,True,
+si-fleet-P02,si-fleet,meta,0,tidepool dual-index stores,HOLE:NO_CATALYST,0,,"post /api/remember {kind, author, title, body, native?, repo?, run?}",True,
+si-fleet-P03,si-fleet,meta,1,WRITE at task end,HOLE:NO_CATALYST,0,,task,True,distillation <= 200 words
+si-fleet-P04,si-fleet,meta,1,READ at task start,HOLE:NO_CATALYST,0,,task_context,True,
+si-fleet-P05,si-fleet,meta,2,provenance discipline,HOLE:NO_CATALYST,0,,artifact_write,True,a write without author/ts is distrusted by policy
+si-fleet-P06,si-fleet,meta,2,absence is information,HOLE:NO_CATALYST,0,,empty_recall_result,True,empty recall obligates a first write
+si-fleet-P07,si-fleet,meta,2,"honest degrade, never 502",HOLE:NO_CATALYST,0,,any request against unbound d1/vectorize/ai,True,"the pool must never return 502; degradation is declared, not hidden"
+si-fleet-P08,si-fleet,meta,2,privacy-preserving rate limit,CLOSED,2,jev-garden-P24;quilt-jepa-P01,,True,max 45 requests/min per IP fingerprint
+si-fleet-P09,si-fleet,meta,1,JEV recall gate,HOLE:NO_CATALYST,0,,scored recall row + embedding confidence + jev verdict,True,pairings below the floor refuse as a typed abstain; untyped JEV input fails clos
+si-fleet-P10,si-fleet,meta,3,quilt at the edge,HOLE:NO_CATALYST,0,,yaml sheet body,True,
+si-fleet-P11,si-fleet,meta,3,AI as cell kinds + router,HOLE:NO_CATALYST,0,,cell_call,True,router escalates to expensive providers only when the cheap path or budget says 
+si-fleet-P12,si-fleet,meta,3,agent-as-sheet,HOLE:NO_CATALYST,0,,"yaml agent sheet (input.task, memory, tool.search, tool.llm, reasoning.prompt...)",True,
+si-fleet-P13,si-fleet,meta,2,CANON.md identity headers,HOLE:NO_CATALYST,0,,lane_description,True,
+si-fleet-P14,si-fleet,meta,4,fully mocked offline test wall,HOLE:BLOCKED_PRODUCER,1,craftmind-study-P16,test,True,gate-off responses must remain bit-identical to ungated ones
+si-fleet-P15,si-fleet,meta,1,polyformalism ports,HOLE:NO_CATALYST,0,,fnv1a_spec,True,
+si-fleet-P16,si-fleet,meta,4,deployability receipts,HOLE:NO_CATALYST,0,,worker_source,True,
+superinstance-site-P01,superinstance-site,meta,0,single self-contained HTML substrate,HOLE:NO_CATALYST,0,,http_request,True,
+superinstance-site-P02,superinstance-site,meta,0,deep-tide token palette,HOLE:NO_CATALYST,0,,brand/readme.md palette table,True,
+superinstance-site-P03,superinstance-site,meta,1,mini engine Sheet (value/formula/deps),HOLE:NO_CATALYST,0,,cell_definition,True,"formula re-eval is skipped when sameV(old,new) is true"
+superinstance-site-P04,superinstance-site,meta,1,Bus + watch listeners,HOLE:NO_CATALYST,0,,"bus emit events {sheet,id,kind,old,v}",True,"every console line must originate from a real Bus emit, not synthesized text"
+superinstance-site-P05,superinstance-site,meta,1,cascade cycle-guard,HOLE:NO_CATALYST,0,,formula_recompute,True,cascade depth bounded; dead sheet halts further _set propagation
+superinstance-site-P06,superinstance-site,meta,1,deterministic PRNG replay,HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P11,seed,True,reload N and reload N+1 must produce identical cell histories
+superinstance-site-P07,superinstance-site,meta,1,visible weight drift (reversi loop),HOLE:NO_CATALYST,0,,finished_game_result,True,
+superinstance-site-P08,superinstance-site,meta,2,gated entries on a rationed quantum budget,HOLE:NO_CATALYST,0,,ema-cross tape signal (proposal),True,entry admitted only after confirmation cell AND quantum budget draw
+superinstance-site-P09,superinstance-site,meta,2,honest-landscape policy,HOLE:NO_CATALYST,0,,"competitor capabilities (excel+copilot, sheets+gemini, airtable, notion, observable, bloomberg, hex/deepnote)",True,the honest panel must exist and name concrete domains where competitors win
+superinstance-site-P10,superinstance-site,meta,2,accent discipline,HOLE:NO_CATALYST,0,,any new ui element,True,
+superinstance-site-P11,superinstance-site,meta,2,offline brand constraint,HOLE:NO_CATALYST,0,,brand_kit,True,
+superinstance-site-P12,superinstance-site,meta,3,four live demos as the argument,HOLE:NO_CATALYST,0,,engine,True,
+superinstance-site-P13,superinstance-site,meta,3,landscape table + positioning 2x2 SVG,HOLE:NO_CATALYST,0,,axes,True,
+superinstance-site-P14,superinstance-site,meta,3,the watching cell brand kit,HOLE:NO_CATALYST,0,,brand_concept,True,
+superinstance-site-P15,superinstance-site,meta,4,playtest findings-to-fixes ledger,HOLE:NO_CATALYST,0,,headless chromium qa harness runs,True,every fix in the table must be traceable to a stated finding
+superinstance-site-P16,superinstance-site,meta,4,automated screenshot evidence,HOLE:NO_CATALYST,0,,qa harness per-demo screenshots,True,screenshots must come from real QA runs of the shipped file
+superinstance-site-P17,superinstance-site,meta,4,live stats receipts,HOLE:NO_CATALYST,0,,fleet ci/patch history,True,
+superinstance-site-P18,superinstance-site,meta,4,zero-error console bar,HOLE:NO_CATALYST,0,,full qa run,True,zero console/page errors across the whole playthrough
+superinstance-site-P19,superinstance-site,meta,2,mechanical-vs-strategic split,CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,mechanical computation must remain free (0 tokens)
+quilt-jev-toolkit-P01,quilt-jev-toolkit,organ,0,canonicalJson (fail-closed),HOLE:NO_CATALYST,0,,any json value,True,undefined / functions / NaN refuse to serialize (throw)
+quilt-jev-toolkit-P02,quilt-jev-toolkit,organ,0,receipt hash formula,HOLE:NO_CATALYST,0,,operation;prevhash;sequence,True,recomputed hash must equal carried hash
+quilt-jev-toolkit-P03,quilt-jev-toolkit,organ,0,per-cell + cells-map state hashes,CLOSED,5,exoj-P03;quilt-jev-toolkit-P05;quilt-upstream-P06;si-fleet-P12;superinstance-site-P07,,True,recomputed hashes must equal manifest claims
+quilt-jev-toolkit-P04,quilt-jev-toolkit,organ,0,manifestHash self-cover,CLOSED,1,MicroMoth-quilt-P10,,True,recomputed self-cover must equal carried manifestHash
+quilt-jev-toolkit-P05,quilt-jev-toolkit,organ,1,deterministic op evaluator (toyQuilt),HOLE:NO_PRODUCER,4,exoj-P03;quilt-upstream-P06;si-fleet-P12;superinstance-site-P07,operation,True,an op must be determinable and reference known cells
+quilt-jev-toolkit-P06,quilt-jev-toolkit,organ,1,verifyChain (contiguity + linkage),HOLE:NO_CATALYST,0,,expectedprev;expectedstart;receipts,True,chain is contiguous and parent-bound across the full window
+quilt-jev-toolkit-P07,quilt-jev-toolkit,organ,1,snapshot() freezing,HOLE:NO_PRODUCER,7,exoj-P03;fleet-seeds-P13;quilt-jev-toolkit-P05;quilt-quant-P14;quilt-upstream-P06;si-fleet-P12,option,True,frozen bundle must pass its own validation
+quilt-jev-toolkit-P08,quilt-jev-toolkit,organ,1,pre-verb courtroom,HOLE:NO_CATALYST,0,,subject,True,no verb acts on an unproven subject
+quilt-jev-toolkit-P09,quilt-jev-toolkit,organ,1,replay == carried assertion,HOLE:BLOCKED_PRODUCER,1,quilt-jev-toolkit-P19,carried statehash;receipts;replay_base,True,replayed state hash == carried state hash
+quilt-jev-toolkit-P10,quilt-jev-toolkit,organ,2,manifest schema law,CLOSED,1,MicroMoth-quilt-P10,,True,schema + schemaVersion are exactly the implemented ones
+quilt-jev-toolkit-P11,quilt-jev-toolkit,organ,2,custody anchor policy,HOLE:BLOCKED_PRODUCER,3,MicroMoth-quilt-P11;jev-garden-P01;jev-garden-P03,checkpoint;manifest_genesis;seed,True,every carried range must be anchored; every gap must be signature-covered
+quilt-jev-toolkit-P12,quilt-jev-toolkit,organ,2,rewind bounds policy,HOLE:NO_CATALYST,0,,court;toseq,True,toSeq within the subject's carried custody
+quilt-jev-toolkit-P13,quilt-jev-toolkit,organ,2,transact atomicity,HOLE:BLOCKED_PRODUCER,3,quilt-jev-toolkit-P07;quilt-jev-toolkit-P17;si-fleet-P16,bundle;operations,True,all ops or nothing; successor passes its own boot courtroom
+quilt-jev-toolkit-P14,quilt-jev-toolkit,organ,2,double-entry balance law,HOLE:NO_CATALYST,0,,host_ledger;organ_ledger,True,debits and credits net to zero across the nest boundary
+quilt-jev-toolkit-P15,quilt-jev-toolkit,organ,2,compensating rewind receipt (revocation law),HOLE:NO_PRODUCER,10,MicroMoth-quilt-P05;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12;jeviter-P19,host_ledger,True,"evidence must be real, unique, and temporally precede the receipt"
+quilt-jev-toolkit-P16,quilt-jev-toolkit,organ,2,checkpoint signature policy,HOLE:BLOCKED_PRODUCER,3,fleet-seeds-P01;jev-garden-P01;jev-garden-P03,document,True,unknown alg refuses; HMAC must verify under the provided key
+quilt-jev-toolkit-P17,quilt-jev-toolkit,organ,2,carve policy,HOLE:BLOCKED_PRODUCER,3,quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;si-fleet-P16,bundle;signed_checkpoint,True,checkpoint prefix must re-hash to the signed manifestHash; boundary must leave a
+quilt-jev-toolkit-P18,quilt-jev-toolkit,organ,1,signCheckpoint mint,HOLE:BLOCKED_PRODUCER,6,jev-garden-P01;jev-garden-P03;quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;quilt-jev-toolkit-P17;si-fleet-P16,bundle;sequence,True,never sign an unproven snapshot; boundary within carried range; full custody sou
+quilt-jev-toolkit-P19,quilt-jev-toolkit,organ,1,seed-aware replay base,HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P11,seed;subject,True,seed hash must equal the boot-verified custody seed hash
+quilt-jev-toolkit-P20,quilt-jev-toolkit,organ,3,boot(),HOLE:BLOCKED_PRODUCER,4,quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;quilt-jev-toolkit-P17;si-fleet-P16,bundle;opts (checkpointkey),True,constructed only after every check passes
+quilt-jev-toolkit-P21,quilt-jev-toolkit,organ,3,stateAt / rewind verbs,HOLE:NO_CATALYST,0,,sequence;subject,True,same-chain continuation after organ rewind; purity on bundle subjects
+quilt-jev-toolkit-P22,quilt-jev-toolkit,organ,3,nestInto + credit append,HOLE:BLOCKED_PRODUCER,6,external-scouts-P10;quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;quilt-jev-toolkit-P17;quilt-jev-toolkit-P20;si-fleet-P16,bundle;host;organ,True,host chain stays contiguous; one nest receipt per manifestHash
+quilt-jev-toolkit-P23,quilt-jev-toolkit,organ,4,custody provenance on the booted organ,HOLE:BLOCKED_PRODUCER,4,quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;quilt-jev-toolkit-P17;si-fleet-P16,bundle,True,provenance names the anchor the custody rests on
+quilt-jev-toolkit-P24,quilt-jev-toolkit,organ,4,fail-closed error table as law,HOLE:NO_CATALYST,0,,refusal,True,every named code has a test or a refusal behind it
+quilt-jev-toolkit-P25,quilt-jev-toolkit,organ,4,demo receipts as sealed evidence,HOLE:NO_CATALYST,0,,demo_run,True,receipts are regenerated truthfully by the runs themselves
+quilt-mcp-receipts-P01,quilt-mcp-receipts,organ,0,canonicalJSON,HOLE:NO_CATALYST,0,,any json value,True,keys sorted at every depth; arrays keep order; output is deterministic across pr
+quilt-mcp-receipts-P02,quilt-mcp-receipts,organ,0,receipt id formula (chain link),HOLE:NO_CATALYST,0,,body;prev;sequence,True,recomputed id must equal stored id
+quilt-mcp-receipts-P03,quilt-mcp-receipts,organ,0,receipt signature formula,HOLE:NO_PRODUCER,3,quilt-mcp-receipts-P02;quilt-organ-workers-P08;quilt-qcells-P03,secret (env mcp_receipt_secret),True,recomputed HMAC must equal stored sig
+quilt-mcp-receipts-P04,quilt-mcp-receipts,organ,0,genesis rule,HOLE:NO_CATALYST,0,,,True,row 1 prev must equal GENESIS_PREV (enforced via the same prev-linkage check)
+quilt-mcp-receipts-P05,quilt-mcp-receipts,organ,1,disk re-parse (no-cache honesty),HOLE:NO_CATALYST,0,,store_bytes,True,no answer is served from a cached view of the file
+quilt-mcp-receipts-P06,quilt-mcp-receipts,organ,1,verifyChain genesis re-derivation,HOLE:NO_CATALYST,0,,loadstore() output,True,every id and sig re-derives; first failure wins
+quilt-mcp-receipts-P07,quilt-mcp-receipts,organ,1,five-field strictness,HOLE:NO_CATALYST,0,,receipt_object,True,REQUIRED_FIELDS membership is exact in both directions
+quilt-mcp-receipts-P08,quilt-mcp-receipts,organ,1,seq/prev linkage checks,HOLE:NO_PRODUCER,10,MicroMoth-quilt-P05;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12;jeviter-P19,expected_prev;expected_seq,True,total order is contiguous and parent-bound
+quilt-mcp-receipts-P09,quilt-mcp-receipts,organ,2,validateAppend admission ladder,HOLE:NO_PRODUCER,10,MicroMoth-quilt-P05;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12;jeviter-P19,current_store,True,nothing invalid is ever appended to disk
+quilt-mcp-receipts-P10,quilt-mcp-receipts,organ,2,append-only write primitive,CLOSED,10,MicroMoth-quilt-P05;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12;jeviter-P19,,True,no code path rewrites or truncates the store (demo seeding only fills an empty s
+quilt-mcp-receipts-P11,quilt-mcp-receipts,organ,2,verifier-not-co-signer stance,CLOSED,10,MicroMoth-quilt-P05;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12;jeviter-P19,,True,the server never holds or transports client key material beyond its own HMAC sec
+quilt-mcp-receipts-P12,quilt-mcp-receipts,organ,3,stdio JSON-RPC 2.0 transport,HOLE:NO_CATALYST,0,,stdin_bytes,True,a notification never produces a reply; an unparseable line still answers -32700
+quilt-mcp-receipts-P13,quilt-mcp-receipts,organ,3,MCP handshake + tool surface,HOLE:NO_CATALYST,0,,tool_requests,True,the wire surface is exactly three tools; nothing else is callable
+quilt-mcp-receipts-P14,quilt-mcp-receipts,organ,3,read_receipts recall with cursor,HOLE:NO_CATALYST,0,,pagination,True,"since_seq must be a non-negative integer; limit in [1,1000]"
+quilt-mcp-receipts-P15,quilt-mcp-receipts,organ,4,demo seeding that never deletes,HOLE:NO_PRODUCER,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,flag,True,seed only if receipts.length === 0 and no corrupted lines
+quilt-mcp-receipts-P16,quilt-mcp-receipts,organ,4,dev-secret loud warning,HOLE:NO_CATALYST,0,,env mcp_receipt_secret,True,fallback-secret use is never silent
+quilt-organ-workers-P01,quilt-organ-workers,organ,0,canonical() fail-closed canonicalizer,HOLE:NO_CATALYST,0,,any json value,True,values with no stable JSON meaning throw (fail-closed) instead of coercing
+quilt-organ-workers-P02,quilt-organ-workers,organ,0,sha256hex over WebCrypto,HOLE:NO_CATALYST,0,,string,True,
+quilt-organ-workers-P03,quilt-organ-workers,organ,0,shared KV namespace substrate,HOLE:NO_CATALYST,0,,kv bindings (organs),True,watcher writes only watch:* rows; loader writes only organ:/meta: rows
+quilt-organ-workers-P04,quilt-organ-workers,organ,1,canonical receipt chain check,CLOSED,11,MicroMoth-quilt-P05;MicroMoth-quilt-P10;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12,,True,full window present; every hash re-derives
+quilt-organ-workers-P05,quilt-organ-workers,organ,1,legacy receipt chain check,HOLE:NO_PRODUCER,10,MicroMoth-quilt-P05;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12;jeviter-P19,receiptrange,True,every legacy digest re-derives and matches the range
+quilt-organ-workers-P06,quilt-organ-workers,organ,1,validateCanonicalBundle,HOLE:BLOCKED_PRODUCER,4,quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;quilt-jev-toolkit-P17;si-fleet-P16,bundle,True,"all three commitment levels (manifest, whole state, per-cell) must re-derive"
+quilt-organ-workers-P07,quilt-organ-workers,organ,1,idempotent envelope store,HOLE:BLOCKED_PRODUCER,7,quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;quilt-jev-toolkit-P17;quilt-mcp-receipts-P02;quilt-organ-workers-P08;quilt-qcells-P03,bundle,True,same bytes → same id → no duplicate objects
+quilt-organ-workers-P08,quilt-organ-workers,organ,2,server-side id derivation,CLOSED,1,MicroMoth-quilt-P10,,True,id is always sha256hex(canonical(manifest)) computed by the worker
+quilt-organ-workers-P09,quilt-organ-workers,organ,2,dialect admission + deprecation policy,HOLE:BLOCKED_PRODUCER,4,quilt-jev-toolkit-P07;quilt-jev-toolkit-P13;quilt-jev-toolkit-P17;si-fleet-P16,bundle,True,"only the two registered dialect strings pass; legacy is loudly deprecated, never"
+quilt-organ-workers-P10,quilt-organ-workers,organ,2,token auth by digest compare,HOLE:NO_CATALYST,0,,env.worker_upload_token;request_headers,True,"no token, or missing binding → refuse"
+quilt-organ-workers-P11,quilt-organ-workers,organ,2,body budget guard,HOLE:NO_CATALYST,0,,request_body,True,declared and actual size both ≤ MAX_BODY_BYTES
+quilt-organ-workers-P12,quilt-organ-workers,organ,2,watcher drift tri-state policy,HOLE:NO_CATALYST,0,,stored_envelopes,True,a stored organ that fails re-derivation is never silently dropped nor auto-delet
+quilt-organ-workers-P13,quilt-organ-workers,organ,3,loader HTTP routes,HOLE:NO_CATALYST,0,,http requests,True,route table matches the advertised index exactly
+quilt-organ-workers-P14,quilt-organ-workers,organ,3,watcher check cycle + status dashboard,HOLE:NO_CATALYST,0,,cron trigger | post /check;kv meta rows,True,one record per organ per cycle; summary counts must add up
+quilt-organ-workers-P15,quilt-organ-workers,organ,3,judge relay fan-out,HOLE:NO_CATALYST,0,,config,True,judges ≤ 8; candidate ≤ 256 KiB; unsupported provider refuses per-judge without 
+quilt-organ-workers-P16,quilt-organ-workers,organ,3,score-first parsing contract,HOLE:NO_CATALYST,0,,judge_content,True,"score must come from the contract line; clamp at [0,10]"
+quilt-organ-workers-P17,quilt-organ-workers,organ,4,/verify boot-readiness report,HOLE:NO_CATALYST,0,,stored_envelope,True,bootable only if every commitment re-derives
+quilt-organ-workers-P18,quilt-organ-workers,organ,4,watcher independence + platform-block receipt,HOLE:NO_CATALYST,0,,stored_bytes,True,zero shared validation code with the loader
+quilt-organ-workers-P19,quilt-organ-workers,organ,4,shared-fixture dual-implementation harness,HOLE:NO_PRODUCER,1,MicroMoth-quilt-P10,organ_manifest;worker_exports,True,exit 0 iff every check holds
+quilt-organ-workers-P20,quilt-organ-workers,organ,4,secret custody discipline,CLOSED,2,jev-garden-P01;jev-garden-P03,,True,no credential ever enters the repo or the uploaded metadata file's leftovers
+quilt-research-canons-P01,quilt-research-canons,organ,0,dated artifact file,HOLE:NO_CATALYST,0,,output,True,
+quilt-research-canons-P02,quilt-research-canons,organ,0,JSON measurement records,HOLE:NO_CATALYST,0,,sprint_runs,True,must parse and carry its own provenance fields
+quilt-research-canons-P03,quilt-research-canons,organ,1,sprint script as self-contained run,HOLE:NO_PRODUCER,2,jev-garden-P01;jev-garden-P03,api endpoints,True,file must be re-runnable without asking a human anything
+quilt-research-canons-P04,quilt-research-canons,organ,1,embedded NEXT-SPRINT SPEC,HOLE:NO_CATALYST,0,,results,True,spec must be specific enough to implement without clarification
+quilt-research-canons-P05,quilt-research-canons,organ,1,output archive + lineage table,HOLE:NO_CATALYST,0,,sprint_states,True,
+quilt-research-canons-P06,quilt-research-canons,organ,2,the sprint contract,CLOSED,2,fleet-seeds-P04;quilt-research-canons-P01,,True,all seven sections + trailer present; no sub-agent spawning
+quilt-research-canons-P07,quilt-research-canons,organ,2,inter-relation requirement,HOLE:NO_CATALYST,0,,prior_sprint_id,True,successor declares its dependency on the predecessor
+quilt-research-canons-P08,quilt-research-canons,organ,2,falsifiability method,HOLE:NO_CATALYST,0,,research_question,True,hypothesis must be stated before the experiment; verdict must be recorded whatev
+quilt-research-canons-P09,quilt-research-canons,organ,2,canon-promotion gate velocity,HOLE:NO_CATALYST,0,,oracle_reading,True,promotion only after the stability criterion holds
+quilt-research-canons-P10,quilt-research-canons,organ,3,README as agent-facing discoverability layer,HOLE:NO_CATALYST,0,,repo_contents,True,
+quilt-research-canons-P11,quilt-research-canons,organ,3,multi-voice sprint frames,HOLE:NO_CATALYST,0,,substrate apis,True,
+quilt-research-canons-P12,quilt-research-canons,organ,4,wipe-survival doctrine,HOLE:NO_CATALYST,0,,sprint_chain,True,artifacts + intent-to-continue must both survive the wipe boundary
+quilt-research-canons-P13,quilt-research-canons,organ,4,verdict ledger with honest negatives,HOLE:NO_CATALYST,0,,experiment_runs,True,no verdict is discarded for being negative
+quilt-research-canons-P14,quilt-research-canons,organ,4,witness-chain fork evidence,HOLE:NO_CATALYST,0,,fork-a/fork-b runs + comparison runners,True,
+jev-quilt-P01,jev-quilt,substrate,0,cell identity law,HOLE:NO_PRODUCER,1,exoj-P01,name,True,non-integer or non-pair coord is refused at __post_init__
+jev-quilt-P02,jev-quilt,substrate,0,Hook subscription primitive,HOLE:NO_CATALYST,0,,floor;source;when,True,
+jev-quilt-P03,jev-quilt,substrate,3,Projection declaration,HOLE:BLOCKED_PRODUCER,1,quilt-dba-P10,decision,True,
+jev-quilt-P04,jev-quilt,substrate,2,binary viability floor,HOLE:NO_CATALYST,0,,decision_with_confidence,True,confidence is None -> viable; else confidence > 0.0 required
+jev-quilt-P05,jev-quilt,substrate,0,Q16 exact rational,HOLE:NO_CATALYST,0,,denominator_integer;integer_number,True,den == 0 raises ZeroDivisionError; gcd reduction is an invariant
+jev-quilt-P06,jev-quilt,substrate,2,from_float projection refusal,HOLE:NO_CATALYST,0,,float,True,|num/SCALE - f| > 1e-12 -> ValueError
+jev-quilt-P07,jev-quilt,substrate,2,deadband floor check,HOLE:NO_CATALYST,0,,delta;hook_floor,True,mag >= floor else silent_deadband
+jev-quilt-P08,jev-quilt,substrate,2,unmeasurable deltas wake (honest default),HOLE:NO_CATALYST,0,,delta,True,mag is None -> return True
+jev-quilt-P09,jev-quilt,substrate,1,emit fanout with logged silence,HOLE:NO_PRODUCER,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,source_delta,True,every hooked cell gets exactly one WakeResult per emit
+jev-quilt-P10,jev-quilt,substrate,2,broken predicate fail-open,HOLE:NO_CATALYST,0,,hook_when,True,exception -> wake (never drop)
+jev-quilt-P11,jev-quilt,substrate,1,"wake = replay book, then decide",HOLE:NO_CATALYST,0,,bookkeeper;delta,True,wake_state() precedes backend resolution in _wake
+jev-quilt-P12,jev-quilt,substrate,1,predictor pre-commit (feeling under the ledger),HOLE:NO_CATALYST,0,,predictor,True,"predictor exception -> pred=None (feeling is optional, never fatal)"
+jev-quilt-P13,jev-quilt,substrate,2,backend resolution ladder,HOLE:NO_CATALYST,0,,backend,True,unknown backend refused at Cell construction
+jev-quilt-P14,jev-quilt,substrate,4,Bookkeeper append-only WAL,HOLE:BLOCKED_PRODUCER,8,crab-traps-P02;crab-traps-P21;jev-quilt-P15;jev-quilt-P16;quilt-dba-P10;quilt-jev-toolkit-P02,decision;delta;tick,True,replay == live (suite test_replay_determinism)
+jev-quilt-P15,jev-quilt,substrate,0,fnv1a-64 over UTF-8 bytes,CLOSED,4,jev-quilt-P17;qthe-P01;qthe-P12;quilt-qcells-P02,,True,cross-language agreement on identical residues (fnv1a reference-vector suite)
+jev-quilt-P16,jev-quilt,substrate,4,receipt sha binds the residue text,HOLE:BLOCKED_PRODUCER,2,jev-quilt-P03;quilt-organ-workers-P14,payload;receipt fields,True,payload edit without hash edit -> replay mismatch (tamper is loud)
+jev-quilt-P17,jev-quilt,substrate,4,typed uncapped decision fields (G20a),HOLE:NO_CATALYST,0,,field,True,all-None fields -> empty bytes -> historical preimage byte-identical (additive p
+jev-quilt-P18,jev-quilt,substrate,2,book() refuses what it cannot carry exactly,HOLE:NO_CATALYST,0,,book_call,True,raise-on-unrepresentable beats round-and-continue
+jev-quilt-P19,jev-quilt,substrate,1,NullBookkeeper honesty,HOLE:NO_CATALYST,0,,flag,True,"wake_state honestly reports booked_ticks: 0, chain: None"
+jev-quilt-P20,jev-quilt,substrate,3,polyformal ports with honest verification labels,HOLE:NO_CATALYST,0,,kernel_semantics,True,"UNVERIFIED is printed where no toolchain ran — do not write counts, run the suit"
+qthe-P01,qthe,substrate,0,pack/unpack bijection over one byte,HOLE:NO_CATALYST,0,,dimension;tau,True,256/256 values round-trip exact AND 256 distinct packed outputs (gate G1)
+qthe-P02,qthe,substrate,0,Psi operator map,HOLE:NO_CATALYST,0,,tau,True,"PSI === [0, 1, -1, 'i'] asserted by G1"
+qthe-P03,qthe,substrate,0,split-channel vector pass (integer-exact),HOLE:NO_CATALYST,0,,integers;weights_rows,True,"hand-computed fixtures exact and every output Number.isInteger (G4: row0 [A10,R4"
+qthe-P04,qthe,substrate,0,substrate allocation with named expandos,HOLE:NO_CATALYST,0,,"h;seedfn(x,y,i);w",True,"w, h positive integers else RangeError"
+qthe-P05,qthe,substrate,1,64-slot wormhole table,HOLE:NO_CATALYST,0,,sigma,True,"exactly SLOT_COUNT=64 slots; write outside [0,64) throws RangeError"
+qthe-P06,qthe,substrate,1,twin-resonance read guard,HOLE:NO_PRODUCER,8,jev-garden-P07;jev-garden-P08;jev-garden-P09;jev-garden-P12;jev-garden-P15;qthe-P21,slot=d of the abstain cell,True,lone Abstain cell never twins after its own first write; every event term === lo
+qthe-P07,qthe,substrate,1,"wormhole write, last-writer-wins",HOLE:NO_CATALYST,0,,slot;x_y_acc,True,totalWrites = 12 after the G5 6-tick twin fixture
+qthe-P08,qthe,substrate,2,sigma bridge scale policy,HOLE:NO_CATALYST,0,,sigma,True,"the SPEC prices sigma as OPEN: only the sweep {log2(3), 0.5, 1, 2, 4} decides (C"
+qthe-P09,qthe,substrate,1,pre-tick snapshot double buffer,CLOSED,5,exoj-P03;quilt-jev-toolkit-P05;quilt-upstream-P06;si-fleet-P12;superinstance-site-P07,,True,tick mutates in place and returns the same substrate with synchronous-exact sema
+qthe-P10,qthe,substrate,1,Moore-8 branchless real accumulator,HOLE:BLOCKED_PRODUCER,2,exoj-P01;qthe-P05,snapshot,True,G2 full-tick exhaustion: 3840/3840 cell-updates in bounds with tau preserved
+qthe-P11,qthe,substrate,1,nextD saturation rule,HOLE:NO_CATALYST,0,,dimension;pressure,True,"2304/2304 exhausted states x 9 pressures stay in [0,63] (G2a — the Coq theorem r"
+qthe-P12,qthe,substrate,1,timbre frozen inside tick,CLOSED,3,jev-quilt-P17;qthe-P01;quilt-qcells-P02,,True,G2: tau preserved EXACTLY on 3840/3840 updates
+qthe-P13,qthe,substrate,1,toroidal Moore-8 edges (R1),HOLE:NO_CATALYST,0,,w_h,True,
+qthe-P14,qthe,substrate,1,determinism contract: no Math.random in the kernel,HOLE:NO_CATALYST,0,,option;substrate,True,"G3: two substrates, 1000 ticks, all per-tick trace hashes byte-identical; differ"
+qthe-P15,qthe,substrate,3,traceView canonical serialization,HOLE:BLOCKED_PRODUCER,7,exoj-P03;qthe-P06;quilt-jev-toolkit-P05;quilt-raw-P03;quilt-upstream-P06;si-fleet-P12,event,True,an empty table is trace-equivalent to wormholes disabled; paired arms byte-equal
+qthe-P16,qthe,substrate,2,paired-arm wormholes flag,HOLE:NO_CATALYST,0,,option;substrate,True,G6/S1: ON-trace != OFF-trace (divergence tick exists); G6/S2: with zero Abstain 
+qthe-P17,qthe,substrate,4,pre-registered gate predictions G0-G6,HOLE:NO_CATALYST,0,,qthe_kernel,True,"honest FAILs stay in the receipt chain, never rewritten"
+qthe-P18,qthe,substrate,4,stone-v1 receipt chain for tests,HOLE:NO_CATALYST,0,,gate_results,True,re-run produces byte-identical receipts
+qthe-P19,qthe,substrate,4,honest-FAIL preservation (G4 erratum),HOLE:NO_CATALYST,0,,registered g4 literal,True,the registered literal is never edited post-registration
+qthe-P20,qthe,substrate,4,two-reader negative controls,HOLE:NO_CATALYST,0,,pin_table_with_seal;registered_chains,True,exit 0 iff every negative control was DETECTED and localized to the correct row
+qthe-P21,qthe,substrate,2,priced empirical claims C1-C5,HOLE:NO_CATALYST,0,,experiment_design,True,a claim that dies dies cheap and honest with the receipt kept beside the body; a
+qthe-P22,qthe,substrate,3,A2UI telemetry mapping,HOLE:NO_CATALYST,0,,substrate_bytes,True,HUD SHA stable across reload (demo/smoke screenshots receipted)
+quilt-jepa-P01,quilt-jepa,substrate,0,xorshift32 deterministic seed,HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P11,seed,True,no Math.random anywhere in core (determinism claim P4 PASS)
+quilt-jepa-P02,quilt-jepa,substrate,0,wave + ball observation field,CLOSED,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,,True,"values are projections in [0,1] (v*0.5+0.5, min(1, ...))"
+quilt-jepa-P03,quilt-jepa,substrate,0,per-cell 4-dim features,HOLE:NO_CATALYST,0,,cell_index;observation,True,
+quilt-jepa-P04,quilt-jepa,substrate,1,per-cell context encoder Wc,HOLE:NO_CATALYST,0,,observation_features,True,
+quilt-jepa-P05,quilt-jepa,substrate,1,per-cell predictor Wp,HOLE:NO_CATALYST,0,,z_ctx,True,
+quilt-jepa-P06,quilt-jepa,substrate,1,EMA target encoder Wt (stop-gradient),HOLE:NO_CATALYST,0,,tau;wc,True,"stationarity drift < 0.01 (claim R2v4 PASS, drift 2.640e-3)"
+quilt-jepa-P07,quilt-jepa,substrate,1,clipped-SGD trainStep,HOLE:NO_CATALYST,0,,observation_t;observation_t_plus_1,True,"learning-sanity ratio 0.34923 == run4 pin, re-bound bit-exact through round 10"
+quilt-jepa-P08,quilt-jepa,substrate,1,deterministic corruption probe,HOLE:BLOCKED_PRODUCER,1,MicroMoth-quilt-P11,fraction;seed,True,P6_zero_self_repair honestly FAILed in run 1 (jump_ratio 0.979) — the fault was 
+quilt-jepa-P09,quilt-jepa,substrate,0,stride-4 mesh cells,HOLE:NO_CATALYST,0,,energy;observation,True,lambda = 0.2 <= 0.25 stability bound
+quilt-jepa-P10,quilt-jepa,substrate,1,Perona-Malik diffusion step,CLOSED,1,quilt-jepa-P09,,True,total energy conserved to 1.2e-8 relative (P5 PASS; my scratch rerun measured 0.
+quilt-jepa-P11,quilt-jepa,substrate,1,variance contraction readout,CLOSED,2,quilt-jepa-P09;quilt-jepa-P10,,True,p5_variance_non_increasing true (receipts/run.json)
+quilt-jepa-P12,quilt-jepa,substrate,2,surprise sampling policy,HOLE:NO_CATALYST,0,,energy_channel;index,True,"R3v4 z-conc 3.5407 > 3.0 (PASS, carried)"
+quilt-jepa-P13,quilt-jepa,substrate,4,registration seal (masked self-sha + mtime),HOLE:NO_CATALYST,0,,registration_json_bytes;time,True,masked self-sha recomputes exactly AND |mtime - sealed| <= 2000ms else fail-clos
+quilt-jepa-P14,quilt-jepa,substrate,4,stone chain walk from GENESIS,HOLE:NO_CATALYST,0,,receipts_run_json,True,"every row re-hashes to its pin, links parent-correct, tip equal; exit 0 only if "
+quilt-jepa-P15,quilt-jepa,substrate,2,fail-closed startup seal re-verification,CLOSED,2,breakthrough-prospector-P10;quilt-atlas-P01,,True,"seal verified at startup, else the run refuses"
+quilt-jepa-P16,quilt-jepa,substrate,4,bit-exact cross-round re-binding,HOLE:NO_PRODUCER,10,MicroMoth-quilt-P05;breakthrough-prospector-P09;jeviter-P10;jeviter-P11;jeviter-P12;jeviter-P19,fresh_execution,True,"any sha mismatch fails the run — the operating point (lr 0.3, tau 0.99998, K4, a"
+quilt-jepa-P17,quilt-jepa,substrate,4,honest-FAIL verdicts carried forward,HOLE:NO_CATALYST,0,,rule,True,"claims_passed reported as measured, never rounded up"
+quilt-jepa-P18,quilt-jepa,substrate,3,browser demo labeled DESIGN-ONLY,HOLE:BLOCKED_PRODUCER,1,quilt-upstream-P16,architecture,True,DESIGN/DEMO ONLY — no headless execution claim
+quilt-qcells-P01,quilt-qcells,substrate,2,primitive inventory + sugar decomposition at append,HOLE:NO_CATALYST,0,,op calls on cellcircuit,True,P2: only primitive ops in BIND rows across all 16 ledgers
+quilt-qcells-P02,quilt-qcells,substrate,0,canonical JSON encoding (C1),HOLE:NO_CATALYST,0,,row_dict,True,parse_ledger: canon(obj) != line -> 'row %d is not in canonical form'
+quilt-qcells-P03,quilt-qcells,substrate,0,row shape + id derivation (C2),HOLE:NO_CATALYST,0,,sequence,True,id mismatch -> 'content tampered or id forged' at that row
+quilt-qcells-P04,quilt-qcells,substrate,0,single linear chain from genesis (C3),CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,verify_ledger walks prev == running id from GENESIS; break named at the exact ro
+quilt-qcells-P05,quilt-qcells,substrate,0,fnv1a-64 (C4),CLOSED,4,jev-quilt-P17;qthe-P01;qthe-P12;quilt-qcells-P02,,True,
+quilt-qcells-P06,quilt-qcells,substrate,4,LINK boundary row with simulator pin,HOLE:NO_CATALYST,0,,parameter,True,conformance refuses if vendored micromoth.py sha256 != pinned bbd10ac2... (fail-
+quilt-qcells-P07,quilt-qcells,substrate,1,BIND gate rows from actual circuit tuples,HOLE:NO_CATALYST,0,,wrapped quantumcircuit data,True,emission happens on _sync from qc.data — no parallel hand-maintained history
+quilt-qcells-P08,quilt-qcells,substrate,1,TICK layering (qubit-disjoint greedy),CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,"TICK tracks BIND gate rows only ('m' readouts are records, not gates)"
+quilt-qcells-P09,quilt-qcells,substrate,1,EFFECT readout vs collapse split,HOLE:NO_CATALYST,0,,measurement;outcome,True,readout rows never mutate gate cells
+quilt-qcells-P10,quilt-qcells,substrate,2,unsealed sampling is minted UNSEALED and excluded,HOLE:NO_CATALYST,0,,sampling,True,determinism claims (P4) cover only the 15/15 sealed circuits
+quilt-qcells-P11,quilt-qcells,substrate,3,"VIEW records the view, digest only",HOLE:NO_CATALYST,0,,view_call,True,view digests re-derive by replay (P1)
+quilt-qcells-P12,quilt-qcells,substrate,3,PROOF rounded-amplitude witness,HOLE:NO_PRODUCER,4,exoj-P24;quilt-jepa-P03;quilt-pincher-P04;quilt-pincher-P18,precision,True,sha256(canon(rounded)) == row digest
+quilt-qcells-P13,quilt-qcells,substrate,2,FORGET tombstone append,HOLE:NO_PRODUCER,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,reason,True,forget with nothing pending raises LedgerError (refusing an empty erasure receip
+quilt-qcells-P14,quilt-qcells,substrate,3,serving surface filters tombstones,HOLE:NO_PRODUCER,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,forget set,True,tombstoned ids filtered when serve=True
+quilt-qcells-P15,quilt-qcells,substrate,4,verify_ledger fail-closed localization,CLOSED,4,jev-quilt-P17;qthe-P01;qthe-P12;quilt-qcells-P02,,True,"P3: single-byte tamper of 4254/4254 rows (id-flip, kind-flip, prev-flip x every "
+quilt-qcells-P16,quilt-qcells,substrate,4,out-of-band anchor check,HOLE:NO_PRODUCER,4,jev-quilt-P17;qthe-P01;qthe-P12;quilt-qcells-P02,published_row_count;published_tip,True,row count and tip must equal the anchored pair else 'tail added or removed'
+quilt-qcells-P17,quilt-qcells,substrate,1,rebuild_from_rows (the ledger is the circuit),CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,"P1: replay == oracle exactly (rebuilt data == wrapped data, statevector ==, seal"
+quilt-qcells-P18,quilt-qcells,substrate,2,initialize refusal after first gate,HOLE:NO_CATALYST,0,,existing_gates;initialize_call,True,any existing gate row -> refuse
+quilt-qcells-P19,quilt-qcells,substrate,4,registration seals over the code that runs,HOLE:NO_PRODUCER,2,breakthrough-prospector-P10;quilt-atlas-P01,source_files,True,"sha256 equal AND |mtime - sealed| <= 1.0s AND size equal, else FATAL refuse"
+quilt-qcells-P20,quilt-qcells,substrate,4,negative controls proving the detection boundary,HOLE:NO_CATALYST,0,,ledgers,True,"each control must be caught by the named mechanism, and the unsealed hole must b"
+quilt-qcells-P21,quilt-qcells,substrate,4,receipt chain over conformance itself,HOLE:NO_CATALYST,0,,conformance_result,True,two full runs produce byte-identical receipts (no wall-clock leakage)
+crab-traps-P01,crab-traps,swarm,0,canonicalJson (deterministic serialization),HOLE:NO_CATALYST,0,,any json value,True,non-finite numbers and unknown types throw (not canonically serializable) — the 
+crab-traps-P02,crab-traps,swarm,0,edge seal = sha256 over the sealed fields minus chain,HOLE:NO_CATALYST,0,,edgeinput (validated),True,
+crab-traps-P03,crab-traps,swarm,1,chain-validated append (POST /edge),HOLE:BLOCKED_PRODUCER,2,crab-traps-P04;crab-traps-P13,edge;prior_head,True,e.chain === prior.edge_hash for non-genesis appends — a missing or stale link is
+crab-traps-P04,crab-traps,swarm,1,"one edge per (cell, ts)",HOLE:NO_CATALYST,0,,insert result,True,UNIQUE/PRIMARY KEY violation -> duplicate refused
+crab-traps-P05,crab-traps,swarm,1,verify walk with first_break forensics,HOLE:NO_CATALYST,0,,stored_rows,True,every recomputed seal must equal the stored edge_hash AND every chain link must 
+crab-traps-P06,crab-traps,swarm,0,D1 migrations (the ledger's skeleton),HOLE:NO_CATALYST,0,,sql migration files,True,
+crab-traps-P07,crab-traps,swarm,1,watermark queue (wake-and-poll contract),HOLE:NO_CATALYST,0,,cell_filter;since_watermark,True,
+crab-traps-P08,crab-traps,swarm,2,body-size budget gate,HOLE:NO_CATALYST,0,,raw_body;request_headers,True,declaredLength > MAX AND raw.length > MAX both checked before JSON.parse
+crab-traps-P09,crab-traps,swarm,2,plaque seal (disclosure as a hash),HOLE:NO_CATALYST,0,,plaque (nine fixed fields),True,any plaque wording change rotates the seal and revokes every ticket derived from
+crab-traps-P10,crab-traps,swarm,2,ack handshake (consent admission),HOLE:NO_CATALYST,0,,ack_string;plaque_seal;player_tag,True,ack must equal the current plaque seal; consent receipt persisted before any are
+crab-traps-P11,crab-traps,swarm,3,capability ticket derived from player + seal,HOLE:NO_CATALYST,0,,plaque_seal;player_tag,True,
+crab-traps-P12,crab-traps,swarm,2,settlement admission rules (the tavern rule),HOLE:NO_CATALYST,0,,"settlementinput {player, entries[]}",True,amount > 0 AND kind in CREDIT_RATES AND balance + delta >= 0 AND entries <= 100
+crab-traps-P13,crab-traps,swarm,1,double-entry conservation (before + signed delta === after),HOLE:NO_CATALYST,0,,prior_balance;signed_entries,True,before + signed === after on every edge — a stranger recomputes the balance from
+crab-traps-P14,crab-traps,swarm,1,"world minting (N=5 object, N=12 room, idempotent)",HOLE:BLOCKED_PRODUCER,2,jev-quilt-P03;quilt-organ-workers-P14,payload;room_catch_counts,True,mint thresholds are fixed constants; duplicate mints are no-ops (idempotent by U
+crab-traps-P15,crab-traps,swarm,2,per-IP rate limiter (bounded in-memory LRU),HOLE:NO_CATALYST,0,,client ip,True,"bounded LRU — eviction, not growth"
+crab-traps-P16,crab-traps,swarm,1,independent second-reader walker (stone-v1 + witness law),HOLE:NO_PRODUCER,8,jev-garden-P07;jev-garden-P08;jev-garden-P09;jev-garden-P12;jev-garden-P15;qthe-P21,stone_chain_bytes;witness_receipt_bytes,True,a second reader must not trust the first reader's engine — or even its helper fu
+crab-traps-P17,crab-traps,swarm,4,47b fail-closed self-test (12 controls),HOLE:NO_CATALYST,0,,fleet-seeds checkout (read-only byte source),True,"ALL controls must behave as designed (negative -> DISAGREE, positive -> AGREE, c"
+crab-traps-P18,crab-traps,swarm,3,genealogy endpoints (provenance you can walk),HOLE:NO_PRODUCER,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,room_object_ids,True,
+crab-traps-P19,crab-traps,swarm,4,"dials dashboard (sealed field reads, degrade never 502)",CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,only sealed ledger rows feed the display; unscored (null imbalance) entries neve
+crab-traps-P20,crab-traps,swarm,1,lure breeding cron (fitness-splice-retire),HOLE:NO_CATALYST,0,,fitness_stat;lure_template,True,
+crab-traps-P21,crab-traps,swarm,0,fnv witness contract (the corpus's fnv1a64 lives here),HOLE:NO_CATALYST,0,,text_input,True,output must equal the canonical FNV-1a-64 rendering — the arena's GAN lanes forg
+crab-traps-P22,crab-traps,swarm,2,the tarpit (worthless caves behind no-consent),HOLE:NO_CATALYST,0,,invalid_ack;parameter,True,"no acknowledgment -> tarpit, never the arena; observation/artifacts/breeding all"
+quilt-murmur-P01,quilt-murmur,swarm,0,"murmur envelope {topic, from, p, n, ttl}",HOLE:NO_PRODUCER,3,quilt-mcp-receipts-P02;quilt-organ-workers-P08;quilt-qcells-P03,belief;evidence_mass;topic,True,p and n must be finite numbers
+quilt-murmur-P02,quilt-murmur,swarm,0,fnv1a64 witness chain (seal/verify),CLOSED,18,crab-traps-P03;crab-traps-P14;crab-traps-P20;exoj-P09;exoj-P13;exoj-P15,,True,every row must carry row_hash matching re-derivation from genesis
+quilt-murmur-P03,quilt-murmur,swarm,0,"entropy vault: harvest once, stretch honestly",HOLE:NO_CATALYST,0,,"harvest_shots;moth_key (env, optional)",True,"liveJobs hard cap maxLiveJobs; offline/budget refusal yields labeled mock, never"
+quilt-murmur-P04,quilt-murmur,swarm,1,trust-weighted log-odds pooling (logarithmic opinion pool),HOLE:NO_PRODUCER,1,quilt-murmur-P06,murmur,True,W > 0 else posterior = 0.5; influence mass W is the pool's conservation denomina
+quilt-murmur-P05,quilt-murmur,swarm,1,Hedge fixed-share trust update,HOLE:NO_CATALYST,0,,"reward map id -> r in [0,1]",True,"weights always renormalized to sum 1 (mass conserved); rewards clamped to [0,1]"
+quilt-murmur-P06,quilt-murmur,swarm,1,zero-trust quarantine for free,CLOSED,3,quilt-mcp-receipts-P02;quilt-organ-workers-P08;quilt-qcells-P03,,True,
+quilt-murmur-P07,quilt-murmur,swarm,1,entropy + leader readouts,CLOSED,1,quilt-murmur-P06,,True,
+quilt-murmur-P08,quilt-murmur,swarm,1,novelty-edge extraction (value + jump evidence),HOLE:NO_CATALYST,0,,per_sender_history,True,
+quilt-murmur-P09,quilt-murmur,swarm,1,relay-first verification (declared origin),HOLE:NO_CATALYST,0,,history;origin_claim;origin_history,True,"matchRate(origin, L) >= 0.8 for some L in 1..maxLag, and origin != self"
+quilt-murmur-P10,quilt-murmur,swarm,1,echo conviction by edge-precedence rate + mirror guard,HOLE:NO_CATALYST,0,,content_history;edge_list_sender,True,aligned >= minEdges AND rate >= confirmEdges(0.8) AND rate > reverse-best AND co
+quilt-murmur-P11,quilt-murmur,swarm,1,dup detection (honest redundancy),HOLE:NO_CATALYST,0,,content_match_rate;window,True,"sd <= dupSigma(0.02) AND matchRate(id2, L) >= confirm for some peer/lag"
+quilt-murmur-P12,quilt-murmur,swarm,1,influence re-attribution (tags -> weights),HOLE:NO_CATALYST,0,,current_tag;murmur;raw weight map,True,
+quilt-murmur-P13,quilt-murmur,swarm,1,state-level echo penalty with floor (absorb path),HOLE:NO_CATALYST,0,,current_tag;weight map,True,penalized weight floored at floor=0.02 — never zeroed (reform must remain possib
+quilt-murmur-P14,quilt-murmur,swarm,1,fractional per-murmur attribution (v3.1),HOLE:NO_CATALYST,0,,edge_list;hard_tags;present_murmurs;raw_weights,True,"infl = w * min(m, tagCap) — hard tag caps the extreme, soft score does the fine "
+quilt-murmur-P15,quilt-murmur,swarm,2,cold-start admission gate,HOLE:NO_CATALYST,0,,edge_count;firstseen age;probation_deviation,True,"age >= 40 AND indepEdges >= 2 AND devMean <= 0.5, else influence stays x epsNew"
+quilt-murmur-P16,quilt-murmur,swarm,2,aggregate probationary influence cap (sybil flood-breaker),HOLE:NO_PRODUCER,3,quilt-mcp-receipts-P02;quilt-organ-workers-P08;quilt-qcells-P03,influence map,True,"P <= capShare*Z enforced exactly (post-cap share = capShare), then uniform renor"
+quilt-murmur-P17,quilt-murmur,swarm,2,founder acclamation (D1 genesis rule),HOLE:NO_CATALYST,0,,coldstart flag;observation_round,True,present at round 1 AND coldStart -> admitted by acclamation
+quilt-murmur-P18,quilt-murmur,swarm,2,hard-tag backstop caps,HOLE:NO_CATALYST,0,,fractional_multiplier;provenance tagof(id),True,"min(m, tagCap) — soft layer can only lower, hard tag bounds the worst case"
+quilt-murmur-P19,quilt-murmur,swarm,1,whisper boundary fail-safes (gauntlet fixes),HOLE:NO_CATALYST,0,,whisper_arguments,True,Number.isFinite(p) && Number.isFinite(n) else throw
+quilt-murmur-P20,quilt-murmur,swarm,2,gardener meta-bandit under a hard credit budget,HOLE:NO_CATALYST,0,,alive_status;credit;h;r;regretdr,True,spawn only if alive < maxBranches AND credits >= policy floor AND world-signal c
+quilt-murmur-P21,quilt-murmur,swarm,1,spreader: branch / prune / graft,HOLE:NO_PRODUCER,1,quilt-murmur-P06,base estimates map;per_branch_rng;stats,True,"prune: streak >= floorStreak, ranked worst, capped at maxDead (2) per generation"
+quilt-murmur-P22,quilt-murmur,swarm,1,"tree operators: subtree graft with cycle rejection, pure candidate views",HOLE:BLOCKED_PRODUCER,1,qthe-P05,qualityfn;snapshot;topology,True,graft target must NOT be inside the moving subtree (cycle) — throw in graftSubtr
+quilt-murmur-P23,quilt-murmur,swarm,1,Kuramoto resonance (agreement as physics),HOLE:BLOCKED_PRODUCER,1,quilt-quant-P13,matrix;omega;phases,True,"r must EARN its keep: corr(r_t, future regret) receipted each run; gating trust "
+quilt-murmur-P24,quilt-murmur,swarm,2,"founder-velocity guard (v3.2 candidate, experiment-local)",HOLE:NO_CATALYST,0,,entrench_age;per_voice_rewards,True,"EWMA gap > delta(0.15) for k(8) rounds AND recent < recentCeil(0.45), only for e"
+quilt-murmur-P25,quilt-murmur,swarm,3,"the sheet pattern (repo-as-sheet, seasonal loop)",HOLE:NO_CATALYST,0,,loadsheet cell definitions;vault_elected_picks,True,"dotted-prefix law, listener caller.metadata contract, CellValue unwrap, multi-ch"
+quilt-murmur-P26,quilt-murmur,swarm,4,smoke gate (CI-first one-pass verification),HOLE:NO_CATALYST,0,,primitives_provenance,True,fails === 0 else exit(1)
+quilt-murmur-P27,quilt-murmur,swarm,4,experiment receipt summaries (verdict history),HOLE:NO_CATALYST,0,,experiment_run,True,
+quilt-murmur-P28,quilt-murmur,swarm,4,in-run equivalence verifications,HOLE:NO_CATALYST,0,,formula;murmurbus.pool reference,True,sheet pooling must equal reference math byte-for-byte or the run is invalid
+quilt-pincher-P01,quilt-pincher,swarm,0,the pinch envelope,HOLE:NO_CATALYST,0,,context_object;safetyhints;trigger,True,
+quilt-pincher-P02,quilt-pincher,swarm,0,the reflex record,HOLE:NO_CATALYST,0,,constraint;embedding;intent,True,
+quilt-pincher-P03,quilt-pincher,swarm,1,brute-force cosine reflex store with upstream federation,HOLE:NO_CATALYST,0,,embedding;parameter;reflex_entries,True,cosine returns 0 on dimension mismatch (never throws mid-match)
+quilt-pincher-P04,quilt-pincher,swarm,1,trigger embedding (pluggable embedder),HOLE:NO_CATALYST,0,,trigger,True,
+quilt-pincher-P05,quilt-pincher,swarm,1,top-5 match query,HOLE:NO_CATALYST,0,,embedding,True,
+quilt-pincher-P06,quilt-pincher,swarm,1,three-way tier router,HOLE:BLOCKED_PRODUCER,2,breakthrough-prospector-P07;cot-quilt-P05,confirmthreshold;hitthreshold;score,True,score >= 0.80 for direct hit; 0.55 <= score < 0.80 for confirm
+quilt-pincher-P07,quilt-pincher,swarm,1,reflex execution with timeout,HOLE:NO_CATALYST,0,,pinch_context;reflex_action,True,Promise.race against executionTimeoutMs (default 5000) — a hung reflex cannot ha
+quilt-pincher-P08,quilt-pincher,swarm,1,confidence climb (logarithmic hit economics),CLOSED,3,quilt-mcp-receipts-P02;quilt-organ-workers-P08;quilt-qcells-P03,,True,"confidence clamped to [0.5 start, 0.99 ceiling] — invariant band"
+quilt-pincher-P09,quilt-pincher,swarm,1,compile-and-store (the LLM as compiler),HOLE:NO_CATALYST,0,,compiler implementation;pinch,True,veto check runs on the FRESH reflex before insert+execute (a compiled reflex can
+quilt-pincher-P10,quilt-pincher,swarm,2,veto gate (safety before execution),HOLE:NO_CATALYST,0,,pinch_safety;reflex_safety,True,no execution without veto.ok — refusal reason becomes the result's 'vetoed' kind
+quilt-pincher-P11,quilt-pincher,swarm,2,tier thresholds as configuration,HOLE:NO_CATALYST,0,,pincherconfig,True,thresholds are read once at construction — mid-flight policy changes are not pos
+quilt-pincher-P12,quilt-pincher,swarm,2,no-compiler fail-closed path,HOLE:NO_CATALYST,0,,compiler;weak_matches,True,compile tier requires this.compiler !== undefined
+quilt-pincher-P13,quilt-pincher,swarm,3,PincherSheet descriptor (engine as cells),HOLE:NO_CATALYST,0,,pinchersheetconfig,True,
+quilt-pincher-P14,quilt-pincher,swarm,3,.nail bundle export + ESP32 loadNail,HOLE:NO_PRODUCER,9,exoj-P04;jev-quilt-P11;qthe-P15;quilt-jev-toolkit-P09;quilt-jev-toolkit-P21;quilt-murmur-P05,label,True,
+quilt-pincher-P15,quilt-pincher,swarm,3,platform sheets (cloud / workstation / esp32 defaults),HOLE:NO_CATALYST,0,,choice,True,
+quilt-pincher-P16,quilt-pincher,swarm,4,node:test suite (12 checks),HOLE:NO_CATALYST,0,,pincherengine + memoryreflexstore + hashembedder + defaultveto,True,"assert.equal(result.kind, 'hit') etc. — tier outcomes are the contract"
+quilt-pincher-P17,quilt-pincher,swarm,4,result kinds + latency telemetry,HOLE:NO_CATALYST,0,,outcome,True,latencyMs recorded on EVERY outcome incl. errors and vetoes
+quilt-pincher-P18,quilt-pincher,swarm,0,embedder degradation ladder,HOLE:NO_CATALYST,0,,credentials;text,True,

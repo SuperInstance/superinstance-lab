@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://arxiv.org",
+    "name": "Geometric coherence of single-cell CRISPR perturbations",
+    "snippet": "Jun 22, 2026 — In the language of Waddington's epigenetic landscape , perturbations into deep valleys, where canalized programs channel cells toward robust ... Read more",
+    "host_name": "arxiv.org",
+    "rank": 0,
+    "date": "Jun 22, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.biorxiv.org",
+    "name": "A Latent Space Thermodynamic Model of Cell Differentiation",
+    "snippet": "Mar 6, 2026 — We formalize Waddington's epigenetic landscape as a thermodynamic energy landscape in which cell . 112 differentiation corresponds to ... Read more 34 pages",
+    "host_name": "www.biorxiv.org",
+    "rank": 1,
+    "date": "Mar 6, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.researchgate.net",
+    "name": "Modeling temporal dynamics. A, Single-cell populations",
+    "snippet": "Waddington's epigenetic landscape has become one of biology's cornerstone metaphors, widely used both conceptually and computationally. Cell types are often ... Read more",
+    "host_name": "www.researchgate.net",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://advanced.onlinelibrary.wiley.com",
+    "name": "Quantifying the Single‐Cell Morphological Landscape of",
+    "snippet": "Nov 7, 2025 — This study reconstructs the driving force field of fibroblast-to-neuron transdifferentiation from sparse single - cell images by decomposing ...",
+    "host_name": "advanced.onlinelibrary.wiley.com",
+    "rank": 3,
+    "date": "Nov 7, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.frontiersin.org",
+    "name": "Beyond static biomarkers: systems biology and AI for",
+    "snippet": "by S Dutta · 2026 · Cited by 3 — At the speculative end, foundation models for single - cell biology—notably scGPT and Geneformer—have attracted significant attention, but recent zero-shot ... Read more",
+    "host_name": "www.frontiersin.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://raju.ai",
+    "name": "Geometric Stability as the Missing Axis of Perturbation",
+    "snippet": "by PC Raju · Cited by 2 — Drawing on Waddington's epigenetic landscape , we propose geometric stability as a missing axis of evaluation: the directional coherence of cellular responses to ... Read more",
+    "host_name": "raju.ai",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  }
+]

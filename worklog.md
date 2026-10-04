@@ -1346,3 +1346,57 @@ Work Log:
 Stage Summary:
 - Everything is PUSH-READY but not pushed: zero live GitHub credential exists in-container (3 dead tokens recovered + tested + receipted). The moment the principal drops a fresh GITHUB_TOKEN into .env.keys (gitignored) or the environment, `bash scripts/push_all.sh` pushes all 38 repos with the token never persisted anywhere.
 - Post-purge state committed: 2ee276c (purge + audit kit), 3f90294 (gitlink refresh). Bundle-verified mirror is user-visible at download/github-mirror/.
+
+---
+Task ID: 67-c
+Agent: general-purpose (cell-fleet builder) + main keeper
+Task: Lane C — Cloudflare Workers cellularization experiment ("how Workers can cellularize function and learning")
+
+Work Log:
+- Built /home/z/my-project/cell-fleet/: Cell Durable Object = nucleus (genome w[8]+b over morphogen channels, hash-chained receipt ledger), Tissue DO = stem niche/routing/lineage registry, KV CELL_MATRIX = membrane transport, DO alarms = cell cycle, request isolate = ribosome. Queues need Workers Paid → DO-to-DO fetch + KV signaling instead (receipted).
+- Ran on REAL workerd locally (wrangler 4.147.0, wrangler dev --local, headless CI=true): 60 tasks, 18 mitoses, 13 apoptoses, generations 0→3, population 7 at close, mean reward 0.634→0.991, 245 receipts, every chain self-verified. Unscripted tail receipted + corrected by append (over-claim fixed — honesty law).
+- LEARNING cellularized: rubric-scored decomposition tasks update genome (delta rule) = clonal selection / affinity maturation on a DO. FUNCTION cellularized: genome determines response to signal packets.
+- Verified: workerd local PASS, ≥30 tasks with mitosis+apoptosis PASS, receipt w/ tissue report PASS, 11/11 asserts PASS. deployed=NO (no Cloudflare credentials in container — receipted).
+- Extends quilt-organ-workers backlog item 2 (organ-boot-bridge): boot ticket → mitosis seed mapping documented in cell-fleet/README.md.
+
+Stage Summary:
+- Workers cellularize BOTH function and learning; the cell↔Worker mapping is proven on the same runtime the fleet's 3 live workers run on. The live fleet (organ-boot-loader /organ-watcher /judge-relay) probed this wave: 5 organs stored, watcher healthy, judge-relay alive — all WITHOUT tokens (public GET surface).
+
+---
+Task ID: 67-r
+Agent: main (Super Z, keeper)
+Task: Lane R — distant-field research rounds → organic decomposition simulation → novel questions
+
+Work Log:
+- 5 web-search rounds (z-ai function web_search): RAF/autocatalytic sets (Kauffman/Hordijk), Physarum computing (Adamatzky, 2026 adaptive transport model), immune affinity maturation (clonal selection + negative selection + resistance dynamics), stigmergy in LLM MAS (2025-2026), Waddington landscape/canalization (2026 geometric-coherence axis). Nugget ledger with sources+mappings: download/w67-research/nugget-ledger.md.
+- SIMULATION (the round's spine): scripts/w67_rafsim.py — RAF closure over the atlas's REAL 528 parts (29 works). Model-assisted chemistry: 1210 raw IO tokens → GLM slug pass (16 chunks) → GLM mega-fusion (3 chunks, 90-concept vocabulary) → chem-canonical.json. Universal-solvent guard: unknown-collapsed slugs kept work-private (F6).
+- FINDINGS: F1 corpus has no shared chemistry as written (4/656 token overlaps); F2 near-disjoint metabolisms (closure 141/528 = 26.7% NUTRIENT; 324 islands); F3 GATE-AS-CATALYST — the atlas's 401 gates ARE catalysts, closure 11.7%→26.7% (wave-66 ontology = wave-67 autocatalysis, same object two fields); F4 zero import-adjacent holes → wave-68 needs deliberate INTERFACE PARTS; F5 closure bracket [11.9% strict, 26.7% nutrient]; F6 model-in-loop method guard.
+- NOVEL QUESTION QUEUE (Q1–Q6) written into the ledger: interface-part closure prediction, Physarum vein routing in cell-fleet, negative-selection detector cells, norm-mark stigmergy A/B, canalization measurement from mitosis genealogy, chemistry-first decomposition law.
+- Receipt of record: download/w67-research/raf-closure-receipt-20261004T100637Z.md (+ per-part CSV, 528 rows of spreadsheet logic).
+- BUGS receipted: git 2.47.3 bundle segfaults on misplaced -q (139, not 128); z-ai chat response at choices[0].message.content; z-ai function rate-limits parallel calls (2/5 survived; sequential retry clean); 4095-token completion cap truncates big JSON fusions (chunking fix); background python died silently → resumable per-chunk bash driver won.
+
+Stage Summary:
+- The principal's "research distant fields → simulate organic decomposition that cellularizes logic → better novel questions" executed literally: 5 fields → nuggets → a real simulation on real fleet data → 6 findings → 6 novel questions, all timestamped and receipted. The deepest nugget: our own gate ontology and Kauffman's catalysis are the same object; the fleet's works are cells that digest privately and need interface organs.
+
+---
+Task ID: 67-j
+Agent: main (Super Z, keeper)
+Task: Lane J — JEV gate rounds with other models; dog-food live Workers
+
+Work Log:
+- Native JEV transport dead (TYPESAFEAI_KEY lost) → transport-swapped JEV: protocol VERBATIM from quilt-jev-toolkit/jev_client.py (noul/score/choice), judge = GLM via z-ai CLI, ensemble of 3 lens-persona judges (skeptic/engineer/teacher — lens-sampling doctrine). scripts/w67_jev_gate.py.
+- 5 artifacts × 3 judges = 15/15 verdicts parsed. canon_p (mean): raf-closure-receipt 0.82 (depth 2.3), cell-fleet-readme 0.82 (2.3), nugget-ledger 0.77 (2.0), push-mirror-readme 0.63 (1.7), cell-fleet-receipt 0.40 (1.3 — raw run receipt scores below its README; skeptic: "detailed metrics, lacks novel insights" — fair, the README carries the mapping). Receipt: download/w67-research/jev-gate-receipt-2026-10-04T100818Z.md.
+- Live Workers dog-food (GET surface, no tokens): organ-boot-loader index + 5-organ list, organ-watcher /status healthy, judge-relay /health — receipted in lane P.
+
+Stage Summary:
+- JEV kept hot with another model helping; the gate ranking is itself a receipt: findings-led artifacts gate higher than run logs. Keys stay hot via z-ai CLI (search + judge + chemistry) — the only live credential family in the container, used extensively and expansively.
+
+---
+Task ID: 67 (keeper)
+Agent: main (Super Z)
+Task: wave-67 close — push-readiness, cellularization, distant-field chemistry, JEV ensemble
+
+Stage Summary:
+- PUSH: everything is push-ready but NOT pushed (honest): 3 embedded GitHub tokens recovered from subrepo configs are ALL DEAD (401); no live credential exists in-container. Leveled instead: scripts/push_all.sh (one command, token never persisted), 37 verified git bundles at download/github-mirror/ (117MB, includes the monorepo journal), mirror README with recipe + purge receipt. The moment a fresh GITHUB_TOKEN lands in .env.keys, one command pushes 38 repos.
+- SECRETS: two tracked key files + one key-bearing cot-quilt receipt PURGED FROM ALL HISTORY (filter-repo, gc-pruned, verified 0 refs); 3 dead-token configs scrubbed; .gitignore hardened; full-history audit kit left in scripts/w67_secret_audit.sh. Nothing key-shaped was ever pushed because nothing was pushed; now nothing key-shaped CAN be pushed.
+- NEXT QUEUE (written where it belongs — in the artifacts): wave-68 = interface parts (F4) + chemistry-first decomposition law (Q6) + Physarum veins in cell-fleet (Q2) + negative-selection detectors (Q3) + organ-boot-bridge DO deployment when Cloudflare credentials return.

@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://arxiv.org",
+    "name": "A Computational Design Taxonomy for Synergistic Bio",
+    "snippet": "We focused on self-contained systems in which digital components physical ly interface with microorganisms (e.g., bacteria, protozoa, fungi, slime moulds) and ... Read more",
+    "host_name": "arxiv.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.alphaxiv.org",
+    "name": "Andrew Adamatzky",
+    "snippet": "Andrew Adamatzky's Physarum Machines use the biological growth patterns of slime mold to solve computational and geometric problems. Read more",
+    "host_name": "www.alphaxiv.org",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.creativeapplications.net",
+    "name": "SlimeMoldCrypt – Security as a biological process",
+    "snippet": "Sep 22, 2025 — SlimeMoldCrypt is a speculative device that reimagines security as a biological process using a single-celled slime mold, as an unpredictable ...",
+    "host_name": "www.creativeapplications.net",
+    "rank": 2,
+    "date": "Sep 22, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.biorxiv.org",
+    "name": "Self-organizing physical and biochemical",
+    "snippet": "May 12, 2026 — A mathematical model for adaptive transport network in path finding by true slime mold . Flow- network adaptation and behavior in slime molds .  ... 22 pages",
+    "host_name": "www.biorxiv.org",
+    "rank": 3,
+    "date": "May 12, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://dl.acm.org",
+    "name": "Fabrication System for Human–Slime Mold Co-Creation",
+    "snippet": "Sep 27, 2025 — The slime mold Physarum polycephalum is a huge single cell that has proved to be a fruitful material for designing novel computing architectures ... Read more",
+    "host_name": "dl.acm.org",
+    "rank": 4,
+    "date": "Sep 27, 2025",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.emerald.com",
+    "name": "Neural networks for emergent behavior in biological",
+    "snippet": "Jul 17, 2024 — We present here a simple example of the adaptive network structure of the slime mold . Figure 8 indicates the phase-field dynamic evolution of ... Read more",
+    "host_name": "www.emerald.com",
+    "rank": 5,
+    "date": "Jul 17, 2024",
+    "favicon": ""
+  }
+]
