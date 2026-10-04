@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>cot-quilt viewer — 20261001T190939Z-4bb8f5f5</title>
+<style>
+body { background:#0d1117; color:#c9d1d9; font-family:ui-monospace,Menlo,monospace; margin:0; padding:24px; }
+h1 { color:#f0f6fc; font-size:20px; } .acc { color:#d29922; }
+.card { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:16px; margin:14px 0; }
+.score { font-size:44px; color:#7ee787; font-weight:700; }
+.tag { display:inline-block; border:1px solid #30363d; border-radius:20px; padding:2px 10px; margin:2px; font-size:11px; }
+.seed { color:#79c0ff; } .gap { color:#ffa198; }
+svg { background:#0d1117; }
+.lg span { margin-right:14px; font-size:11px; }
+</style></head><body>
+<h1>cot-quilt <span class="acc">graph viewer</span> — run 20261001T190939Z-4bb8f5f5</h1>
+<div class="card">prompt: Design a minimal local algorithm that decides which cell of a cellular graph receives the next unit of computation budget, given per-cell potential and resistance values. The rule must use only a cell and its direct neig<br>
+seeds: <span class="seed">52840 / 25780 / 24417</span> <span class="tag">mothquantum 16-bit × 3</span>
+<span class="tag">3 CoT samples</span><span class="tag">6 clusters</span><span class="tag">4 divergent routes</span><span class="tag">5 critique cells</span><span class="tag">7 cluster edges (p=mean typesafe dependency)</span></div>
+<div class="card"><span class="score">6/10</span> <span>v4-pro self-judged thoroughness</span><br><i>The graph captures the high-level components but omits the key aging, tie-breaking, and proof mechanisms, so it is only moderately thorough.</i>
+<ul class="gap"><li>Global-maximum impossibility: a one-step local rule cannot compute the unique global maximum, so the design must use a token or local propagation instead of global argmax.</li><li>Explicit aging mechanism: the score must include a λa_i term, with the served cell's age reset and other ages incremented, to force eventual selection.</li><li>Tie-breaking/backoff: equal local scores or multiple local maxima need a deterministic or randomized tie-break to avoid loops.</li><li>Randomized token walk alternative: positive-floor local probabilities can make an irreducible walk that visits every cell infinitely often.</li><li>Formal no-starvation proof: show the aging term dominates bounded p/r and forces the token across every cut, or use irreducibility/recurrence.</li></ul></div>
+<svg width="660" height="640" viewBox="0 0 660 640"><line x1="330" y1="135" x2="482" y2="222" stroke="#58a6ff" stroke-width="4.999999999999999" opacity="0.6535"/>
+<circle cx="406" cy="179" r="9" fill="#0d1117" stroke="#58a6ff" opacity="0.9"/>
+<text x="406" y="182" text-anchor="middle" font-size="7.5" fill="#79c0ff" font-family="monospace">0.90</text>
+<line x1="482" y1="222" x2="330" y2="485" stroke="#58a6ff" stroke-width="2.2" opacity="0.646"/>
+<circle cx="406" cy="354" r="9" fill="#0d1117" stroke="#58a6ff" opacity="0.9"/>
+<text x="406" y="357" text-anchor="middle" font-size="7.5" fill="#79c0ff" font-family="monospace">0.88</text>
+<line x1="178" y1="398" x2="178" y2="222" stroke="#58a6ff" stroke-width="2.2" opacity="0.49750000000000005"/>
+<circle cx="178" cy="310" r="9" fill="#0d1117" stroke="#58a6ff" opacity="0.9"/>
+<text x="178" y="313" text-anchor="middle" font-size="7.5" fill="#79c0ff" font-family="monospace">0.55</text>
+<line x1="330" y1="135" x2="482" y2="398" stroke="#58a6ff" stroke-width="2.2" opacity="0.6415"/>
+<circle cx="406" cy="266" r="9" fill="#0d1117" stroke="#58a6ff" opacity="0.9"/>
+<text x="406" y="269" text-anchor="middle" font-size="7.5" fill="#79c0ff" font-family="monospace">0.87</text>
+<line x1="482" y1="222" x2="482" y2="398" stroke="#58a6ff" stroke-width="2.2" opacity="0.5785"/>
+<circle cx="482" cy="310" r="9" fill="#0d1117" stroke="#58a6ff" opacity="0.9"/>
+<text x="482" y="313" text-anchor="middle" font-size="7.5" fill="#79c0ff" font-family="monospace">0.73</text>
+<line x1="482" y1="398" x2="330" y2="485" stroke="#58a6ff" stroke-width="2.2" opacity="0.6910000000000001"/>
+<circle cx="406" cy="441" r="9" fill="#0d1117" stroke="#58a6ff" opacity="0.9"/>
+<text x="406" y="444" text-anchor="middle" font-size="7.5" fill="#79c0ff" font-family="monospace">0.98</text>
+<line x1="482" y1="398" x2="178" y2="398" stroke="#58a6ff" stroke-width="2.2" opacity="0.619"/>
+<circle cx="330" cy="398" r="9" fill="#0d1117" stroke="#58a6ff" opacity="0.9"/>
+<text x="330" y="400" text-anchor="middle" font-size="7.5" fill="#79c0ff" font-family="monospace">0.82</text>
+<line x1="330" y1="135" x2="330" y2="560" stroke="#d29922" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+<line x1="482" y1="222" x2="482" y2="560" stroke="#d29922" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+<line x1="482" y1="222" x2="482" y2="560" stroke="#d29922" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+<line x1="482" y1="398" x2="482" y2="560" stroke="#d29922" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+<line x1="178" y1="222" x2="178" y2="560" stroke="#d29922" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+<circle cx="330" cy="135" r="39" fill="rgb(227,81,138)" opacity="0.94" stroke="#0d1117" stroke-width="2"/>
+<text x="330" y="135" text-anchor="middle" dy="-4" font-size="9.5" fill="#fff" font-family="monospace"><tspan x="330" dy="0">Task</tspan><tspan x="330" dy="11">definition</tspan></text>
+<title>Task definition: Design a local rule using only a cell and its direct neighbors to choose the next budget recipient and ensure fairness/no starvation. (load 2.91)</title>
+<circle cx="482" cy="222" r="39" fill="rgb(196,92,159)" opacity="0.94" stroke="#0d1117" stroke-width="2"/>
+<text x="482" y="222" text-anchor="middle" dy="-4" font-size="9.5" fill="#fff" font-family="monospace"><tspan x="482" dy="0">Local urgency</tspan><tspan x="482" dy="11">score</tspan></text>
+<title>Local urgency score: Combine potential and resistance into a local priority, typically potential/resistance, for comparing a cell with its neighbors. (load 2.56)</title>
+<circle cx="482" cy="398" r="39" fill="rgb(233,79,134)" opacity="0.94" stroke="#0d1117" stroke-width="2"/>
+<text x="482" y="398" text-anchor="middle" dy="-4" font-size="9.5" fill="#fff" font-family="monospace"><tspan x="482" dy="0">Token holder</tspan><tspan x="482" dy="11">moves locally</tspan></text>
+<title>Token holder moves locally: Use a single token whose holder considers itself and neighbors and moves or serves based only on local values. (load 2.97)</title>
+<circle cx="330" cy="485" r="30" fill="rgb(209,87,150)" opacity="0.94" stroke="#0d1117" stroke-width="2"/>
+<text x="330" y="485" text-anchor="middle" dy="-11" font-size="9.5" fill="#fff" font-family="monospace"><tspan x="330" dy="0">Service</tspan><tspan x="330" dy="11">lowers future</tspan><tspan x="330" dy="11">priority</tspan></text>
+<title>Service lowers future priority: After service, reduce potential or raise resistance so the served cell's score drops and it stops monopolizing. (load 2.71)</title>
+<circle cx="178" cy="398" r="39" fill="rgb(199,91,157)" opacity="0.94" stroke="#0d1117" stroke-width="2"/>
+<text x="178" y="398" text-anchor="middle" dy="-11" font-size="9.5" fill="#fff" font-family="monospace"><tspan x="178" dy="0">Local-max</tspan><tspan x="178" dy="11">starvation</tspan><tspan x="178" dy="11">risk</tspan></text>
+<title>Local-max starvation risk: A deterministic local-max/greedy token can get stuck and starve lower-urgency cells, so a safeguard is needed. (load 2.59)</title>
+<circle cx="178" cy="222" r="39" fill="rgb(221,83,142)" opacity="0.94" stroke="#0d1117" stroke-width="2"/>
+<text x="178" y="222" text-anchor="middle" dy="-11" font-size="9.5" fill="#fff" font-family="monospace"><tspan x="178" dy="0"></tspan><tspan x="178" dy="11">No-starvation</tspan><tspan x="178" dy="11">fairness</tspan></text>
+<title>No-starvation fairness claim: The chosen local mechanism ensures long-run fairness and no cell starves forever. (load 2.84)</title>
+<rect x="512" y="34" width="176" height="42" rx="7" fill="none" stroke="#7ee787" stroke-width="1.4" stroke-dasharray="5 3"/>
+<text x="600" y="51" text-anchor="middle" font-size="9" fill="#7ee787" font-family="monospace"><tspan x="600" dy="0">Global maximum</tspan><tspan x="600" dy="12">impos</tspan></text>
+<title>divergent route (samples [0]): A purely local rule cannot find the unique global maximum in one step, so it must use local maxima, token passing, or randomized propagation.</title>
+<rect x="-28" y="34" width="176" height="42" rx="7" fill="none" stroke="#7ee787" stroke-width="1.4" stroke-dasharray="5 3"/>
+<text x="60" y="51" text-anchor="middle" font-size="9" fill="#7ee787" font-family="monospace"><tspan x="60" dy="0"></tspan><tspan x="60" dy="12">Tie-breaking/backoff</tspan></text>
+<title>divergent route (samples [0]): If several strict local maxima or ties occur, break ties by ID or local backoff.</title>
+<rect x="512" y="194" width="176" height="42" rx="7" fill="none" stroke="#7ee787" stroke-width="1.4" stroke-dasharray="5 3"/>
+<text x="600" y="211" text-anchor="middle" font-size="9" fill="#7ee787" font-family="monospace"><tspan x="600" dy="0">Randomized token</tspan><tspan x="600" dy="12">wal</tspan></text>
+<title>divergent route (samples [0, 1]): Randomize the token's next location in proportion to local weights, with a positive floor, yielding an irreducible walk that visits every cell infinitely often.</title>
+<rect x="-28" y="194" width="176" height="42" rx="7" fill="none" stroke="#7ee787" stroke-width="1.4" stroke-dasharray="5 3"/>
+<text x="60" y="211" text-anchor="middle" font-size="9" fill="#7ee787" font-family="monospace"><tspan x="60" dy="0">Aging-based</tspan><tspan x="60" dy="12">determin</tspan></text>
+<title>divergent route (samples [2]): Add a local waiting/aging term so an unserved cell's effective urgency rises until the token leaves a local maximum and reaches it.</title>
+<path d="M 75 563 L 87 575 L 75 587 L 63 575 Z" fill="#d29922" opacity="0.95"/>
+<text x="75" y="601" text-anchor="middle" font-size="8.5" fill="#d29922" font-family="monospace">g1 CHECK</text>
+<title>CHECK: Check that a one-step local rule cannot compute the unique global maximum, so a token or local propagation replaces global argmax.</title>
+<path d="M 197 563 L 209 575 L 197 587 L 185 575 Z" fill="#d29922" opacity="0.95"/>
+<text x="197" y="601" text-anchor="middle" font-size="8.5" fill="#d29922" font-family="monospace">g2 DECISION</text>
+<title>DECISION: Add explicit aging λ_i to the score, resetting served cell age and incrementing others to force eventual selection.</title>
+<path d="M 319 563 L 331 575 L 319 587 L 307 575 Z" fill="#d29922" opacity="0.95"/>
+<text x="319" y="601" text-anchor="middle" font-size="8.5" fill="#d29922" font-family="monospace">g3 CHECK</text>
+<title>CHECK: Check tie-breaking/backoff for equal local scores or multiple local maxima to avoid loops deterministically or randomly.</title>
+<path d="M 441 563 L 453 575 L 441 587 L 429 575 Z" fill="#d29922" opacity="0.95"/>
+<text x="441" y="601" text-anchor="middle" font-size="8.5" fill="#d29922" font-family="monospace">g4 INFERENCE</text>
+<title>INFERENCE: Infer that positive-floor local probabilities can form an irreducible token walk visiting every cell infinitely often.</title>
+<path d="M 563 563 L 575 575 L 563 587 L 551 575 Z" fill="#d29922" opacity="0.95"/>
+<text x="563" y="601" text-anchor="middle" font-size="8.5" fill="#d29922" font-family="monospace">g5 CHECK</text>
+<title>CHECK: Check formal no-starvation proof: aging dominates bounded p/r and crosses every cut, or irreducibility/recurrence holds.</title></svg>
+<div class="card lg"><span style="color:#388bfd">●</span> cluster (size=occurrence, hue=load) <span style="color:#58a6ff">—</span> edge (width=count, opacity=p) <span style="color:#7ee787">□</span> divergent route <span style="color:#d29922">◆</span> critique cell — hover for full text</div>
+<div class="card">cell signature — in: {prompt, n_seeds, lenses} · out: {graph_v1, graph_v2, judge, receipts} ·
+clusters → value cells · edges → links with p as dial weight · judge.gaps → question-cells · critique nodes → next generation<br>
+repo: github.com/SuperInstance/cot-quilt · erised playground: erised-mirror.pages.dev</div>
+</body></html>

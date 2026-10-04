@@ -18,7 +18,7 @@
 #     scripts/w67_secret_audit.sh — run it before every push)
 # ============================================================================
 set -u
-ROOT=/home/z/my-project
+ROOT="${ROOT:-/home/z/my-project}"
 DRYRUN=0
 [ "${1:-}" = "--dry-run" ] && DRYRUN=1
 

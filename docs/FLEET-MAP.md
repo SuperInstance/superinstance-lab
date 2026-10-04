@@ -4,6 +4,11 @@
 > find your way around what it produced. Companion file:
 > [AGENT-BOOTSTRAP.md](./AGENT-BOOTSTRAP.md) (the 60-minute zero-shot path).
 
+> **WARNING** — the repo-named directories in a clone of this monorepo are
+> gitlinks and appear EMPTY; the fleet repos are standalone — clone them
+> individually from `https://github.com/SuperInstance/<repo>` (this is by
+> design; see `scripts/push_all.sh` for how the keeper syncs them).
+
 ## The shape of the fleet
 
 ```

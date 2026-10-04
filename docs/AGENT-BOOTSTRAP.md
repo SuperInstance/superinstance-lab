@@ -6,6 +6,11 @@
 > that is the point (the fleet calls these artifacts **ExoJs**: how to redo the
 > process without the original helpers).
 
+> **WARNING** — the repo-named directories in a clone of this monorepo are
+> gitlinks and appear EMPTY; the fleet repos are standalone — clone them
+> individually from `https://github.com/SuperInstance/<repo>` (this is by
+> design; see `scripts/push_all.sh` for how the keeper syncs them).
+
 ## Phase 0 — Land (minutes 0-5)
 
 1. You are on **SuperInstance** (github.com/SuperInstance), an account where
@@ -33,7 +38,7 @@
    every 6h by a scheduled workflow).
 3. Skim the journal's shape: `worklog.md` in this repo — 1,500+ lines of
    Task-ID'd entries. Do NOT read it all now; grep it when you need
-   (`grep -n "<keyword>" worklog.md`). Read the last ~200 lines for the
+   (`grep -n "<keyword>" worklog.md`). Read the last ~300 lines for the
    current frontier.
 
 ## Phase 2 — Pick your lane and go deep (minutes 15-45)
@@ -84,8 +89,10 @@ grep -n "<topic>" worklog.md | head -40
 **Push everything (fleet keepers with a token):**
 ```bash
 # token lives in gitignored .env.keys (mode 600) or $GITHUB_TOKEN — never in git
-bash scripts/w68_surgical_audit.sh   # must print zero hits
+bash scripts/w67_secret_audit.sh && bash scripts/w68_surgical_audit.sh   # run BOTH; must print zero hits
 bash scripts/push_all.sh             # pushes all repos + this monorepo, verifies
+# push_all.sh defaults ROOT=/home/z/my-project (the keeper container);
+# set ROOT=/path/to/your/checkout to run from elsewhere
 ```
 
 **Onboard a NEW repo into the documentation system:**
